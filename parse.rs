@@ -154,6 +154,9 @@ impl RegexpState {
     Ok(true)
   }
   pub fn tryConcatenation(&mut self) {
+    // tries to perform a concatenation. this simply 
+    // means performing a concatenation operation
+    // if two or more items are on the stack.
     if (self.stack.len() > 1) {
       self.doConcatenation();
     }
