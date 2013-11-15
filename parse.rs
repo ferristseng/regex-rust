@@ -1,9 +1,5 @@
 // A Regex Operation
 //
-// Used on the stack to distinguish an operator
-// (defined as an opcode), from a parsed
-// regular expression.
-
 pub enum OpCode {
   OpConcatenation,
   OpAlternation,
@@ -17,7 +13,7 @@ pub enum OpCode {
 }
 
 // Regexp Literal
-//
+// a literal character in a regex string (i.e 'abcd')
 struct RegexpLiteral {
   value: ~str 
 }
@@ -28,6 +24,9 @@ impl RegexpLiteral {
   }
 }
 
+// Regexp
+// represents a variable number of states with an
+// operator applied to them. 
 struct Regexp { 
   op: OpCode, 
   state0: Option<~RegexpStack>, 
@@ -41,7 +40,11 @@ impl Regexp {
   }
 }
 
-// Representations of regexp on
+// RegexpCharClass
+// represents a character class (i.e '[a-z123]')
+struct RegexpCharClass;
+
+// different representations of expressions on
 // the stack
 enum RegexpStack {
   ReOp(OpCode),
@@ -63,6 +66,10 @@ impl RegexpState {
 
 impl RegexpState {
   pub fn pushLiteral(&mut self, s: &str) -> () {
+    // special cases to consider that we can optimize for:
+    //   * if we have multiple literals in a row, we can condense
+    //     that expression into one expression (i.e 'abc' can just 
+    //     be ReLiteral(abc))
     match self.stack.pop_opt() {
       Some(ReLiteral(l)) => {
         self.stack.push(ReLiteral(RegexpLiteral::new(l.value + s)));
