@@ -11,7 +11,9 @@ pub enum OpCode {
   OpZeroOrOne,
   OpOneOrMore,
   OpLineStart,
-  OpLineEnd
+  OpLineEnd,
+  OpLeftParen,
+  OpRightParen
 }
 
 // Regexp Literal
@@ -65,7 +67,11 @@ impl RegexpState {
       Some(ReLiteral(l)) => {
         self.stack.push(ReLiteral(RegexpLiteral::new(l.value + s)));
       }
-      _ => { 
+      Some(r) => { 
+        self.stack.push(r);
+        self.stack.push(ReLiteral(RegexpLiteral::new(s)));
+      }
+      None => {
         self.stack.push(ReLiteral(RegexpLiteral::new(s)));
       }
     }
@@ -79,11 +85,78 @@ impl RegexpState {
 }
 
 impl RegexpState {
-  pub fn doAlternation(&mut self) {
+  pub fn pushAlternation(&mut self) -> () {
     self.pushOperation(OpAlternation);
   }
-  pub fn doConcatenation(&mut self) {
-    self.pushOperation(OpConcatenation);
+  pub fn pushLeftParen(&mut self) -> () {
+    self.pushOperation(OpLeftParen);
+  }
+}
+
+impl RegexpState {
+  pub fn doAlternation(&mut self) -> Result<bool, &'static str> {
+    // try to pop off two items from the stack.
+    // these should be branches that you can take.
+    //     -> state0
+    // s |
+    //     -> state1
+    // 
+    // with alternation occuring sequentially, we can 
+    // make an equivalent model by having state0 or state1 
+    // also be a regexp with a alternation operand applied to it.
+    //     -> state0
+    // s |              -> 'state0
+    //     -> state1  |
+    //                  -> 'state1
+    //
+    // the operand should be pushed onto the stack before we start parsing 
+    // the right hand side of the alternation, so the stack should look something
+    // like this before doAlternation() is called:
+    //
+    // state0
+    // OpCode(OpAlternation)
+    // state1
+    let branch1 = match self.stack.pop_opt() {
+      Some(s) => s,
+      None => return Err("Nothing to alternate")
+    };
+    match self.stack.pop_opt() {
+      Some(ReOp(OpAlternation)) => { },
+      _ => return Err("No alternation operand on the stack, but expected one")
+    };
+    let branch2 = match self.stack.pop_opt() {
+      Some(s) => s,
+      None => return Err("Nothing to alternate")
+    };
+    let r = Regexp::new(OpAlternation, Some(~branch1), Some(~branch2));
+
+    self.pushExpression(r);
+
+    Ok(true)
+  }
+  pub fn doConcatenation(&mut self) -> Result<bool, &'static str> {
+    // try to take two items off the stack to
+    // concatenate.
+    //
+    // state0 -> state1
+    let branch1 = match self.stack.pop_opt() {
+      Some(s) => s,
+      None => return Err("Nothing to concatenate")
+    };
+    let branch2 = match self.stack.pop_opt() {
+      Some(s) => s,
+      None => return Err("Nothing to concatenate")
+    };
+    let r = Regexp::new(OpConcatenation, Some(~branch1), Some(~branch2));
+
+    self.pushExpression(r);
+    
+    Ok(true)
+  }
+  pub fn tryConcatenation(&mut self) {
+    if (self.stack.len() > 1) {
+      self.doConcatenation();
+    }
   }
   pub fn doLeftParen(&mut self) {
 
@@ -114,12 +187,21 @@ impl RegexpState {
         // a repition op, try to condense (by collapsing
         // overlapping cases...i.e, *?, *+, **, can really
         // just be *).
+        // 
+        // note: in the match block below,
+        // the (_) case will cover cases
+        // Some(OpOneOrMore), Some(OpZeroOrMore)
+        //
         // otherwise, we can make a new expression.
         match opcode {
           Some(OpKleine) => {
             self.stack.push(r);
           }
-          Some(OpOneOrMore) => {
+          None => {
+            let expr = Regexp::new(OpKleine, Some(~r), None);
+            self.pushExpression(expr);
+          }
+          _ => {
             match r {
               ReExpression(ref mut e) => {
                 e.op = OpKleine;
@@ -127,10 +209,6 @@ impl RegexpState {
               _ => { }
             }
             self.stack.push(r);
-          }
-          _ => {
-            let expr = Regexp::new(OpKleine, Some(~r), None);
-            self.pushExpression(expr);
           }
         }
       }

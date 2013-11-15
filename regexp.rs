@@ -28,6 +28,12 @@ pub fn parse_recursive(t: &mut ~str, s: Option<*mut RegexpState>) -> Result<Rege
 
     match t.char_at(0) {
       '(' => {
+        // try to concatenate items on the stack.
+        // these will be concatenated with the
+        // expression within the parenthases.
+        ps.tryConcatenation();
+        ps.pushLeftParen();
+
         ps.doLeftParen();
         t.shift_char();
       },
@@ -37,7 +43,11 @@ pub fn parse_recursive(t: &mut ~str, s: Option<*mut RegexpState>) -> Result<Rege
       }
 
       '|' => {
-        ps.doConcatenation();
+        // try to concatenate items on the stack.
+        // these should compose the left hand side
+        // of the alternation.
+        ps.tryConcatenation();
+        ps.pushAlternation();
 
         t.shift_char();
         parse_recursive(t, Some(ptr::to_mut_unsafe_ptr(&mut ps)));
