@@ -94,28 +94,44 @@ impl RegexpState {
   pub fn doKleine(&mut self) -> Result<bool, &'static str> {
     match self.stack.pop_opt() {
       Some(r) => {
+        let mut r = r;
         // check to see if the expr on the top
-        // of the stack already has a kleine
+        // of the stack has some repition 
         // op applied to it.
-        let has_kleine = match &r {
+        let opcode = match &r {
           &ReExpression(ref e) => {
             match e.op {
-              OpKleine => true,
-              _ => false
+              OpKleine      => Some(OpKleine),
+              OpOneOrMore   => Some(OpOneOrMore),
+              OpZeroOrMore  => Some(OpZeroOrMore)
             }
           },
           _ => {
-            false
+            None
           }
         };
         // if we found that the expr already had
-        // a kleine op, just repush it.
+        // a repition op, try to condense (by collapsing
+        // overlapping cases...i.e, *?, *+, **, can really
+        // just be *).
         // otherwise, we can make a new expression.
-        if has_kleine {
-          self.stack.push(r);
-        } else {
-          let expr = Regexp::new(OpKleine, Some(~r), None);
-          self.pushExpression(expr);
+        match opcode {
+          Some(OpKleine) => {
+            self.stack.push(r);
+          }
+          Some(OpOneOrMore) => {
+            match r {
+              ReExpression(ref mut e) => {
+                e.op = OpKleine;
+              }
+              _ => { }
+            }
+            self.stack.push(r);
+          }
+          _ => {
+            let expr = Regexp::new(OpKleine, Some(~r), None);
+            self.pushExpression(expr);
+          }
         }
       }
       _ => {

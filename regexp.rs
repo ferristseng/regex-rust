@@ -93,4 +93,7 @@ fn main() {
 
   println("--Case 5--");
   parse_recursive(&mut ~"a*", None);
+
+  println("--Case 6--");
+  parse_recursive(&mut ~"a****", None);
 }

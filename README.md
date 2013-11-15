@@ -1,4 +1,4 @@
-Basing the lib off of this [resource](http://swtch.com/~rsc/regexp/), which cover how to generate, and how to traverse an NFA as well as some other good examples.
+Basing the lib off of this [resource](http://swtch.com/~rsc/regexp/), which covers how to generate, and how to traverse an NFA as well as some other good examples.
 
 Other resources I found useful: 
 
