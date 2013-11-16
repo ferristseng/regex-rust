@@ -69,6 +69,7 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<(), &'static 
                   _ => { } // Ok...continue
                 }
                 t.shift_char();
+                t.shift_char();
               }
             }
             _ => { 
@@ -78,8 +79,6 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<(), &'static 
         } else {
           cc.addChar(c); 
         }
-
-        t.shift_char();
       }
     }
 
@@ -195,5 +194,5 @@ fn main() {
   Regexp::new("あ(ab(cd|d)|e)|f").parse();
 
   println("--Case 7--");
-  Regexp::new("[[A-Z]0-9(abc)]]]").parse();
+  Regexp::new("[[A-Z]0-9(fgh)]]]|[abc]").parse();
 }
