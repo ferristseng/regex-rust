@@ -187,10 +187,13 @@ impl RegexpState {
   pub fn doRightParen(&mut self) {
 
   }
-  pub fn doKleine(&mut self) -> Result<bool, &'static str> {
+  pub fn doRepeatOp(&mut self, op: OpCode) -> Result<bool, &'static str> {
     match self.stack.pop_opt() {
       Some(r) => {
         let mut r = r;
+        // check if we should have apply a 
+        // nongreedy flag
+        let mut nongreedy = false;
         // check to see if the expr on the top
         // of the stack has some repition 
         // op applied to it.
@@ -199,7 +202,11 @@ impl RegexpState {
             match e.op {
               OpKleine      => Some(OpKleine),
               OpOneOrMore   => Some(OpOneOrMore),
-              OpZeroOrMore  => Some(OpZeroOrMore)
+              OpZeroOrOne   => {
+                nongreedy = true;
+                Some(OpZeroOrOne)
+              },
+              _             => None
             }
           },
           _ => {
@@ -207,32 +214,34 @@ impl RegexpState {
           }
         };
         // if we found that the expr already had
-        // a repition op, try to condense (by collapsing
-        // overlapping cases...i.e, *?, *+, **, can really
-        // just be *).
+        // a repeat op, we might need to throw a 
+        // error
         // 
         // note: in the match block below,
         // the (_) case will cover cases
-        // Some(OpOneOrMore), Some(OpZeroOrMore)
+        // Some(OpOneOrMore), Some(OpZeroOrOne)
         //
         // otherwise, we can make a new expression.
         match opcode {
-          Some(OpKleine) => {
-            self.stack.push(r);
-          }
+          Some(OpOneOrMore) | 
+          Some(OpKleine) |
+          Some(OpZeroOrOne) => {
+            if (nongreedy) {
+              match r {
+                ReExpression(ref mut e) => {
+                  // set greedy flag
+                }
+                _ => { } // should never hit this case
+              }
+              self.stack.push(r)
+            }
+            return Err("Repeated use of repetition.");
+          },
           None => {
-            let expr = Regexp::new(OpKleine, Some(~r), None);
+            let expr = Regexp::new(op, Some(~r), None);
             self.pushExpression(expr);
           }
-          _ => {
-            match r {
-              ReExpression(ref mut e) => {
-                e.op = OpKleine;
-              }
-              _ => { }
-            }
-            self.stack.push(r);
-          }
+          _ => { } // should never hit this case
         }
       }
       _ => {
@@ -240,6 +249,15 @@ impl RegexpState {
       }
     }
     Ok(true)
+  }
+  pub fn doKleine(&mut self) -> Result<bool, &'static str> {
+    self.doRepeatOp(OpKleine)
+  }
+  pub fn doOneOrMore(&mut self) -> Result<bool, &'static str> {
+    self.doRepeatOp(OpOneOrMore)
+  }
+  pub fn doZeroOrOne(&mut self) -> Result<bool, &'static str> {
+    self.doRepeatOp(OpZeroOrOne)
   }
 }
 

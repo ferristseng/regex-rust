@@ -60,11 +60,11 @@ pub fn parse_recursive(t: &mut ~str, s: Option<*mut RegexpState>) -> Result<Rege
       },
       '?' => {
         t.shift_char();
-        ps.pushOperation(OpZeroOrOne);
+        ps.doZeroOrOne();
       },
       '+' => {
         t.shift_char();
-        ps.pushOperation(OpOneOrMore);
+        ps.doOneOrMore();
       }
       c => {
         ps.pushLiteral(c.to_str());
@@ -103,7 +103,4 @@ fn main() {
 
   println("--Case 5--");
   parse_recursive(&mut ~"a*", None);
-
-  println("--Case 6--");
-  parse_recursive(&mut ~"a****", None);
 }
