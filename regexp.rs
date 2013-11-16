@@ -11,6 +11,14 @@ impl Regexp {
   fn new(s: &str) -> Regexp {
     Regexp { input: s.clone().to_owned() }
   }
+  fn parse(&mut self) {
+    let mut ps = ParseState::new();
+    parse_recursive(&mut self.input, Some(ptr::to_mut_unsafe_ptr(&mut ps))); 
+  }
+}
+
+pub fn parse_charclass(t: &mut ~str, ps: *mut ParseState) -> Result<(), &'static str> {
+  Ok(())
 }
 
 pub fn parse_recursive(t: &mut ~str, s: Option<*mut ParseState>) -> Result<(), &'static str> {
@@ -50,6 +58,10 @@ pub fn parse_recursive(t: &mut ~str, s: Option<*mut ParseState>) -> Result<(), &
         t.shift_char();
         parse_recursive(t, Some(ptr::to_mut_unsafe_ptr(&mut ps)));
         ps.doAlternation();
+        
+        if (ps.hasUnmatchedParens()) {
+          break;
+        }
       },
 
       '*' => {
@@ -90,17 +102,20 @@ pub fn parse_recursive(t: &mut ~str, s: Option<*mut ParseState>) -> Result<(), &
 
 fn main() {
   println("--Case 1--");
-  parse_recursive(&mut ~"a|b", None);
+  Regexp::new("a|b").parse();
 
   println("--Case 2--");
-  parse_recursive(&mut ~"a|b|c", None);
+  Regexp::new("a|b|c").parse();
 
   println("--Case 3--");
-  parse_recursive(&mut ~"a|Bcf|dez", None);
+  Regexp::new("a|Bcf|dez").parse();
 
   println("--Case 4--");
-  parse_recursive(&mut ~"abc|d", None);
+  Regexp::new("abc*|d").parse();
 
   println("--Case 5--");
-  parse_recursive(&mut ~"io(abc)*zz|(bcd)*", None);
+  Regexp::new("io(ab|c)*zz|(bcd)*").parse();
+
+  println("--Case 6--");
+  Regexp::new("あ(ab(cd|d)|e)|f").parse();
 }
