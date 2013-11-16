@@ -13,12 +13,12 @@ impl Regexp {
   }
 }
 
-pub fn parse_recursive(t: &mut ~str, s: Option<*mut RegexpState>) -> Result<Regexp, ~str> {
+pub fn parse_recursive(t: &mut ~str, s: Option<*mut ParseState>) -> Result<(), &'static str> {
   let mut ps = match s {
     Some(st) => { 
       unsafe { ptr::read_and_zero_ptr(st) } 
     },
-    None => RegexpState::new()
+    None => ParseState::new()
   };
 
   // cases for
@@ -31,12 +31,16 @@ pub fn parse_recursive(t: &mut ~str, s: Option<*mut RegexpState>) -> Result<Rege
         ps.doConcatenation();
         ps.pushLeftParen();
 
-        ps.doLeftParen();
         t.shift_char();
+        parse_recursive(t, Some(ptr::to_mut_unsafe_ptr(&mut ps)));
+        ps.doLeftParen();
       },
       ')' => {
-        ps.doRightParen();
         t.shift_char();
+        if (ps.hasUnmatchedParens()) {
+          break;
+        }
+        return Err("Unmatched ')'")
       }
 
       '|' => {
@@ -81,7 +85,7 @@ pub fn parse_recursive(t: &mut ~str, s: Option<*mut RegexpState>) -> Result<Rege
     _ => { }
   }
 
-  Err(~"Ok")
+  Ok(())
 }
 
 fn main() {
@@ -98,5 +102,5 @@ fn main() {
   parse_recursive(&mut ~"abc|d", None);
 
   println("--Case 5--");
-  parse_recursive(&mut ~"a*", None);
+  parse_recursive(&mut ~"(abc)*|(bcd)*", None);
 }

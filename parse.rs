@@ -53,18 +53,36 @@ enum RegexpStack {
 }
 
 // 
-pub struct RegexpState {
+pub struct ParseState {
   priv stack: ~[RegexpStack],
   priv nparen: uint 
 }
 
-impl RegexpState {
-  pub fn new() -> RegexpState {
-    RegexpState { stack: ~[], nparen: 0 } 
+impl ParseState {
+  pub fn new() -> ParseState {
+    ParseState { stack: ~[], nparen: 0 } 
   }
 }
 
-impl RegexpState {
+impl ParseState {
+  pub fn pop(&mut self) -> Result<Regexp, &'static str> {
+    match self.stack.pop_opt() {
+      Some(ReExpression(r)) => Ok(r),
+      _ => Err("Unknown error")
+    }
+  }
+}
+
+impl ParseState {
+  pub fn hasUnmatchedParens(&mut self) -> bool {
+    self.nparen > 0
+  }
+  pub fn hasNoParens(&mut self) -> bool {
+    self.nparen == 0
+  }
+}
+
+impl ParseState {
   pub fn pushLiteral(&mut self, s: &str) -> () {
     self.stack.push(ReLiteral(RegexpLiteral::new(s)));
   }
@@ -76,16 +94,17 @@ impl RegexpState {
   }
 }
 
-impl RegexpState {
+impl ParseState {
   pub fn pushAlternation(&mut self) -> () {
     self.pushOperation(OpAlternation);
   }
   pub fn pushLeftParen(&mut self) -> () {
+    self.nparen += 1;
     self.pushOperation(OpLeftParen);
   }
 }
 
-impl RegexpState {
+impl ParseState {
   pub fn doAlternation(&mut self) -> Result<bool, &'static str> {
     // try to pop off two items from the stack.
     // these should be branches that you can take.
@@ -141,9 +160,6 @@ impl RegexpState {
           self.pushOperation(op); 
           return Ok(true);
         },
-        Some(ReLiteral(s)) => {
-          ReLiteral(s)
-        }
         Some(s) => s,
         None => return Err("Nothing to concatenate")
       };
@@ -154,10 +170,14 @@ impl RegexpState {
           self.stack.push(branch1);
           return Ok(true);
         },
-        Some(ReLiteral(l)) => {
+        Some(ReLiteral(s)) => {
           match branch1 {
-            ReLiteral(s) => self.pushLiteral(l.value + s.value),
-            _ => { }
+            ReLiteral(l) => self.pushLiteral(s.value + l.value),
+            _ => { 
+              let r = Regexp::new(OpConcatenation, Some(~branch1), 
+                                  Some(~ReLiteral(s)));
+              self.pushExpression(r);
+            }
           }
         }
         Some(s) => { 
@@ -169,11 +189,18 @@ impl RegexpState {
     }
     Ok(true)
   }
-  pub fn doLeftParen(&mut self) {
-
-  }
-  pub fn doRightParen(&mut self) {
-
+  pub fn doLeftParen(&mut self) -> Result<bool, &'static str> {
+    self.nparen -= 1;
+    self.doConcatenation();
+    let inner = self.stack.pop();
+    // after the left paren operand should be on the top 
+    // of the stack
+    match self.stack.pop_opt() {
+      Some(ReOp(OpLeftParen)) => { },
+      _ => return Err("Unexpected item on stack")
+    }
+    self.stack.push(inner);
+    Ok(true)
   }
   pub fn doRepeatOp(&mut self, op: OpCode) -> Result<bool, &'static str> {
     match self.stack.pop_opt() {
@@ -188,13 +215,13 @@ impl RegexpState {
         let opcode = match &r {
           &ReExpression(ref e) => {
             match e.op {
-              OpKleine      => Some(OpKleine),
-              OpOneOrMore   => Some(OpOneOrMore),
-              OpZeroOrOne   => {
+              OpKleine => Some(OpKleine),
+              OpOneOrMore => Some(OpOneOrMore),
+              OpZeroOrOne => {
                 nongreedy = true;
                 Some(OpZeroOrOne)
               },
-              _             => None
+              _ => None
             }
           },
           _ => {
@@ -249,7 +276,7 @@ impl RegexpState {
   }
 }
 
-impl RegexpState {
+impl ParseState {
   pub fn trace(&mut self) {
     println("--STACK--");
     for e in self.stack.iter() {
