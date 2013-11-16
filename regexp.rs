@@ -18,7 +18,32 @@ impl Regexp {
 }
 
 pub fn parse_charclass(t: &mut ~str, ps: *mut ParseState) -> Result<(), &'static str> {
-  Ok(())
+ 
+  // check to see if the first char following
+  // '[' is a '^', if so, it is a negated char 
+  // class
+  let negated = match t.char_at(0) {
+    '^' => {
+      t.shift_char();
+      true
+    },
+    _ => false
+  };
+
+  while (t.len() > 0) {
+
+    match t.char_at(0) {
+      ']' => {
+          
+      }
+      _ => {
+
+      }
+    }
+
+  }
+
+  Err(~"Expected a ']'.")
 }
 
 pub fn parse_recursive(t: &mut ~str, s: Option<*mut ParseState>) -> Result<(), &'static str> {

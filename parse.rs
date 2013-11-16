@@ -8,12 +8,15 @@ pub enum OpCode {
   OpLineStart,
   OpLineEnd,
   OpLeftParen,
-  OpRightParen
+  OpCapture,
 }
 
 // Flags for parsing 
+// i'm including a bunch of extra flags for now,
+// but we can add support for them as we go
 enum ParseFlags {
-  
+  NoParseFlags  = 0,
+  FoldCase      = 1 << 0
 }
 
 // Regexp Literal
@@ -46,7 +49,28 @@ impl Regexp {
 
 // RegexpCharClass
 // represents a character class (i.e '[a-z123]')
-pub struct CharClass;
+struct CharClass {
+  priv negate: bool,
+  priv ranges: ~[(start, end)] 
+}
+
+impl CharClass {
+  fn new() -> CharClass {
+    CharClass { ranges: ~[], negate: false }
+  }
+}
+
+impl CharClass {
+  fn negate(&mut self) {
+    self.negate = true;
+  }
+  fn addRange(&mut self, s: char, e: char) -> Result<bool, &'static str> {
+
+  }
+  fn addChar(&mut self, s: char) -> Result<bool, &'static str> {
+
+  }
+}
 
 mod ParseStack {
   use parse::OpCode;
@@ -66,12 +90,13 @@ mod ParseStack {
 // current state of parsing
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
-  priv nparen: uint 
+  priv nparen: uint, 
+  flags: ParseFlags
 }
 
 impl ParseState {
   pub fn new() -> ParseState {
-    ParseState { stack: ~[], nparen: 0 } 
+    ParseState { stack: ~[], nparen: 0, flags: NoParseFlags } 
   }
 }
 
@@ -102,6 +127,9 @@ impl ParseState {
   }
   pub fn pushExpression(&mut self, r: Regexp) -> () {
     self.stack.push(ParseStack::Expression(r));
+  }
+  pub fn pushCharClass(&mut self, cc: CharClass) -> () {
+    self.stack.push(ParseStack::CharClass(cc));
   }
 }
 
@@ -213,7 +241,8 @@ impl ParseState {
       Some(ParseStack::Op(OpLeftParen)) => { },
       _ => return Err("Unexpected item on stack")
     }
-    self.stack.push(inner);
+    let r = Regexp::new(OpCapture, Some(~inner), None);
+    self.pushExpression(r);
     Ok(true)
   }
   pub fn doRepeatOp(&mut self, op: OpCode) -> Result<bool, &'static str> {
