@@ -43,7 +43,7 @@ pub fn parse_charclass(t: &mut ~str, ps: *mut ParseState) -> Result<(), &'static
 
   }
 
-  Err(~"Expected a ']'.")
+  Err("Expected a ']'.")
 }
 
 pub fn parse_recursive(t: &mut ~str, s: Option<*mut ParseState>) -> Result<(), &'static str> {

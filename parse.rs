@@ -51,7 +51,7 @@ impl Regexp {
 // represents a character class (i.e '[a-z123]')
 struct CharClass {
   priv negate: bool,
-  priv ranges: ~[(start, end)] 
+  priv ranges: ~[(char, char)] 
 }
 
 impl CharClass {
@@ -65,10 +65,10 @@ impl CharClass {
     self.negate = true;
   }
   fn addRange(&mut self, s: char, e: char) -> Result<bool, &'static str> {
-
+    Ok(true)
   }
   fn addChar(&mut self, s: char) -> Result<bool, &'static str> {
-
+    Ok(true)
   }
 }
 
