@@ -144,13 +144,26 @@ impl RegexpState {
   pub fn doConcatenation(&mut self) -> Result<bool, &'static str> {
     // try to take two items off the stack to
     // concatenate.
+    // if either of them are opcodes, just 
+    // push them back no the stack, and return 
+    // (this means there is a singular item on the stack,
+    // and can't be concatenated with anything)
     //
     // state0 -> state1
     let branch1 = match self.stack.pop_opt() {
+      Some(ReOp(op)) => {
+        self.pushOperation(op); 
+        return Ok(true);
+      },
       Some(s) => s,
       None => return Err("Nothing to concatenate")
     };
     let branch2 = match self.stack.pop_opt() {
+      Some(ReOp(op)) => {
+        self.pushOperation(op); 
+        self.stack.push(branch1);
+        return Ok(true);
+      },
       Some(s) => s,
       None => return Err("Nothing to concatenate")
     };
