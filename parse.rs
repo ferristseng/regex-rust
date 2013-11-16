@@ -21,12 +21,12 @@ enum ParseFlags {
 
 // Regexp Literal
 // a literal character in a regex string (i.e 'abcd')
-struct Literal {
+pub struct Literal {
   value: ~str 
 }
 
 impl Literal {
-  fn new(s: &str) -> Literal {
+  pub fn new(s: &str) -> Literal {
     Literal { value: s.clone().to_owned() }
   }
 }
@@ -41,33 +41,44 @@ struct Regexp {
 } 
 
 impl Regexp {
-  fn new(op: OpCode, state0: Option<~ParseStack::Entry>, 
-         state1: Option<~ParseStack::Entry>) -> Regexp {
+  pub fn new(op: OpCode, state0: Option<~ParseStack::Entry>, 
+             state1: Option<~ParseStack::Entry>) -> Regexp {
     Regexp { op: op, state0: state0, state1: state1 }
   }
 }
 
 // RegexpCharClass
 // represents a character class (i.e '[a-z123]')
-struct CharClass {
+pub struct CharClass {
   priv negate: bool,
   priv ranges: ~[(char, char)] 
 }
 
 impl CharClass {
-  fn new() -> CharClass {
+  pub fn new() -> CharClass {
     CharClass { ranges: ~[], negate: false }
   }
 }
 
 impl CharClass {
-  fn negate(&mut self) {
+  pub fn negate(&mut self) {
     self.negate = true;
   }
-  fn addRange(&mut self, s: char, e: char) -> Result<bool, &'static str> {
+  pub fn containsChar(&mut self, c: char) -> bool {
+    true
+  }
+  pub fn addRange(&mut self, s: char, e: char) -> Result<bool, &'static str> {
+    if (s < e) {
+      self.ranges.push((s, e));
+    } else {
+      return Err("Empty range")
+    }
+
     Ok(true)
   }
-  fn addChar(&mut self, s: char) -> Result<bool, &'static str> {
+  pub fn addChar(&mut self, s: char) -> Result<bool, &'static str> {
+    self.ranges.push((s,s));
+
     Ok(true)
   }
 }
