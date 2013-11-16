@@ -66,22 +66,7 @@ impl RegexpState {
 
 impl RegexpState {
   pub fn pushLiteral(&mut self, s: &str) -> () {
-    // special cases to consider that we can optimize for:
-    //   * if we have multiple literals in a row, we can condense
-    //     that expression into one expression (i.e 'abc' can just 
-    //     be ReLiteral(abc))
-    match self.stack.pop_opt() {
-      Some(ReLiteral(l)) => {
-        self.stack.push(ReLiteral(RegexpLiteral::new(l.value + s)));
-      }
-      Some(r) => { 
-        self.stack.push(r);
-        self.stack.push(ReLiteral(RegexpLiteral::new(s)));
-      }
-      None => {
-        self.stack.push(ReLiteral(RegexpLiteral::new(s)));
-      }
-    }
+    self.stack.push(ReLiteral(RegexpLiteral::new(s)));
   }
   pub fn pushOperation(&mut self, op: OpCode) -> () {
     self.stack.push(ReOp(op));
@@ -142,44 +127,47 @@ impl RegexpState {
     Ok(true)
   }
   pub fn doConcatenation(&mut self) -> Result<bool, &'static str> {
-    // try to take two items off the stack to
-    // concatenate.
-    // if either of them are opcodes, just 
-    // push them back no the stack, and return 
-    // (this means there is a singular item on the stack,
-    // and can't be concatenated with anything)
-    //
-    // state0 -> state1
-    let branch1 = match self.stack.pop_opt() {
-      Some(ReOp(op)) => {
-        self.pushOperation(op); 
-        return Ok(true);
-      },
-      Some(s) => s,
-      None => return Err("Nothing to concatenate")
-    };
-    let branch2 = match self.stack.pop_opt() {
-      Some(ReOp(op)) => {
-        self.pushOperation(op); 
-        self.stack.push(branch1);
-        return Ok(true);
-      },
-      Some(s) => s,
-      None => return Err("Nothing to concatenate")
-    };
-    let r = Regexp::new(OpConcatenation, Some(~branch1), Some(~branch2));
+    while (self.stack.len() > 1) {
+      // try to take two items off the stack to
+      // concatenate.
+      // if either of them are opcodes, just 
+      // push them back no the stack, and return 
+      // (this means there is a singular item on the stack,
+      // and can't be concatenated with anything)
+      //
+      // state0 -> state1
+      let branch1 = match self.stack.pop_opt() {
+        Some(ReOp(op)) => {
+          self.pushOperation(op); 
+          return Ok(true);
+        },
+        Some(ReLiteral(s)) => {
+          ReLiteral(s)
+        }
+        Some(s) => s,
+        None => return Err("Nothing to concatenate")
+      };
 
-    self.pushExpression(r);
-    
-    Ok(true)
-  }
-  pub fn tryConcatenation(&mut self) {
-    // tries to perform a concatenation. this simply 
-    // means performing a concatenation operation
-    // if two or more items are on the stack.
-    if (self.stack.len() > 1) {
-      self.doConcatenation();
+      match self.stack.pop_opt() {
+        Some(ReOp(op)) => {
+          self.pushOperation(op); 
+          self.stack.push(branch1);
+          return Ok(true);
+        },
+        Some(ReLiteral(l)) => {
+          match branch1 {
+            ReLiteral(s) => self.pushLiteral(l.value + s.value),
+            _ => { }
+          }
+        }
+        Some(s) => { 
+          let r = Regexp::new(OpConcatenation, Some(~branch1), Some(~s));
+          self.pushExpression(r);
+        },
+        None => return Err("Nothing to concatenate")
+      };
     }
+    Ok(true)
   }
   pub fn doLeftParen(&mut self) {
 
