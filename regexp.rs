@@ -102,5 +102,5 @@ fn main() {
   parse_recursive(&mut ~"abc|d", None);
 
   println("--Case 5--");
-  parse_recursive(&mut ~"(abc)*|(bcd)*", None);
+  parse_recursive(&mut ~"io(abc)*zz|(bcd)*", None);
 }

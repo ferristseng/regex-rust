@@ -52,7 +52,7 @@ enum RegexpStack {
   ReExpression(Regexp)
 }
 
-// 
+// current state of parsing
 pub struct ParseState {
   priv stack: ~[RegexpStack],
   priv nparen: uint 
@@ -174,14 +174,14 @@ impl ParseState {
           match branch1 {
             ReLiteral(l) => self.pushLiteral(s.value + l.value),
             _ => { 
-              let r = Regexp::new(OpConcatenation, Some(~branch1), 
-                                  Some(~ReLiteral(s)));
+              let r = Regexp::new(OpConcatenation, Some(~ReLiteral(s)), 
+                                  Some(~branch1)); 
               self.pushExpression(r);
             }
           }
         }
         Some(s) => { 
-          let r = Regexp::new(OpConcatenation, Some(~branch1), Some(~s));
+          let r = Regexp::new(OpConcatenation, Some(~s), Some(~branch1));
           self.pushExpression(r);
         },
         None => return Err("Nothing to concatenate")
