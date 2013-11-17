@@ -1,4 +1,7 @@
 *.swp
 .DS_STORE
 *.dSYM
+compile
+regexp
+parse
 *~*
