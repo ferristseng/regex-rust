@@ -9,6 +9,7 @@ pub enum OpCode {
   OpLineEnd,
   OpLeftParen,
   OpCapture,
+  OpNoop
 }
 
 // Flags for parsing 
@@ -115,6 +116,9 @@ impl ParseState {
   pub fn pop(&mut self) -> Result<Regexp, &'static str> {
     match self.stack.pop_opt() {
       Some(ParseStack::Expression(r)) => Ok(r),
+      Some(ParseStack::Literal(r)) => Ok(Regexp::new(OpNoop, 
+                                                     Some(~ParseStack::Literal(r)),
+                                                     None)),
       _ => Err("Unknown error")
     }
   }
