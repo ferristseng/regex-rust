@@ -1,3 +1,5 @@
+use parse::ParseStack;
+
 mod parse;
 
 // instruction opcodes
@@ -29,5 +31,22 @@ struct Instruction {
 }
 
 fn compile(ps: parse::Regexp) -> ~[Instruction] {
+  compile_recursive(ps)
+}
+
+fn compile_recursive(ps: parse::Regexp) -> ~[Instruction] {
+  let stack = ~[];
+
+  match ps.state0 {
+    Some(~ParseStack::Literal(l)) => {
+
+    }
+    _ => {}
+  }
+  
+  stack
+}
+
+fn main() {
 
 }

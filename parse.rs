@@ -84,7 +84,7 @@ impl CharClass {
   }
 }
 
-mod ParseStack {
+pub mod ParseStack {
   use parse::OpCode;
   use parse::Literal;
   use parse::Regexp;
