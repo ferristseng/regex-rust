@@ -1,7 +1,9 @@
 use std::ptr;
-use parse::*;
+use parse::parse_recursive;
+use state::ParseState;
 
 mod parse;
+mod state;
 
 struct Regexp {
   input: ~str
