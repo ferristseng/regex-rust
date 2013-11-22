@@ -1,3 +1,5 @@
+use error::ParseError::*;
+
 // A Regex Operation
 pub enum OpCode {
   OpConcatenation,
@@ -39,12 +41,12 @@ impl Literal {
 // operator applied to them. 
 struct Regexp { 
   op: OpCode, 
-  state0: ~ParseStack::Entry, 
+  state0: Option<~ParseStack::Entry>, 
   state1: Option<~ParseStack::Entry>
 } 
 
 impl Regexp {
-  pub fn new(op: OpCode, state0: ~ParseStack::Entry, 
+  pub fn new(op: OpCode, state0: Option<~ParseStack::Entry>, 
              state1: Option<~ParseStack::Entry>) -> Regexp {
     Regexp { op: op, state0: state0, state1: state1 }
   }
@@ -70,19 +72,19 @@ impl CharClass {
   pub fn containsChar(&mut self, c: char) -> bool {
     true
   }
-  pub fn addRange(&mut self, s: char, e: char) -> Result<bool, &'static str> {
+  pub fn addRange(&mut self, s: char, e: char) -> ParseCode {
     if (s < e) {
       self.ranges.push((s, e));
     } else {
-      return Err("Empty range")
+      return ParseEmptyCharClassRange;
     }
 
-    Ok(true)
+    ParseOk
   }
-  pub fn addChar(&mut self, s: char) -> Result<bool, &'static str> {
+  pub fn addChar(&mut self, s: char) -> ParseCode {
     self.ranges.push((s,s));
 
-    Ok(true)
+    ParseOk
   }
 }
 
@@ -115,17 +117,17 @@ impl ParseState {
 }
 
 impl ParseState {
-  pub fn pop(&mut self) -> Result<Regexp, &'static str> {
+  pub fn pop(&mut self) -> Result<Regexp, ParseCode> {
     match self.stack.pop_opt() {
       Some(ParseStack::Expression(r)) => Ok(r),
       Some(ParseStack::Literal(r)) => {
-        Ok(Regexp::new(OpNoop, ~ParseStack::Literal(r), None))
+        Ok(Regexp::new(OpNoop, Some(~ParseStack::Literal(r)), None))
       },
       Some(ParseStack::CharClass(r)) => {
-        Ok(Regexp::new(OpNoop, ~ParseStack::CharClass(r), None))
+        Ok(Regexp::new(OpNoop, Some(~ParseStack::CharClass(r)), None))
       },
-      Some(ParseStack::Op(_)) => Err("Hanging operand on stack"),
-      None => Err("Empty stack")
+      Some(ParseStack::Op(_)) => Err(ParseInternalError), 
+      None => Err(ParseEmptyStack)
     }
   }
 }
@@ -165,7 +167,7 @@ impl ParseState {
 }
 
 impl ParseState {
-  pub fn doAlternation(&mut self) -> Result<bool, &'static str> {
+  pub fn doAlternation(&mut self) -> ParseCode { 
     // try to pop off two items from the stack.
     // these should be branches that you can take.
     //     -> state0
@@ -189,25 +191,25 @@ impl ParseState {
     // state1 (branch1)
     let branch1 = match self.stack.pop_opt() {
       Some(s) => s,
-      None => return Err("Nothing to alternate")
+      None => return ParseEmptyAlternate
     };
     // make sure there is an alternation operand on the stack,
     // otherwise, might have parsed incorrectly
     match self.stack.pop_opt() {
       Some(ParseStack::Op(OpAlternation)) => { },
-      _ => return Err("No alternation operand on the stack, but expected one")
+      _ => return ParseUnexpectedOperand 
     };
     let branch2 = match self.stack.pop_opt() {
       Some(s) => s,
-      None => return Err("Nothing to alternate")
+      None => return ParseEmptyAlternate
     };
-    let r = Regexp::new(OpAlternation, ~branch2, Some(~branch1));
+    let r = Regexp::new(OpAlternation, Some(~branch2), Some(~branch1));
 
     self.pushExpression(r);
 
-    Ok(true)
+    ParseOk
   }
-  pub fn doConcatenation(&mut self) -> Result<bool, &'static str> {
+  pub fn doConcatenation(&mut self) -> ParseCode {
     while (self.stack.len() > 1) {
       // try to take two items off the stack to
       // concatenate.
@@ -220,39 +222,40 @@ impl ParseState {
       let branch1 = match self.stack.pop_opt() {
         Some(ParseStack::Op(op)) => {
           self.pushOperation(op); 
-          return Ok(true);
+          return ParseOk;
         },
         Some(s) => s,
-        None => return Err("Nothing to concatenate")
+        None => return ParseEmptyConcatenate
       };
 
       match self.stack.pop_opt() {
         Some(ParseStack::Op(op)) => {
           self.pushOperation(op); 
           self.stack.push(branch1);
-          return Ok(true);
+          return ParseOk;
         },
         Some(ParseStack::Literal(s)) => {
           match branch1 {
             ParseStack::Literal(l) => self.pushLiteral(s.value + l.value),
             _ => { 
               let r = Regexp::new(OpConcatenation, 
-                                  ~ParseStack::Literal(s), 
+                                  Some(~ParseStack::Literal(s)), 
                                   Some(~branch1)); 
               self.pushExpression(r);
             }
           }
         }
         Some(s) => { 
-          let r = Regexp::new(OpConcatenation, ~s, Some(~branch1));
+          let r = Regexp::new(OpConcatenation, Some(~s), Some(~branch1));
           self.pushExpression(r);
         },
-        None => return Err("Nothing to concatenate")
+        None => return ParseEmptyConcatenate 
       };
     }
-    Ok(true)
+
+    ParseOk
   }
-  pub fn doLeftParen(&mut self) -> Result<bool, &'static str> {
+  pub fn doLeftParen(&mut self) -> ParseCode { 
     self.nparen -= 1;
     self.doConcatenation();
     let inner = self.stack.pop();
@@ -260,13 +263,14 @@ impl ParseState {
     // of the stack
     match self.stack.pop_opt() {
       Some(ParseStack::Op(OpLeftParen)) => { },
-      _ => return Err("Unexpected item on stack")
+      _ => return ParseExpectedOperand 
     }
-    let r = Regexp::new(OpCapture, ~inner, None);
+    let r = Regexp::new(OpCapture, Some(~inner), None);
     self.pushExpression(r);
-    Ok(true)
+
+    ParseOk
   }
-  pub fn doRepeatOp(&mut self, op: OpCode) -> Result<bool, &'static str> {
+  pub fn doRepeatOp(&mut self, op: OpCode) -> ParseCode { 
     match self.stack.pop_opt() {
       Some(r) => {
         let mut r = r;
@@ -314,28 +318,29 @@ impl ParseState {
               }
               self.stack.push(r)
             }
-            return Err("Repeated use of repetition.");
+            return ParseRepeatedRepetition; 
           },
           None => {
-            let expr = Regexp::new(op, ~r, None);
+            let expr = Regexp::new(op, Some(~r), None);
             self.pushExpression(expr);
           }
           _ => { } // should never hit this case
         }
       }
       _ => {
-        return Err("'*' not applied to any state.")
+        return ParseEmptyRepetition;
       }
     }
-    Ok(true)
+
+    ParseOk
   }
-  pub fn doKleine(&mut self) -> Result<bool, &'static str> {
+  pub fn doKleine(&mut self) -> ParseCode { 
     self.doRepeatOp(OpKleine)
   }
-  pub fn doOneOrMore(&mut self) -> Result<bool, &'static str> {
+  pub fn doOneOrMore(&mut self) -> ParseCode { 
     self.doRepeatOp(OpOneOrMore)
   }
-  pub fn doZeroOrOne(&mut self) -> Result<bool, &'static str> {
+  pub fn doZeroOrOne(&mut self) -> ParseCode { 
     self.doRepeatOp(OpZeroOrOne)
   }
 }

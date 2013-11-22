@@ -2,10 +2,14 @@ use std::ptr;
 use parse::parse_recursive;
 use state::ParseState;
 use compile::{Instruction, compile_recursive};
+use error::ParseError::*;
 
 mod parse;
 mod state;
 mod compile;
+mod error;
+
+static PARSE_ERR: &'static str = "Parse Error: ";
 
 struct Regexp {
   input: ~str
@@ -19,7 +23,7 @@ impl Regexp {
 
 impl Regexp { 
   // we should hide the underlying parsing algorithm
-  fn parse(&mut self) -> Result<state::Regexp, &'static str> {
+  fn parse(&mut self) -> Result<state::Regexp, ParseCode> {
     let mut ps = ParseState::new();
     match parse_recursive(&mut self.input, ptr::to_mut_unsafe_ptr(&mut ps)) {
       Ok(s) => {
@@ -36,9 +40,18 @@ impl Regexp {
         compile_recursive(re, &mut stack);
       }
       Err(e) => {
-        println(e);
+        println(Regexp::parse_err_to_str(e));
       }
     };
+  }
+}
+
+impl Regexp {
+  fn parse_err_to_str(code: ParseCode) -> ~str {
+    match code {
+      ParseOk => ~"Ok",
+      _ => PARSE_ERR + "Error"
+    }
   }
 }
 

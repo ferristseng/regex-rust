@@ -69,17 +69,19 @@ pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
 }
 
 fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
+  // recurse on a sub expression if type is Expression,
+  // otherwise just compile
   macro_rules! recurse(
     ($re: expr) => (
       {
         match $re {
-          &~ParseStack::Expression(ref x) => {
+          &Some(~ParseStack::Expression(ref x)) => {
             compile_recursive(x, stack);
           }
-          &~ParseStack::Literal(ref lit) => {
+          &Some(~ParseStack::Literal(ref lit)) => {
             compile_literal(lit, stack);
           }
-          &~ParseStack::CharClass(ref cc) => {
+          &Some(~ParseStack::CharClass(ref cc)) => {
             compile_charclass(cc, stack);
           }
           _ => { } // unreachable
@@ -91,25 +93,45 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
   match &re.op {
     // this should correspond with the case 
     // of the input being only a string (i.e 'abc')
+    // or a char class (i.e '[a-zA-Z]')
     &OpNoop => {
       match re.state0 {
-        ~ParseStack::Literal(ref lit) => {
+        Some(~ParseStack::Literal(ref lit)) => {
           compile_literal(lit, stack);
         }
-        ~ParseStack::CharClass(ref cc) => {
+        Some(~ParseStack::CharClass(ref cc)) => {
           compile_charclass(cc, stack);
         }
         _ => { } // unreachable
       };
     }
+    // compile to:
+    // ...
+    //      Split(L1, L2)
+    // L1:  (state0)
+    //      Jump(L3)
+    // L2:  (state1)
+    // L3:  ...
     &OpAlternation => {
-      recurse!(&re.state0);
-      let pc = stack.len();
+      let ptr_split = stack.len();
       stack.push(Instruction::new(InstNoop));
-      match re.state1 {
-        Some(ref s) => recurse!(s),
-        None => { }
-      }
+      recurse!(&re.state0);
+
+      let ptr_jmp = stack.len();
+      stack.push(Instruction::new(InstNoop));
+      recurse!(&re.state1);
+      
+      stack[ptr_split] = Instruction::new(InstSplit(ptr_split + 1, ptr_jmp + 1));
+      stack[ptr_jmp] = Instruction::new(InstJump(stack.len()));
+    }
+    // compile to:
+    // ...
+    // (state0)
+    // (state1)
+    // ...
+    &OpConcatenation => {
+      recurse!(&re.state0);
+      recurse!(&re.state1);
     }
     _ => { }
   }

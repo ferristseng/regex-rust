@@ -1,13 +1,14 @@
 use std::ptr;
 use state::ParseState;
 use state::CharClass;
+use error::ParseError::*;
 
 // parse functions
 //
 // these take in a pointer to a ParseState and an input string,
 // and finish / modify the ParseState
 
-pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, &'static str> {
+pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, ParseCode> {
  
   let mut ps = unsafe { ptr::read_and_zero_ptr(s) };
 
@@ -55,8 +56,8 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, &
             '-' => {
               if (t.char_at(1) != ']') {
                 match cc.addRange(c, t.char_at(1)) {
-                  Err(e) => return Err(e),
-                  _ => { } // Ok...continue
+                  ParseOk => { },
+                  e => return Err(e),
                 }
                 t.shift_char();
                 t.shift_char();
@@ -74,7 +75,7 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, &
 
   }
 
-  Err("Expected a ']'.")
+  Err(ParseExpectedClosingBracket)
 }
 
 // parse an input string recursively
@@ -82,7 +83,7 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, &
 // because rust does not optimize tail end
 // recursive calls, but...
 // this way is pretty
-pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, &'static str> {
+pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, ParseCode> {
   
   let mut ps = unsafe { ptr::read_and_zero_ptr(s) };
 
@@ -116,7 +117,7 @@ pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, &
         if (ps.hasUnmatchedParens()) {
           break;
         }
-        return Err("Unmatched ')'")
+        return Err(ParseExpectedClosingParen);
       }
 
       '|' => {
