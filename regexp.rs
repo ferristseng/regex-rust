@@ -25,12 +25,11 @@ impl Regexp {
   // we should hide the underlying parsing algorithm
   fn parse(&mut self) -> Result<state::Regexp, ParseCode> {
     let mut ps = ParseState::new();
-    match parse_recursive(&mut self.input, ptr::to_mut_unsafe_ptr(&mut ps)) {
-      Ok(s) => {
-        ps = s;
+    match parse_recursive(&mut self.input, &mut ps) {
+      ParseOk => {
         ps.pop()
       }
-      Err(e) => Err(e)
+      e => Err(e)
     }
   }
   fn compile(&mut self) {
@@ -63,7 +62,7 @@ fn main() {
   Regexp::new("a|b").compile();
 
   println("--Case 2--");
-  //Regexp::new("a|b|c").parse();
+  Regexp::new("a|b|c").parse();
 
   println("--Case 3--");
   //Regexp::new("a|Bcf|dez").parse();

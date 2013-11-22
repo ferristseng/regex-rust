@@ -8,9 +8,9 @@ use error::ParseError::*;
 // these take in a pointer to a ParseState and an input string,
 // and finish / modify the ParseState
 
-pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, ParseCode> {
+pub fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
  
-  let mut ps = unsafe { ptr::read_and_zero_ptr(s) };
+  //let mut ps = unsafe { ptr::read_and_zero_ptr(s) };
 
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
@@ -43,7 +43,7 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
           nbracket -= 1;
         } else {
           ps.pushCharClass(cc);
-          return Ok(ps);
+          return ParseOk;
         }
       }
       c => {
@@ -57,7 +57,7 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
               if (t.char_at(1) != ']') {
                 match cc.addRange(c, t.char_at(1)) {
                   ParseOk => { },
-                  e => return Err(e),
+                  e => return e,
                 }
                 t.shift_char();
                 t.shift_char();
@@ -75,7 +75,7 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
 
   }
 
-  Err(ParseExpectedClosingBracket)
+  ParseExpectedClosingBracket
 }
 
 // parse an input string recursively
@@ -83,17 +83,14 @@ pub fn parse_charclass(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
 // because rust does not optimize tail end
 // recursive calls, but...
 // this way is pretty
-pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, ParseCode> {
+pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   
-  let mut ps = unsafe { ptr::read_and_zero_ptr(s) };
-
   // check for an err,
-  // if not update the state
-  macro_rules! set_ok(
+  macro_rules! check_ok(
     ($f: expr) => (
       match $f {
-        Ok(s)   => { ps = s; }
-        Err(e)  => return Err(e)
+        ParseOk => { }
+        e => return e
       }
     );
   )
@@ -109,7 +106,7 @@ pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
         ps.pushLeftParen();
 
         t.shift_char();
-        set_ok!(parse_recursive(t, ptr::to_mut_unsafe_ptr(&mut ps)));
+        check_ok!(parse_recursive(t, ps));
         ps.doLeftParen();
       },
       ')' => {
@@ -117,7 +114,7 @@ pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
         if (ps.hasUnmatchedParens()) {
           break;
         }
-        return Err(ParseExpectedClosingParen);
+        return ParseExpectedClosingParen;
       }
 
       '|' => {
@@ -125,7 +122,7 @@ pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
         ps.pushAlternation();
 
         t.shift_char();
-        set_ok!(parse_recursive(t, ptr::to_mut_unsafe_ptr(&mut ps)));
+        check_ok!(parse_recursive(t, ps));
         ps.doAlternation();
         
         if (ps.hasUnmatchedParens()) {
@@ -148,7 +145,7 @@ pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
 
       '[' => {
         t.shift_char();
-        set_ok!(parse_charclass(t, ptr::to_mut_unsafe_ptr(&mut ps)));
+        check_ok!(parse_charclass(t, ps));
       }
 
       c => {
@@ -163,6 +160,6 @@ pub fn parse_recursive(t: &mut ~str, s: *mut ParseState) -> Result<ParseState, P
 
   ps.doConcatenation();
 
-  Ok(ps)
+  ParseOk
 }
 
