@@ -62,7 +62,7 @@ fn main() {
   Regexp::new("a|b").compile();
 
   println("--Case 2--");
-  Regexp::new("a|b|c").parse();
+  Regexp::new("a|b|c").compile();
 
   println("--Case 3--");
   //Regexp::new("a|Bcf|dez").parse();

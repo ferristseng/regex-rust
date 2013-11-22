@@ -10,8 +10,6 @@ use error::ParseError::*;
 
 pub fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
  
-  //let mut ps = unsafe { ptr::read_and_zero_ptr(s) };
-
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
   // class
