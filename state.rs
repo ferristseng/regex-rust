@@ -39,12 +39,12 @@ impl Literal {
 // operator applied to them. 
 struct Regexp { 
   op: OpCode, 
-  state0: Option<~ParseStack::Entry>, 
+  state0: ~ParseStack::Entry, 
   state1: Option<~ParseStack::Entry>
 } 
 
 impl Regexp {
-  pub fn new(op: OpCode, state0: Option<~ParseStack::Entry>, 
+  pub fn new(op: OpCode, state0: ~ParseStack::Entry, 
              state1: Option<~ParseStack::Entry>) -> Regexp {
     Regexp { op: op, state0: state0, state1: state1 }
   }
@@ -119,7 +119,7 @@ impl ParseState {
     match self.stack.pop_opt() {
       Some(ParseStack::Expression(r)) => Ok(r),
       Some(ParseStack::Literal(r)) => Ok(Regexp::new(OpNoop, 
-                                                     Some(~ParseStack::Literal(r)),
+                                                     ~ParseStack::Literal(r),
                                                      None)),
       _ => Err("Unknown error")
     }
@@ -197,7 +197,7 @@ impl ParseState {
       Some(s) => s,
       None => return Err("Nothing to alternate")
     };
-    let r = Regexp::new(OpAlternation, Some(~branch2), Some(~branch1));
+    let r = Regexp::new(OpAlternation, ~branch2, Some(~branch1));
 
     self.pushExpression(r);
 
@@ -233,14 +233,14 @@ impl ParseState {
             ParseStack::Literal(l) => self.pushLiteral(s.value + l.value),
             _ => { 
               let r = Regexp::new(OpConcatenation, 
-                                  Some(~ParseStack::Literal(s)), 
+                                  ~ParseStack::Literal(s), 
                                   Some(~branch1)); 
               self.pushExpression(r);
             }
           }
         }
         Some(s) => { 
-          let r = Regexp::new(OpConcatenation, Some(~s), Some(~branch1));
+          let r = Regexp::new(OpConcatenation, ~s, Some(~branch1));
           self.pushExpression(r);
         },
         None => return Err("Nothing to concatenate")
@@ -258,7 +258,7 @@ impl ParseState {
       Some(ParseStack::Op(OpLeftParen)) => { },
       _ => return Err("Unexpected item on stack")
     }
-    let r = Regexp::new(OpCapture, Some(~inner), None);
+    let r = Regexp::new(OpCapture, ~inner, None);
     self.pushExpression(r);
     Ok(true)
   }
@@ -313,7 +313,7 @@ impl ParseState {
             return Err("Repeated use of repetition.");
           },
           None => {
-            let expr = Regexp::new(op, Some(~r), None);
+            let expr = Regexp::new(op, ~r, None);
             self.pushExpression(expr);
           }
           _ => { } // should never hit this case

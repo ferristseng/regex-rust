@@ -1,6 +1,4 @@
-use parse::ParseStack;
-
-mod parse;
+use state::*;
 
 // instruction opcodes
 //
@@ -16,37 +14,61 @@ mod parse;
 //                first uint, and the next jumping to the
 //                second.
 
-enum OpCode {
-  Literal(~str),
-  Range(char, char),
-  Match,
-  Jump(uint),
-  CaptureStart,
-  CaptureEnd,
-  Split(uint, uint)
+enum InstOpCode {
+  InstLiteral(char),
+  InstRange(char, char),
+  InstMatch,
+  InstJump(uint),
+  InstCaptureStart,
+  InstCaptureEnd,
+  InstSplit(uint, uint)
 }
 
 struct Instruction {
-  opcode: OpCode
+  op: InstOpCode 
 }
 
-fn compile(ps: parse::Regexp) -> ~[Instruction] {
-  compile_recursive(ps)
-}
-
-fn compile_recursive(ps: parse::Regexp) -> ~[Instruction] {
-  let stack = ~[];
-
-  match ps.state0 {
-    Some(~ParseStack::Literal(l)) => {
-
-    }
-    _ => {}
+impl Instruction {
+  fn new(op: InstOpCode) -> Instruction {
+    Instruction { op: op }
   }
-  
-  stack
 }
 
-fn main() {
+impl ToStr for Instruction {
+  fn to_str(&self) -> ~str {
+    match self.op {
+      InstLiteral(c)    => fmt!("InstLiteral %c", c), 
+      InstRange(s, e)   => fmt!("InstRange %c-%c", s, e),
+      InstMatch         => ~"InstMatch", 
+      InstJump(i)       => fmt!("InstJump %u", i),
+      InstCaptureStart  => ~"InstCaptureStart",
+      InstCaptureEnd    => ~"InstCaptureEnd",
+      InstSplit(l, r)   => fmt!("InstSplit %u | %u", l, r)
+    }
+  }
+}
 
+pub fn compile_recursive(re: Regexp, stack: &mut ~[Instruction]) {
+  match re.op {
+    // this should correspond with the case 
+    // of the input being only a string (i.e 'abc')
+    OpNoop => {
+      let lit = match re.state0 {
+        ~ParseStack::Literal(s) => s,
+        _ => Literal::new("")
+      };
+      for c in lit.value.iter() {
+        stack.push(Instruction::new(InstLiteral(c)));
+      }
+      stack.push(Instruction::new(InstMatch));
+    }
+    OpAlternation | 
+    OpConcatenation => {
+       
+    }
+    _ => { }
+  }
+
+  println("--COMPILE STACK--");
+  println(stack.to_str());
 }

@@ -1,9 +1,11 @@
 use std::ptr;
 use parse::parse_recursive;
 use state::ParseState;
+use compile::{Instruction, compile_recursive};
 
 mod parse;
 mod state;
+mod compile;
 
 struct Regexp {
   input: ~str
@@ -17,13 +19,33 @@ impl Regexp {
 
 impl Regexp { 
   // we should hide the underlying parsing algorithm
-  fn parse(&mut self) {
+  fn parse(&mut self) -> Result<state::Regexp, &'static str> {
     let mut ps = ParseState::new();
-    parse_recursive(&mut self.input, ptr::to_mut_unsafe_ptr(&mut ps)); 
+    match parse_recursive(&mut self.input, ptr::to_mut_unsafe_ptr(&mut ps)) {
+      Ok(s) => {
+        ps = s;
+        ps.pop()
+      }
+      Err(e) => Err(e)
+    }
+  }
+  fn compile(&mut self) {
+    let mut stack: ~[Instruction] = ~[];
+    match self.parse() {
+      Ok(re) => {
+        compile_recursive(re, &mut stack);
+      }
+      Err(e) => {
+        println(e);
+      }
+    };
   }
 }
 
 fn main() {
+  println("--Case 0--");
+  Regexp::new("abc").compile();
+
   println("--Case 1--");
   Regexp::new("a|b").parse();
 
