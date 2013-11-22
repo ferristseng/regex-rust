@@ -21,7 +21,8 @@ enum InstOpCode {
   InstJump(uint),
   InstCaptureStart,
   InstCaptureEnd,
-  InstSplit(uint, uint)
+  InstSplit(uint, uint),
+  InstNoop
 }
 
 struct Instruction {
@@ -43,28 +44,72 @@ impl ToStr for Instruction {
       InstJump(i)       => fmt!("InstJump %u", i),
       InstCaptureStart  => ~"InstCaptureStart",
       InstCaptureEnd    => ~"InstCaptureEnd",
-      InstSplit(l, r)   => fmt!("InstSplit %u | %u", l, r)
+      InstSplit(l, r)   => fmt!("InstSplit %u | %u", l, r),
+      InstNoop          => ~"InstNoop"
     }
   }
 }
 
-pub fn compile_recursive(re: Regexp, stack: &mut ~[Instruction]) {
-  match re.op {
+fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
+  for c in lit.value.iter() {
+    stack.push(Instruction::new(InstLiteral(c)));
+  }
+}
+          
+fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
+
+}
+
+pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
+  _compile_recursive(re, stack);
+  stack.push(Instruction::new(InstMatch));
+
+  println("--COMPILE STACK--");
+  println(stack.to_str());
+}
+
+fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
+  macro_rules! recurse(
+    ($re: expr) => (
+      {
+        match $re {
+          &~ParseStack::Expression(ref x) => {
+            compile_recursive(x, stack);
+          }
+          &~ParseStack::Literal(ref lit) => {
+            compile_literal(lit, stack);
+          }
+          &~ParseStack::CharClass(ref cc) => {
+            compile_charclass(cc, stack);
+          }
+          _ => { } // unreachable
+        }
+      }
+    );
+  )
+
+  match &re.op {
     // this should correspond with the case 
     // of the input being only a string (i.e 'abc')
-    OpNoop => {
-      let lit = match re.state0 {
-        ~ParseStack::Literal(s) => s,
-        _ => Literal::new("")
+    &OpNoop => {
+      match re.state0 {
+        ~ParseStack::Literal(ref lit) => {
+          compile_literal(lit, stack);
+        }
+        ~ParseStack::CharClass(ref cc) => {
+          compile_charclass(cc, stack);
+        }
+        _ => { } // unreachable
       };
-      for c in lit.value.iter() {
-        stack.push(Instruction::new(InstLiteral(c)));
-      }
-      stack.push(Instruction::new(InstMatch));
     }
-    OpAlternation | 
-    OpConcatenation => {
-       
+    &OpAlternation => {
+      recurse!(&re.state0);
+      let pc = stack.len();
+      stack.push(Instruction::new(InstNoop));
+      match re.state1 {
+        Some(ref s) => recurse!(s),
+        None => { }
+      }
     }
     _ => { }
   }

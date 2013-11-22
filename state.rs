@@ -118,10 +118,14 @@ impl ParseState {
   pub fn pop(&mut self) -> Result<Regexp, &'static str> {
     match self.stack.pop_opt() {
       Some(ParseStack::Expression(r)) => Ok(r),
-      Some(ParseStack::Literal(r)) => Ok(Regexp::new(OpNoop, 
-                                                     ~ParseStack::Literal(r),
-                                                     None)),
-      _ => Err("Unknown error")
+      Some(ParseStack::Literal(r)) => {
+        Ok(Regexp::new(OpNoop, ~ParseStack::Literal(r), None))
+      },
+      Some(ParseStack::CharClass(r)) => {
+        Ok(Regexp::new(OpNoop, ~ParseStack::CharClass(r), None))
+      },
+      Some(ParseStack::Op(_)) => Err("Hanging operand on stack"),
+      None => Err("Empty stack")
     }
   }
 }
