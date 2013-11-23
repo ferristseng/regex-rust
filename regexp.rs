@@ -39,9 +39,11 @@ impl Regexp {
     let mut stack: ~[Instruction] = ~[];
     match self.parse() {
       Ok(ref re) => {
+        println("Starting recursive compilation...");
         compile_recursive(re, &mut stack);
       }
       Err(e) => {
+        println("Failed to start recursive compilation...");
         println(Regexp::parse_err_to_str(e));
       }
     };
@@ -75,26 +77,26 @@ impl Regexp {
 }
 
 fn main() {
-  println("--Case 0--");
-  Regexp::new("abc").compile();
+  // println("--Case 0--");
+  // Regexp::new("abc").compile();
 
-  println("--Case 1--");
-  Regexp::new("a|b").compile();
+  // println("--Case 1--");
+  // Regexp::new("a|b").compile();
 
-  println("--Case 2--");
-  Regexp::new("a|b|c").compile();
+  // println("--Case 2--");
+  // Regexp::new("a|b|c").compile();
 
-  println("--Case 3--");
-  Regexp::new("a|(Bcf)|dez").compile();
+  // println("--Case 3--");
+  // Regexp::new("a|(Bcf)|dez").compile();
 
-  println("--Case 4--");
-  //Regexp::new("abc*|d").parse();
+  // println("--Case 4--");
+  // //Regexp::new("abc*|d").parse();
 
-  println("--Case 5--");
-  //Regexp::new("io(ab|c)*zz|(bcd)*").parse();
+  // println("--Case 5--");
+  // //Regexp::new("io(ab|c)*zz|(bcd)*").parse();
 
-  println("--Case 6--");
-  //Regexp::new("あ(ab(cd|d)|e)|f").parse();
+  // println("--Case 6--");
+  // //Regexp::new("あ(ab(cd|d)|e)|f").parse();
 
   println("--Case 7--");
   //Regexp::new("[[A-Z]0-9(fgh)]]]|[abc]").parse();
@@ -110,4 +112,7 @@ fn main() {
 
   println("--Case 11--");
   Regexp::new("a{4,3}?").parse();
+
+  println("--Case 12--");
+  Regexp::new("[A-Z]").compile();
 }
