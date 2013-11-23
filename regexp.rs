@@ -47,8 +47,20 @@ impl Regexp {
 impl Regexp {
   fn parse_err_to_str(code: ParseCode) -> ~str {
     match code {
-      ParseOk => ~"Ok",
-      _ => PARSE_ERR + "Error"
+      ParseOk                     => ~"Ok",
+      ParseEmptyAlternate         => PARSE_ERR + "Nothing to alternate",
+      ParseEmptyConcatenate       => PARSE_ERR + "Nothing to concatenate",
+      ParseRepeatedRepetition     => PARSE_ERR + "Multiple repeat operations",
+      ParseEmptyRepetition        => PARSE_ERR + "Nothing to repeat",
+      ParseExpectedClosingParen   => PARSE_ERR + "Expected ')'",
+      ParseExpectedClosingBracket => PARSE_ERR + "Expected ']'",
+      ParseExpectedClosingBrace   => PARSE_ERR + "Expected '}'",
+      ParseExpectedOperand        => PARSE_ERR + "Expected an operand on the stack",
+      ParseUnexpectedOperand      => PARSE_ERR + "Unexpected operand was on the stack",
+      ParseEmptyCharClassRange    => PARSE_ERR + "Empty character class",
+      ParseInternalError |
+      ParseUnknownError           => PARSE_ERR + "Unknown error",
+      ParseEmptyStack             => PARSE_ERR + "Nothing on the stack"
     }
   }
 }
@@ -64,7 +76,7 @@ fn main() {
   Regexp::new("a|b|c").compile();
 
   println("--Case 3--");
-  Regexp::new("a|Bcf|dez").compile();
+  Regexp::new("a|(Bcf)|dez").compile();
 
   println("--Case 4--");
   //Regexp::new("abc*|d").parse();
