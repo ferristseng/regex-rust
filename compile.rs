@@ -64,9 +64,7 @@ pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
   _compile_recursive(re, stack);
   stack.push(Instruction::new(InstMatch));
 
-  // debug
-  println("--COMPILE STACK--");
-  println(stack.to_str());
+  debug_stack(stack);
 }
 
 fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
@@ -77,7 +75,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       {
         match $re {
           &Some(~ParseStack::Expression(ref x)) => {
-            compile_recursive(x, stack);
+            _compile_recursive(x, stack);
           }
           &Some(~ParseStack::Literal(ref lit)) => {
             compile_literal(lit, stack);
@@ -115,15 +113,18 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // L3:  ...
     &OpAlternation => {
       let ptr_split = stack.len();
-      stack.push(Instruction::new(InstNoop));
+      stack.push(Instruction::new(InstNoop)); // placeholder
       recurse!(&re.state0);
 
       let ptr_jmp = stack.len();
-      stack.push(Instruction::new(InstNoop));
+      stack.push(Instruction::new(InstNoop)); // placeholder
       recurse!(&re.state1);
       
-      stack[ptr_split] = Instruction::new(InstSplit(ptr_split + 1, ptr_jmp + 1));
-      stack[ptr_jmp] = Instruction::new(InstJump(stack.len()));
+      let split = Instruction::new(InstSplit(ptr_split + 1, ptr_jmp + 1));
+      let jmp = Instruction::new(InstJump(stack.len()));
+
+      stack[ptr_split] = split; 
+      stack[ptr_jmp] = jmp; 
     }
     // compile to:
     // ...
@@ -134,10 +135,26 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       recurse!(&re.state0);
       recurse!(&re.state1);
     }
+    // compile to:
+    //
+    //
+    &OpCapture => {
+      stack.push(Instruction::new(InstCaptureStart));
+      recurse!(&re.state0);
+      stack.push(Instruction::new(InstCaptureEnd));
+    }
     _ => { }
   }
 
-  // debug
+  debug_stack(stack);
+}
+
+fn debug_stack(stack: &mut ~[Instruction]) {
+  let mut count: uint = 0;
+
   println("--COMPILE STACK--");
-  println(stack.to_str());
+  for e in stack.iter() {
+    println(fmt!("%u: %s", count, e.to_str()));
+    count += 1;
+  }
 }

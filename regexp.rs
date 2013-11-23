@@ -1,4 +1,3 @@
-use std::ptr;
 use parse::parse_recursive;
 use state::ParseState;
 use compile::{Instruction, compile_recursive};
@@ -65,7 +64,7 @@ fn main() {
   Regexp::new("a|b|c").compile();
 
   println("--Case 3--");
-  //Regexp::new("a|Bcf|dez").parse();
+  Regexp::new("a|Bcf|dez").compile();
 
   println("--Case 4--");
   //Regexp::new("abc*|d").parse();

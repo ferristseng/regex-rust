@@ -1,4 +1,3 @@
-use std::ptr;
 use state::ParseState;
 use state::CharClass;
 use error::ParseError::*;
