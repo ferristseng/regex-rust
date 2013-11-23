@@ -101,7 +101,7 @@ fn main() {
 
   println("--Case 7--");
   //Regexp::new("[[A-Z]0-9(fgh)]]]|[abc]").parse();
-  Regexp::new("[1-]]").parse();
+  Regexp::new("1\\d2").parse();
 
   println("--Case 8--");
   Regexp::new("(abc){1,}").parse();

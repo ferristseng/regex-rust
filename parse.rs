@@ -32,6 +32,22 @@ macro_rules! check_ok(
 //
 // these take in a pointer to a ParseState and an input string,
 // and finish / modify the ParseState
+fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+  let mut cc = CharClass::new();
+  match t.char_at(0) {
+    'd' => {
+      match cc.addRange('0', '9') {
+                    ParseOk => { ps.pushCharClass(cc); 
+                    t.shift_char();
+                  },
+                  e => return e,
+                }
+    } 
+    _ =>{
+    }
+  }
+  ParseOk
+}
 
 fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
  
@@ -218,7 +234,10 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         t.shift_char();
         check_ok!(parse_charclass(t, ps));
       }
-
+      '\\' => {
+        t.shift_char();
+        check_ok!(parse_escape(t, ps));
+      }
       c => {
         ps.pushLiteral(c.to_str());
         t.shift_char();
