@@ -73,6 +73,8 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
                   e => return e,
                 }
                 t.shiftn_char(2);
+              } else {
+                cc.addChar(c);
               }
             }
             _ => { 
