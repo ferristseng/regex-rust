@@ -22,13 +22,17 @@ impl Regexp {
 
 impl Regexp { 
   // we should hide the underlying parsing algorithm
+  // from the user
   fn parse(&mut self) -> Result<state::Regexp, ParseCode> {
     let mut ps = ParseState::new();
     match parse_recursive(&mut self.input, &mut ps) {
       ParseOk => {
         ps.pop()
       }
-      e => Err(e)
+      e => {
+        println(Regexp::parse_err_to_str(e));
+        Err(e)
+      }
     }
   }
   fn compile(&mut self) {
@@ -52,14 +56,19 @@ impl Regexp {
       ParseEmptyConcatenate       => PARSE_ERR + "Nothing to concatenate",
       ParseRepeatedRepetition     => PARSE_ERR + "Multiple repeat operations",
       ParseEmptyRepetition        => PARSE_ERR + "Nothing to repeat",
+      ParseEmptyRepetitionRange   => PARSE_ERR + "Repeat range is empty",
       ParseExpectedClosingParen   => PARSE_ERR + "Expected ')'",
       ParseExpectedClosingBracket => PARSE_ERR + "Expected ']'",
       ParseExpectedClosingBrace   => PARSE_ERR + "Expected '}'",
+      ParseExpectedComma          => PARSE_ERR + "Expected ','",
+      ParseExpectedAlpha          => PARSE_ERR + "Expected alpha character",
+      ParseExpectedNumeric        => PARSE_ERR + "Expected number",
       ParseExpectedOperand        => PARSE_ERR + "Expected an operand on the stack",
       ParseUnexpectedOperand      => PARSE_ERR + "Unexpected operand was on the stack",
+      ParseUnexpectedCharacter    => PARSE_ERR + "Unexpected character in input",
       ParseEmptyCharClassRange    => PARSE_ERR + "Empty character class",
       ParseInternalError |
-      ParseUnknownError           => PARSE_ERR + "Unknown error",
+      ParseUnknownError           => PARSE_ERR + "Unknown error (probably a bug)",
       ParseEmptyStack             => PARSE_ERR + "Nothing on the stack"
     }
   }
@@ -89,4 +98,16 @@ fn main() {
 
   println("--Case 7--");
   //Regexp::new("[[A-Z]0-9(fgh)]]]|[abc]").parse();
+  
+  println("--Case 8--");
+  Regexp::new("(abc){1,}").parse();
+
+  println("--Case 9--");
+  Regexp::new("abc{3,4}?").parse();
+  
+  println("--Case 10--");
+  Regexp::new("a|b{3}").parse();
+
+  println("--Case 11--");
+  Regexp::new("a{4,3}?").parse();
 }

@@ -10,12 +10,17 @@ pub mod ParseError {
     ParseEmptyConcatenate,
     ParseRepeatedRepetition,
     ParseEmptyRepetition,
+    ParseEmptyRepetitionRange,
 
     ParseExpectedClosingParen,
     ParseExpectedClosingBracket,
     ParseExpectedClosingBrace,
+    ParseExpectedComma,
+    ParseExpectedAlpha,
+    ParseExpectedNumeric,
     ParseExpectedOperand,
     ParseUnexpectedOperand,
+    ParseUnexpectedCharacter,
 
     // char class errors
     ParseEmptyCharClassRange,

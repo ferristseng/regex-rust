@@ -1,17 +1,30 @@
+use std::char::to_digit;
 use state::ParseState;
 use state::CharClass;
 use error::ParseError::*;
+
+// add functionality to
+// build in ~str to shift a number
+// of characters from the beginning
+trait RegexInputStr {
+  fn shiftn_char(&mut self, times: uint);
+}
+
+impl RegexInputStr for ~str {
+  fn shiftn_char(&mut self, times: uint) {
+    for _ in range(0, times) {
+      self.shift_char();
+    }
+  }
+}
 
 // parse functions
 //
 // these take in a pointer to a ParseState and an input string,
 // and finish / modify the ParseState
 
-pub fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
  
-  // check to see if the first char following
-  // '[' is a '^', if so, it is a negated char 
-  // class
   let mut cc = CharClass::new();
 
   // we need to keep track of any [, ( in
@@ -19,6 +32,9 @@ pub fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   // them
   let mut nbracket: uint = 0;
 
+  // check to see if the first char following
+  // '[' is a '^', if so, it is a negated char 
+  // class
   match t.char_at(0) {
     '^' => {
       t.shift_char();
@@ -56,8 +72,7 @@ pub fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
                   ParseOk => { },
                   e => return e,
                 }
-                t.shift_char();
-                t.shift_char();
+                t.shiftn_char(2);
               }
             }
             _ => { 
@@ -73,6 +88,55 @@ pub fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   }
 
   ParseExpectedClosingBracket
+}
+
+// tries to determine if there
+// is a repetition operation
+// and parses it
+// multiple cases:
+// {a,b}: from a to be inclusive
+// {a,}:  a unbounded
+// {a}:   exactly a
+fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+
+  let buf = ~"";
+
+  if (t.len() > 1) {
+    let s = match t.char_at(0) {
+      x if x > '0' && x < '9' => to_digit(x, 10).unwrap(), 
+      _ => return ParseOk // not parsable
+    };
+    match t.char_at(1) {
+      ',' => { } // continue
+      '}' => {
+        t.shiftn_char(2); 
+        return ps.doBoundedRepetition(s, s);
+      }
+      _ => return ParseOk // not parsable
+    }
+
+    if (t.len() > 2) {
+      let e = match t.char_at(2) {
+        '}' => {
+          t.shiftn_char(3);
+          return ps.doUnboundedRepetition(s);
+        }
+        x if x > '0' && x < '9' => to_digit(x, 10).unwrap(), 
+        _ => return ParseOk // not parsable
+      };
+      if (t.len() > 3) {
+        match t.char_at(3) {
+          '}' => {
+            t.shiftn_char(4);
+            return ps.doBoundedRepetition(s, e);
+          },
+          _ => return ParseOk // not parsable
+        } 
+      }
+    }
+  }
+
+  ParseOk
 }
 
 // parse an input string recursively
@@ -105,7 +169,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         t.shift_char();
         check_ok!(parse_recursive(t, ps));
         ps.doLeftParen();
-      },
+      }
       ')' => {
         t.shift_char();
         if (ps.hasUnmatchedParens()) {
@@ -125,19 +189,24 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         if (ps.hasUnmatchedParens()) {
           break;
         }
-      },
+      }
 
       '*' => {
         t.shift_char();
         ps.doKleine();
-      },
+      }
       '?' => {
         t.shift_char();
         ps.doZeroOrOne();
-      },
+      }
       '+' => {
         t.shift_char();
         ps.doOneOrMore();
+      }
+
+      '{' => {
+        t.shift_char();
+        check_ok!(parse_repetition(t, ps));
       }
 
       '[' => {

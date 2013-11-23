@@ -11,6 +11,7 @@ pub enum OpCode {
   OpLineEnd,
   OpLeftParen,
   OpCapture,
+  OpRepeatOp(uint, Option<uint>),
   OpNoop
 }
 
@@ -70,6 +71,7 @@ impl CharClass {
     self.negate = true;
   }
   pub fn containsChar(&mut self, c: char) -> bool {
+    // unimplemented currently, but can be used for optimizations
     true
   }
   pub fn addRange(&mut self, s: char, e: char) -> ParseCode {
@@ -276,7 +278,10 @@ impl ParseState {
         let mut r = r;
         // check if we should have apply a 
         // nongreedy flag
-        let mut nongreedy = false;
+        let mut nongreedy = match op {
+          OpZeroOrOne => true,
+          _ => false
+        };
         // check to see if the expr on the top
         // of the stack has some repition 
         // op applied to it.
@@ -285,10 +290,8 @@ impl ParseState {
             match e.op {
               OpKleine => Some(OpKleine),
               OpOneOrMore => Some(OpOneOrMore),
-              OpZeroOrOne => {
-                nongreedy = true;
-                Some(OpZeroOrOne)
-              },
+              OpRepeatOp(s, e) => Some(OpRepeatOp(s,e)),
+              OpZeroOrOne => Some(OpZeroOrOne),
               _ => None
             }
           },
@@ -300,14 +303,11 @@ impl ParseState {
         // a repeat op, we might need to throw a 
         // error
         // 
-        // note: in the match block below,
-        // the (_) case will cover cases
-        // Some(OpOneOrMore), Some(OpZeroOrOne)
-        //
         // otherwise, we can make a new expression.
         match opcode {
           Some(OpOneOrMore) | 
           Some(OpKleine) |
+          Some(OpRepeatOp(_, _)) |
           Some(OpZeroOrOne) => {
             if (nongreedy) {
               match r {
@@ -317,8 +317,9 @@ impl ParseState {
                 _ => { } // should never hit this case
               }
               self.stack.push(r)
+            } else {
+              return ParseRepeatedRepetition; 
             }
-            return ParseRepeatedRepetition; 
           },
           None => {
             let expr = Regexp::new(op, Some(~r), None);
@@ -343,8 +344,37 @@ impl ParseState {
   pub fn doZeroOrOne(&mut self) -> ParseCode { 
     self.doRepeatOp(OpZeroOrOne)
   }
+  pub fn doBoundedRepetition(&mut self, start: uint, end: uint) -> ParseCode {
+    match self.stack.pop_opt() {
+      Some(ParseStack::Op(_)) => return ParseUnexpectedOperand,
+      Some(s) => {
+        if start <= end {
+          let expr = Regexp::new(OpRepeatOp(start, Some(end)), Some(~s), None);
+          self.pushExpression(expr);
+        } else {
+          return ParseEmptyRepetitionRange
+        }
+      }
+      None => return ParseEmptyStack
+    }
+
+    ParseOk
+  }
+  pub fn doUnboundedRepetition(&mut self, start: uint) -> ParseCode {
+    match self.stack.pop_opt() {
+      Some(ParseStack::Op(_)) => return ParseUnexpectedOperand,
+      Some(s) => {
+        let expr = Regexp::new(OpRepeatOp(start, None), Some(~s), None);
+        self.pushExpression(expr); 
+      }
+      None => return ParseEmptyStack
+    }
+
+    ParseOk
+  }
 }
 
+// debug
 impl ParseState {
   pub fn trace(&mut self) {
     println("--STACK--");
