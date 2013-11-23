@@ -55,10 +55,26 @@ fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
     stack.push(Instruction::new(InstLiteral(c)));
   }
 }
-          
 fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
   //let's talk about how to account for charclass negation?
-  stack.push(Instruction::new(InstRange(cc.ranges[0].n0(),cc.ranges[0].n1())))
+  let mut range_size = stack.len()+cc.ranges.len()*3;
+  let mut current_stack_size = stack.len();
+  let mut current_range_len = cc.ranges.len();
+  for tuple in cc.ranges.iter(){
+    if (current_range_len>=2){
+      stack.push(Instruction::new(InstSplit(current_stack_size+1 , current_stack_size+3)));
+      current_stack_size+=3;
+      current_range_len-=1;
+    }
+    if (tuple.n0()==tuple.n1()){
+      stack.push(Instruction::new(InstLiteral(tuple.n0())));
+    }
+    else{
+      stack.push(Instruction::new(InstRange(tuple.n0(),tuple.n1())));
+    }
+    stack.push(Instruction::new(InstJump(range_size-1)));
+    
+  }
 }
 
 pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {

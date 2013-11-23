@@ -6,3 +6,7 @@ Other resources I found useful:
   * [Regular Expression to NFA Generator](http://hackingoff.com/compilers/regular-expression-to-nfa-dfa)
   * [re2 Code (C implemntation of regular expressions by the guy who wrote the above paper)](http://code.google.com/p/re2/source/browse/re2/parse.cc)
   * [Rust Regexp Wiki Spec](https://github.com/mozilla/rust/wiki/Lib-re)
+
+[A-]]
+[A-Z1] ---- range from A to Z OR range from 1 to 1
+[A-Z]1 range from A-Z and 1

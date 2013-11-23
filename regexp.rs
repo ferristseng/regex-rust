@@ -114,5 +114,5 @@ fn main() {
   Regexp::new("a{4,3}?").parse();
 
   println("--Case 12--");
-  Regexp::new("[A-Z]").compile();
+  Regexp::new("[C[e-h]arlemange]|bs|c").compile();
 }
