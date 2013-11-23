@@ -57,11 +57,13 @@ fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
 }
           
 fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
-
+  //let's talk about how to account for charclass negation?
+  stack.push(Instruction::new(InstRange(cc.ranges[0].n0(),cc.ranges[0].n1())))
 }
 
 pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
   _compile_recursive(re, stack);
+  println("pushing instmatch");
   stack.push(Instruction::new(InstMatch));
 
   debug_stack(stack);

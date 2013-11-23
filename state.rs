@@ -55,8 +55,8 @@ impl Regexp {
 // RegexpCharClass
 // represents a character class (i.e '[a-z123]')
 pub struct CharClass {
-  priv negate: bool,
-  priv ranges: ~[(char, char)] 
+  negate: bool,
+  ranges: ~[(char, char)] 
 }
 
 impl CharClass {
