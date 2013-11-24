@@ -1,4 +1,5 @@
 *.swp
+*.txt
 .DS_STORE
 *.dSYM
 compile

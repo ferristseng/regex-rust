@@ -56,23 +56,27 @@ impl Regexp {
 // RegexpCharClass
 // represents a character class (i.e '[a-z123]')
 pub struct CharClass {
-  negate: bool,
   ranges: ~[(char, char)] 
 }
 
 impl CharClass {
   pub fn new() -> CharClass {
-    CharClass { ranges: ~[], negate: false }
+    CharClass { ranges: ~[] }
   }
 }
 
 impl CharClass {
   pub fn negate(&mut self) {
-    self.negate = true;
+    for &(start, end) in self.ranges.iter() {
+       
+    }
   }
   pub fn containsChar(&mut self, c: char) -> bool {
     // unimplemented currently, but can be used for optimizations
     true
+  }
+  pub fn collapseOverlapping(&mut self) {
+    // merge overlapping ranges
   }
   pub fn addRange(&mut self, s: char, e: char) -> ParseCode {
     if (s < e) {

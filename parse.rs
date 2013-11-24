@@ -35,12 +35,12 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
   // class
-  match t.char_at(0) {
+  let negate = match t.char_at(0) {
     '^' => {
       t.shift_char();
-      cc.negate();
+      true
     },
-    _ => { }
+    _ => false
   };
 
   while (t.len() > 0) {
@@ -55,6 +55,9 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         if (nbracket > 0) {
           nbracket -= 1;
         } else {
+          if (negate) {
+            cc.negate();
+          }
           ps.pushCharClass(cc);
           return ParseOk;
         }
