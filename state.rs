@@ -1,3 +1,5 @@
+use extra::sort::merge_sort;
+use std::char::{from_u32, MAX};
 use error::ParseError::*;
 
 // A Regex Operation
@@ -66,17 +68,49 @@ impl CharClass {
 }
 
 impl CharClass {
-  pub fn negate(&mut self) {
-    for &(start, end) in self.ranges.iter() {
-       
+  pub fn negate(&mut self) -> ParseCode {
+    let mut ordered = do merge_sort(self.ranges) |range1, range2| {
+      let &(start1, _) = range1;
+      let &(start2, _) = range2;
+      start1 <= start2
+    };
+
+    let mut min: char = '\U00000000'; 
+    let mut max: char = MAX;
+
+    self.ranges = ~[];
+
+    for &(start, end) in ordered.iter() {
+      match CharClass::prev_char(start) {
+        Some(e) => {
+          if (min < e) {
+            self.ranges.push((min, e)); 
+          }
+        },
+        None => { } // continue
+      };
+      if (min < end) {
+        min = match CharClass::next_char(end) {
+          Some(c) => c,
+          None => end
+        };
+      }
+    }
+
+    // patch the end
+    if (min != max) {
+      self.ranges.push((min, max));
+    }
+
+    if self.ranges.len() == 0 {
+      ParseEmptyCharClassRange
+    } else {
+      ParseOk
     }
   }
   pub fn containsChar(&mut self, c: char) -> bool {
     // unimplemented currently, but can be used for optimizations
     true
-  }
-  pub fn collapseOverlapping(&mut self) {
-    // merge overlapping ranges
   }
   pub fn addRange(&mut self, s: char, e: char) -> ParseCode {
     if (s < e) {
@@ -91,6 +125,21 @@ impl CharClass {
     self.ranges.push((s,s));
 
     ParseOk
+  }
+}
+
+impl CharClass {
+  fn prev_char(c: char) -> Option<char> {
+    match from_u32(c as u32 - 1) {
+      None => None,
+      r    => r   
+    }
+  }
+  fn next_char(c: char) -> Option<char> {
+    match from_u32(c as u32 + 1) {
+      None => None,
+      r    => r
+    }
   }
 }
 

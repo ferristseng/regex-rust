@@ -58,7 +58,7 @@ fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
 fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
   let mut current_stack_size = stack.len();
   let mut current_range_len = cc.ranges.len();
-  let mut range_size = current_stack_size + current_range_len * 3;
+  let range_size = current_stack_size + current_range_len * 3;
 
   for &(start, end) in cc.ranges.iter() {
     if (current_range_len >= 2) {
@@ -77,7 +77,6 @@ fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
 
 pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
   _compile_recursive(re, stack);
-  println("pushing instmatch");
   stack.push(Instruction::new(InstMatch));
 
   debug_stack(stack);

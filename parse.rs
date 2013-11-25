@@ -18,6 +18,16 @@ impl RegexInputStr for ~str {
   }
 }
 
+// check for an err,
+macro_rules! check_ok(
+  ($f: expr) => (
+    match $f {
+      ParseOk => { }
+      e => return e
+    }
+  );
+)
+
 // parse functions
 //
 // these take in a pointer to a ParseState and an input string,
@@ -56,7 +66,7 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
           nbracket -= 1;
         } else {
           if (negate) {
-            cc.negate();
+            check_ok!(cc.negate());
           }
           ps.pushCharClass(cc);
           return ParseOk;
@@ -151,16 +161,6 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 // this way is pretty
 pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   
-  // check for an err,
-  macro_rules! check_ok(
-    ($f: expr) => (
-      match $f {
-        ParseOk => { }
-        e => return e
-      }
-    );
-  )
-
   // cases for
   // parsing different characters
   // in the input string

@@ -1,3 +1,5 @@
+extern mod extra;
+
 use parse::parse_recursive;
 use state::ParseState;
 use compile::{Instruction, compile_recursive};
@@ -39,11 +41,9 @@ impl Regexp {
     let mut stack: ~[Instruction] = ~[];
     match self.parse() {
       Ok(ref re) => {
-        println("Starting recursive compilation...");
         compile_recursive(re, &mut stack);
       }
       Err(e) => {
-        println("Failed to start recursive compilation...");
         println(Regexp::parse_err_to_str(e));
       }
     };
@@ -116,4 +116,10 @@ fn main() {
 
   println("--Case 12--");
   Regexp::new("[C[e-h]arlemange]|bs|c").compile();
+
+  println("--Case 13--");
+  Regexp::new("[^aA-ZA]").parse();
+
+  println("--Case 14--");
+  Regexp::new("[^\U00000000-\U0010FFFF]").parse();
 }
