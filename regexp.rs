@@ -119,7 +119,7 @@ fn main() {
   Regexp::new("[C[e-h]arlemange]|bs|c").compile();
 
   println("--Case 13--");
-  Regexp::new("[^aA-ZA]").parse();
+  Regexp::new("[^aA-ZA]").compile();
 
   println("--Case 14--");
   Regexp::new("[^\U00000000-\U0010FFFF]").parse();
