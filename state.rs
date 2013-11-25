@@ -438,7 +438,7 @@ impl ParseState {
 }
 
 #[cfg(test)]
-mod tests {
+mod char_class_tests {
   use std::char::MAX;
   use state::{CharClass};
   use error::ParseError::*;
