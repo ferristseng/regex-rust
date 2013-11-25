@@ -87,15 +87,15 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
                 }
                 t.shiftn_char(2);
               } else {
-                cc.addChar(c);
+                cc.addRange(c, c);
               }
             }
             _ => { 
-              cc.addChar(c);
+              cc.addRange(c, c);
             }
           }
         } else {
-          cc.addChar(c); 
+          cc.addRange(c, c); 
         }
       }
     }

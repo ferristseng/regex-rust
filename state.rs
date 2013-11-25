@@ -84,7 +84,7 @@ impl CharClass {
       match CharClass::prev_char(start) {
         Some(e) => {
           if (min < e) {
-            self.ranges.push((min, e)); 
+            self.addRange(min, e); 
           }
         },
         None => { } // continue
@@ -99,7 +99,7 @@ impl CharClass {
 
     // patch the end
     if (min != max) {
-      self.ranges.push((min, max));
+      self.addRange(min, max);
     }
 
     if self.ranges.len() == 0 {
@@ -121,16 +121,11 @@ impl CharClass {
     covered
   }
   pub fn addRange(&mut self, s: char, e: char) -> ParseCode {
-    if (s < e) {
+    if (s <= e) {
       self.ranges.push((s, e));
     } else {
       return ParseEmptyCharClassRange;
     }
-
-    ParseOk
-  }
-  pub fn addChar(&mut self, s: char) -> ParseCode {
-    self.ranges.push((s,s));
 
     ParseOk
   }
@@ -152,10 +147,7 @@ impl CharClass {
 }
 
 pub mod ParseStack {
-  use state::OpCode;
-  use state::Literal;
-  use state::Regexp;
-  use state::CharClass;
+  use state::{OpCode, Literal, Regexp, CharClass};
   // different representations of expressions on
   // the stack
   pub enum Entry {
@@ -442,6 +434,64 @@ impl ParseState {
     for e in self.stack.iter() {
       println(fmt!("%?", e));
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::char::MAX;
+  use state::{CharClass};
+  use error::ParseError::*;
+  
+  #[test]
+  fn char_class_good() {
+    let mut cc = CharClass::new(); 
+    cc.addRange('A', 'Z');
+    cc.addRange('F', 'F');
+    cc.addRange('A', 'あ');
+    assert_eq!(cc.ranges, ~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]); 
+  }
+
+  #[test]
+  fn char_class_empty() {
+    let mut cc = CharClass::new();
+    assert!(match cc.addRange('Z', 'A') { 
+      ParseEmptyCharClassRange => true, _ => false });
+  }
+
+  #[test]
+  fn char_class_negate() {
+    let mut cc = CharClass::new();
+    cc.addRange('A', '\U0000FA08');
+    cc.negate();
+    assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('\U0000FA09', MAX)]);
+  }
+
+  #[test]
+  fn char_class_negate_multiple() {
+    let mut cc = CharClass::new();
+    cc.addRange('們', '我');
+    cc.addRange('A', 'Z');
+    cc.negate();
+    assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('[', '\U00005010'), 
+               ('\U00006212', MAX)])
+  }
+
+  #[test]
+  fn char_class_negate_overlap() {
+    let mut cc = CharClass::new();
+    cc.addRange('a', 'd');
+    cc.addRange('c', 'c');
+    cc.negate();
+    assert_eq!(cc.ranges, ~[('\U00000000', '`'), ('e', MAX)]);
+  }
+
+  #[test]
+  fn char_class_negate_bounds() {
+    let mut cc = CharClass::new();
+    cc.addRange('\U00000000', MAX);
+    assert!(match cc.negate() {
+      ParseEmptyCharClassRange => true, _ => false });
   }
 }
 

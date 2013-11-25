@@ -123,4 +123,7 @@ fn main() {
 
   println("--Case 14--");
   Regexp::new("[^\U00000000-\U0010FFFF]").parse();
+
+  println("--Case 15--");
+  Regexp::new("[^a-f]").parse();
 }
