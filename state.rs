@@ -69,14 +69,14 @@ impl CharClass {
 
 impl CharClass {
   pub fn negate(&mut self) -> ParseCode {
-    let mut ordered = do merge_sort(self.ranges) |range1, range2| {
+    let ordered = do merge_sort(self.ranges) |range1, range2| {
       let &(start1, _) = range1;
       let &(start2, _) = range2;
       start1 <= start2
     };
 
     let mut min: char = '\U00000000'; 
-    let mut max: char = MAX;
+    let max: char = MAX;
 
     self.ranges = ~[];
 
@@ -109,8 +109,16 @@ impl CharClass {
     }
   }
   pub fn containsChar(&mut self, c: char) -> bool {
-    // unimplemented currently, but can be used for optimizations
-    true
+    let mut covered = false;
+
+    for &(start, end) in self.ranges.iter() {
+      if (c >= start && c <= end) {
+        covered = true;
+        break
+      }
+    }
+
+    covered
   }
   pub fn addRange(&mut self, s: char, e: char) -> ParseCode {
     if (s < e) {

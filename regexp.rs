@@ -66,6 +66,7 @@ impl Regexp {
       ParseExpectedAlpha          => PARSE_ERR + "Expected alpha character",
       ParseExpectedNumeric        => PARSE_ERR + "Expected number",
       ParseExpectedOperand        => PARSE_ERR + "Expected an operand on the stack",
+      ParseUnexpectedClosingParen => PARSE_ERR + "Unexpected closing parenthases in input",
       ParseUnexpectedOperand      => PARSE_ERR + "Unexpected operand was on the stack",
       ParseUnexpectedCharacter    => PARSE_ERR + "Unexpected character in input",
       ParseEmptyCharClassRange    => PARSE_ERR + "Empty character class",

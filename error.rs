@@ -19,6 +19,7 @@ pub mod ParseError {
     ParseExpectedAlpha,
     ParseExpectedNumeric,
     ParseExpectedOperand,
+    ParseUnexpectedClosingParen,
     ParseUnexpectedOperand,
     ParseUnexpectedCharacter,
 

@@ -180,7 +180,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         if (ps.hasUnmatchedParens()) {
           break;
         }
-        return ParseExpectedClosingParen;
+        return ParseUnexpectedClosingParen;
       }
 
       '|' => {
