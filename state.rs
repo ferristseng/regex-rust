@@ -478,6 +478,8 @@ impl ParseState {
   }
 }
 
+// tests
+
 #[cfg(test)]
 mod char_class_tests {
   use std::char::MAX;

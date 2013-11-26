@@ -9,10 +9,13 @@ mod parse;
 mod state;
 mod compile;
 mod error;
+mod exec;
 
 struct UncompiledRegexp {
   input: ~str
 }
+
+struct CompiledRegexp;
 
 impl UncompiledRegexp {
   pub fn new(s: &str) -> UncompiledRegexp {
