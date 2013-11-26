@@ -5,4 +5,4 @@ test:
 	rust test regexp.rs
 
 clean:
-	rm -r *.dSYM 
+	rm -r *.dSYM *~* 

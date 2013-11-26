@@ -369,7 +369,7 @@ impl ParseState {
         let mut r = r;
         // check if we should have apply a 
         // nongreedy flag
-        let mut nongreedy = match op {
+        let nongreedy = match op {
           OpZeroOrOne => true,
           _ => false
         };
@@ -403,7 +403,7 @@ impl ParseState {
             if (nongreedy) {
               match r {
                 ParseStack::Expression(ref mut e) => {
-                  // set greedy flag
+                  e.addFlag(ParseFlags::NonGreedy);
                 }
                 _ => { } // should never hit this case
               }
