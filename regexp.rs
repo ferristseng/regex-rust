@@ -78,11 +78,11 @@ impl Regexp {
 }
 
 fn main() {
-  // println("--Case 0--");
-  // Regexp::new("abc").compile();
+  println("--Case 0--");
+  Regexp::new("abc").compile();
 
-  // println("--Case 1--");
-  // Regexp::new("a|b").compile();
+  println("--Case 1--");
+  Regexp::new("a|b").compile();
 
   // println("--Case 2--");
   // Regexp::new("a|b|c").compile();
@@ -126,4 +126,14 @@ fn main() {
 
   println("--Case 15--");
   Regexp::new("[^a-f]").parse();
+}
+
+#[cfg(test)]
+mod tests {
+  use state::*;
+  
+  #[test]
+  fn parse_alternation_test() {
+    assert_eq!("HELLO", "HELLO");
+  }
 }

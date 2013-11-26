@@ -2,6 +2,38 @@ use extra::sort::merge_sort;
 use std::char::{from_u32, MAX};
 use error::ParseError::*;
 
+pub mod ParseFlags {
+  // Flags for parsing 
+  // Taken from re2 so there might be extras
+  pub static NoParseFlags:  u32 = 0b00000000000000000000000000000001;
+  pub static FoldCase:      u32 = 0b00000000000000000000000000000010;
+  pub static Literal:       u32 = 0b00000000000000000000000000000100;
+  pub static ClassNL:       u32 = 0b00000000000000000000000000001000;
+  pub static DotNL:         u32 = 0b00000000000000000000000000010000;
+  pub static MatchNL:       u32 = ClassNL | DotNL; 
+  pub static OneLine:       u32 = 0b00000000000000000000000000100000;
+  pub static Latin1:        u32 = 0b00000000000000000000000001000000;
+  pub static NonGreedy:     u32 = 0b00000000000000000000000010000000;
+  pub static PerlClasses:   u32 = 0b00000000000000000000000100000000;
+  pub static PerlB:         u32 = 0b00000000000000000000001000000000;
+  pub static PerlX:         u32 = 0b00000000000000000000010000000000;
+  pub static UnicodeGroups: u32 = 0b00000000000000000000100000000000;
+  pub static NeverNL:       u32 = 0b00000000000000000001000000000000;
+  pub static NeverCapture:  u32 = 0b00000000000000000010000000000000;
+}
+
+pub mod ParseStack {
+  use super::*;
+  // different representations of expressions on
+  // the stack
+  pub enum Entry {
+    Op(OpCode),
+    Literal(Literal),
+    Expression(Regexp),
+    CharClass(CharClass)
+  }
+}
+
 // A Regex Operation
 pub enum OpCode {
   OpConcatenation,
@@ -15,16 +47,6 @@ pub enum OpCode {
   OpCapture,
   OpRepeatOp(uint, Option<uint>),
   OpNoop
-}
-
-// Flags for parsing 
-// i'm including a bunch of extra flags for now,
-// but we can add support for them as we go
-//
-// actually, not really sure how these work
-enum ParseFlags {
-  NoParseFlags  = 0,
-  FoldCase      = 1 << 0
 }
 
 // Regexp Literal
@@ -42,16 +64,31 @@ impl Literal {
 // Regexp
 // represents a variable number of states with an
 // operator applied to them. 
-struct Regexp { 
+pub struct Regexp { 
   op: OpCode, 
   state0: Option<~ParseStack::Entry>, 
-  state1: Option<~ParseStack::Entry>
+  state1: Option<~ParseStack::Entry>,
+  flags: u32 
 } 
 
 impl Regexp {
   pub fn new(op: OpCode, state0: Option<~ParseStack::Entry>, 
              state1: Option<~ParseStack::Entry>) -> Regexp {
-    Regexp { op: op, state0: state0, state1: state1 }
+    Regexp { 
+      op: op, 
+      state0: state0, 
+      state1: state1,
+      flags: ParseFlags::NoParseFlags
+    }
+  }
+}
+
+impl Regexp {
+  pub fn addFlag(&mut self, flag: u32) {
+    self.flags = self.flags | flag;
+  }
+  pub fn hasFlag(&mut self, flag: u32) -> bool {
+    (self.flags & flag) > 0
   }
 }
 
@@ -146,28 +183,29 @@ impl CharClass {
   }
 }
 
-pub mod ParseStack {
-  use state::{OpCode, Literal, Regexp, CharClass};
-  // different representations of expressions on
-  // the stack
-  pub enum Entry {
-    Op(OpCode),
-    Literal(Literal),
-    Expression(Regexp),
-    CharClass(CharClass)
-  }
-}
-
 // current state of parsing
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
   priv nparen: uint, 
-  flags: ParseFlags
+  flags: u32 
 }
 
 impl ParseState {
   pub fn new() -> ParseState {
-    ParseState { stack: ~[], nparen: 0, flags: NoParseFlags } 
+    ParseState { 
+      stack: ~[], 
+      nparen: 0, 
+      flags: ParseFlags::NoParseFlags 
+    } 
+  }
+}
+
+impl ParseState {
+  pub fn addFlag(&mut self, flag: u32) {
+    self.flags = self.flags | flag;
+  }
+  pub fn hasFlag(&mut self, flag: u32) -> bool {
+    (self.flags & flag) > 0
   }
 }
 
@@ -440,7 +478,7 @@ impl ParseState {
 #[cfg(test)]
 mod char_class_tests {
   use std::char::MAX;
-  use state::{CharClass};
+  use state::*;
   use error::ParseError::*;
   
   #[test]
