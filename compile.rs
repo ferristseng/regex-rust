@@ -104,6 +104,12 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     );
   )
 
+  macro_rules! placeholder(
+    () => (
+      stack.push(Instruction::new(InstNoop))
+    );
+  )
+
   match &re.op {
     // this should correspond with the case 
     // of the input being only a string (i.e 'abc')
@@ -128,11 +134,11 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // L3:  ...
     &OpAlternation => {
       let ptr_split = stack.len();
-      stack.push(Instruction::new(InstNoop)); // placeholder
+      placeholder!();
       recurse!(&re.state0);
 
       let ptr_jmp = stack.len();
-      stack.push(Instruction::new(InstNoop)); // placeholder
+      placeholder!();
       recurse!(&re.state1);
       
       let split = Instruction::new(InstSplit(ptr_split + 1, ptr_jmp + 1));
@@ -151,12 +157,59 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       recurse!(&re.state1);
     }
     // compile to:
-    //
-    //
+    // ...
+    // CaptureStart
+    // (state0)
+    // CaptureEnd
     &OpCapture => {
       stack.push(Instruction::new(InstCaptureStart));
       recurse!(&re.state0);
       stack.push(Instruction::new(InstCaptureEnd));
+    }
+    // compile to:
+    // ...
+    // L1: Split(L2, L3)
+    // L2: (state0)
+    //     Jump(L1)
+    // L3: ...
+    // ...
+    &OpKleine => {
+      let ptr_split = stack.len();
+      placeholder!();
+
+      recurse!(&re.state0);
+      let jmp = Instruction::new(InstJump(ptr_split));
+      stack.push(jmp);
+
+      let split = Instruction::new(InstSplit(ptr_split + 1, stack.len()));
+      stack[ptr_split] = split;
+    }
+    // compile to:
+    // ...
+    // L1: (state0)
+    //     Split(L1, L2)
+    // L2: ...
+    // ...
+    &OpOneOrMore => {
+      let ptr_inst = stack.len();
+      recurse!(&re.state0);
+
+      let split = Instruction::new(InstSplit(ptr_inst, stack.len() + 1));
+      stack.push(split);
+    }
+    // compile to:
+    // ...
+    //     Split(L1, L2)
+    // L1: (state0)
+    // L2: ... 
+    &OpZeroOrOne => {
+      let ptr_split = stack.len();
+      placeholder!();
+
+      recurse!(&re.state0);
+
+      let split = Instruction::new(InstSplit(ptr_split + 1, stack.len()));
+      stack[ptr_split] = split;
     }
     _ => { }
   }

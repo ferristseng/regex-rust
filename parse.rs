@@ -174,11 +174,11 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
         t.shift_char();
         check_ok!(parse_recursive(t, ps));
+        ps.doLeftParen();
+        t.shift_char();
       }
       ')' => {
-        t.shift_char();
-        if (ps.hasUnmatchedParens()) {
-          ps.doLeftParen();
+        if (ps.hasUnmatchedParens() && t.len() > 0) {
           break;
         }
         return ParseUnexpectedClosingParen;

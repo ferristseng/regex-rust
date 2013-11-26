@@ -5,21 +5,24 @@ use error::ParseError::*;
 pub mod ParseFlags {
   // Flags for parsing 
   // Taken from re2 so there might be extras
-  pub static NoParseFlags:  u32 = 0b00000000000000000000000000000001;
-  pub static FoldCase:      u32 = 0b00000000000000000000000000000010;
-  pub static Literal:       u32 = 0b00000000000000000000000000000100;
-  pub static ClassNL:       u32 = 0b00000000000000000000000000001000;
-  pub static DotNL:         u32 = 0b00000000000000000000000000010000;
+  pub static NoParseFlags:  u32 = 0b00000000000000000000000000000000;
+  pub static FoldCase:      u32 = 0b00000000000000000000000000000001;
+  pub static Literal:       u32 = 0b00000000000000000000000000000010;
+  pub static ClassNL:       u32 = 0b00000000000000000000000000000100;
+  pub static DotNL:         u32 = 0b00000000000000000000000000001000;
   pub static MatchNL:       u32 = ClassNL | DotNL; 
-  pub static OneLine:       u32 = 0b00000000000000000000000000100000;
-  pub static Latin1:        u32 = 0b00000000000000000000000001000000;
-  pub static NonGreedy:     u32 = 0b00000000000000000000000010000000;
-  pub static PerlClasses:   u32 = 0b00000000000000000000000100000000;
-  pub static PerlB:         u32 = 0b00000000000000000000001000000000;
-  pub static PerlX:         u32 = 0b00000000000000000000010000000000;
-  pub static UnicodeGroups: u32 = 0b00000000000000000000100000000000;
-  pub static NeverNL:       u32 = 0b00000000000000000001000000000000;
-  pub static NeverCapture:  u32 = 0b00000000000000000010000000000000;
+  pub static OneLine:       u32 = 0b00000000000000000000000000010000;
+  pub static Latin1:        u32 = 0b00000000000000000000000000100000;
+  pub static NonGreedy:     u32 = 0b00000000000000000000000001000000;
+  pub static PerlClasses:   u32 = 0b00000000000000000000000010000000;
+  pub static PerlB:         u32 = 0b00000000000000000000000100000000;
+  pub static PerlX:         u32 = 0b00000000000000000000001000000000;
+  pub static UnicodeGroups: u32 = 0b00000000000000000000010000000000;
+  pub static NeverNL:       u32 = 0b00000000000000000000100000000000;
+  pub static NeverCapture:  u32 = 0b00000000000000000001000000000000;
+  pub static LikePERL:      u32 = ClassNL | OneLine | PerlClasses | 
+                                  PerlB | PerlX | UnicodeGroups;
+  pub static WasDollar:     u32 = 0b00000000000000000010000000000000;
 }
 
 pub mod ParseStack {
@@ -533,3 +536,31 @@ mod char_class_tests {
   }
 }
 
+#[cfg(test)]
+mod flag_tests {
+  use super::*;
+
+  #[test]
+  fn test_add_flag_ok() {
+    let mut re = Regexp::new(OpNoop, None, None); 
+    re.addFlag(ParseFlags::OneLine);
+    assert!(re.flags == ParseFlags::OneLine)
+  }
+
+  #[test]
+  fn test_multiple_add_flag_ok() {
+    let mut re = Regexp::new(OpNoop, None, None);
+    re.addFlag(ParseFlags::OneLine);
+    re.addFlag(ParseFlags::NeverCapture);
+    assert!(re.flags == ParseFlags::OneLine | ParseFlags::NeverCapture);
+  }
+
+  #[test]
+  fn test_has_flag_ok() {
+    let mut re = Regexp::new(OpNoop, None, None);
+    re.addFlag(ParseFlags::NeverCapture);
+    re.addFlag(ParseFlags::OneLine);
+    re.addFlag(ParseFlags::NonGreedy);
+    assert!(re.hasFlag(ParseFlags::NonGreedy));
+  }
+}

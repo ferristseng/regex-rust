@@ -97,6 +97,15 @@ fn main() {
 
   println("--Case 15--");
   UncompiledRegexp::new("[^a-f]").parse();
+  
+  println("--Case 16--");
+  UncompiledRegexp::new("a?").compile();
+
+  println("--Case 17--");
+  UncompiledRegexp::new("(ABC)+").compile();
+
+  println("--Case 18--");
+  UncompiledRegexp::new("(A|B)*").compile();
 }
 
 #[cfg(test)]
