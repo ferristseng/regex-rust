@@ -6,6 +6,7 @@ use error::ParseError::*;
 // add functionality to
 // build in ~str to shift a number
 // of characters from the beginning
+
 trait RegexInputStr {
   fn shiftn_char(&mut self, times: uint);
 }
