@@ -1,5 +1,6 @@
 extern mod extra;
 
+use exec::Prog;
 use parse::parse_recursive;
 use state::ParseState;
 use compile::{Instruction, compile_recursive};
@@ -43,6 +44,7 @@ impl UncompiledRegexp {
     match self.parse() {
       Ok(ref re) => {
         compile_recursive(re, &mut stack);
+        Prog::new(stack, "abcdefghijklmnopaaa").run(); 
       }
       Err(e) => {
         println(e.to_str());

@@ -13,8 +13,9 @@ use state::*;
 // Split        = start a new thread with one jumping to the
 //                first uint, and the next jumping to the
 //                second.
+// InstNoop     = placeholder in most cases
 
-enum InstOpCode {
+pub enum InstOpCode {
   InstLiteral(char),
   InstRange(char, char),
   InstMatch,
@@ -25,12 +26,12 @@ enum InstOpCode {
   InstNoop
 }
 
-struct Instruction {
+pub struct Instruction {
   op: InstOpCode 
 }
 
 impl Instruction {
-  fn new(op: InstOpCode) -> Instruction {
+  pub fn new(op: InstOpCode) -> Instruction {
     Instruction { op: op }
   }
 }
@@ -56,22 +57,26 @@ fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
   }
 }
 fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
-  let mut current_stack_size = stack.len();
-  let mut current_range_len = cc.ranges.len();
-  let range_size = current_stack_size + current_range_len * 3;
+  let mut ssize = stack.len();
+  let mut rlen = cc.ranges.len();
+  let rsize = ssize + rlen * 3;
 
   for &(start, end) in cc.ranges.iter() {
-    if (current_range_len >= 2) {
-      stack.push(Instruction::new(InstSplit(current_stack_size + 1, current_stack_size + 3)));
-      current_stack_size += 3;
-      current_range_len -= 1;
+    if (rlen >= 2) {
+      let split = Instruction::new(InstSplit(ssize + 1, ssize + 3));
+      stack.push(split);
+
+      ssize += 3;
+      rlen  -= 1;
     }
+
     if (start == end) {
       stack.push(Instruction::new(InstLiteral(start)));
     } else {
       stack.push(Instruction::new(InstRange(start, end)));
     }
-    stack.push(Instruction::new(InstJump(range_size - 1)));
+
+    stack.push(Instruction::new(InstJump(rsize - 1)));
   }
 }
 
@@ -104,6 +109,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     );
   )
 
+  // insert a InstNoop...to be replaced later
   macro_rules! placeholder(
     () => (
       stack.push(Instruction::new(InstNoop))
