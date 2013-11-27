@@ -75,6 +75,7 @@ fn main() {
   // println("--Case 6--");
   // //UncompiledRegexp::new("あ(ab(cd|d)|e)|f").parse();
 
+  /*
   println("--Case 7--");
   //UncompiledRegexp::new("[[A-Z]0-9(fgh)]]]|[abc]").parse();
   UncompiledRegexp::new("[1-]]").parse();
@@ -111,6 +112,7 @@ fn main() {
 
   println("--Case 18--");
   UncompiledRegexp::new("(A|B)*").compile();
+  */
 }
 
 #[cfg(test)]

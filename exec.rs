@@ -1,5 +1,5 @@
 use std::vec::with_capacity;
-use std::ptr::{replace_ptr, to_mut_unsafe_ptr};
+use std::util::swap;
 use compile::{Instruction, InstOpCode};
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, InstNoop};
@@ -51,13 +51,15 @@ trait ExecStrategy {
 
 struct Thread {
   pc: uint, // some index of an instruction
+  sp: uint, // index of a char in the input
   captures: ~[(uint, uint)]
 }
 
 impl Thread {
-  fn new(pc: uint) -> Thread {
+  fn new(pc: uint, sp: uint) -> Thread {
     Thread { 
       pc: pc, 
+      sp: sp,
       captures: ~[] 
     }
   }
@@ -66,8 +68,6 @@ impl Thread {
 struct PikeVM {
   input: ~str,
   inst: ~[Instruction],
-  pc: uint,
-  sp: uint,
   len: uint
 }
 
@@ -77,8 +77,6 @@ impl PikeVM {
     PikeVM {
       input: input.to_owned(),
       inst: inst,
-      pc: 0,
-      sp: 0,
       len: len 
     }
   }
@@ -87,63 +85,77 @@ impl PikeVM {
 impl ExecStrategy for PikeVM {
   fn run(&mut self) {
     // reset
-    self.pc = 0;
-    self.sp = 0;
+    let mut sp = 0;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
     let mut nlist: ~[Thread] = with_capacity(self.len);
     
-    clist.push(Thread::new(self.pc));
+    clist.push(Thread::new(0, sp));
 
     for c in self.input.iter() {
-      let num_entries = clist.len();
-
       println(c.to_str());
 
-      for i in range(0, num_entries) {
-        self.pc = clist[i].pc;
+      let mut i = 0;
+      let mut num = clist.len();
 
-        match self.inst[self.pc].op {
+      while(i < num) {
+
+        let pc = clist[i].pc;
+
+        match self.inst[pc].op {
           InstLiteral(m) => {
-            if c != m {
-              return;
+            if (c != m) {
+              break;
             }
-            nlist.push(Thread::new(self.pc + 1));
+            nlist.push(Thread::new(pc + 1, sp));
           }
           InstRange(s, e) => {
-
+            if (!(c >= s && c <= e)) {
+              break;
+            }
+            nlist.push(Thread::new(pc + 1, sp));
           }
           InstMatch => {
-            clist[i].captures.push((i, i));
+            println(fmt!("FOUND MATCH, %u-%u", clist[i].sp, sp));
             return;
           }
-          InstJump(i) => {
-
+          InstJump(addr) => {
+            println("JMP");
+            clist.push(Thread::new(addr, sp));
           }
           InstCaptureStart => {
-
+          
           }
           InstCaptureEnd => {
 
           }
-          InstSplit(l, r) => {
-            clist.push(Thread::new(l));
-            clist.push(Thread::new(r));
+          InstSplit(laddr, raddr) => {
+            clist.push(Thread::new(laddr, sp));
+            clist.push(Thread::new(raddr, sp));
           }
           InstNoop => { }
         }
+
+        println(fmt!("BEFORE %u", i));
+
+        i += 1;
+        num = clist.len();
+
+        println(fmt!("clist: %?", clist));
+        println(fmt!("nlist: %?", nlist));
+        println(fmt!("%u | %u", i, num));
       }
       // this should be safe because nlist and clist 
       // are vectors of the same size (their size shouldn't
       // change as well).
-      println(fmt!("nlist: %?", nlist));
-      unsafe {
-        replace_ptr(
-          to_mut_unsafe_ptr(&mut clist), 
-          nlist);
-      }
+      println("SWAPPING");
+      swap(&mut clist, &mut nlist);
+      println("AFTER");
       println(fmt!("clist: %?", clist));
-      nlist = ~[];
+      println(fmt!("nlist: %?", nlist));
+      nlist.clear();
+
+      sp += 1;
     }
   }
 }
