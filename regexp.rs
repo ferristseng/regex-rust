@@ -12,16 +12,57 @@ mod compile;
 mod error;
 mod exec;
 
-struct UncompiledRegexp {
-  input: ~str
+struct CompiledRegexp {
+  input: ~str,
+  prog: Prog
 }
 
-struct CompiledRegexp;
+impl CompiledRegexp {
+  pub fn new(s: &str) -> Result<CompiledRegexp, ParseCode> {
+    match UncompiledRegexp::new(s).compile() {
+      Ok(re) => Ok(re), 
+      Err(e) => Err(e)
+    }
+  }
+  fn new_with_prog(prog: Prog, s: &str) -> CompiledRegexp {
+    CompiledRegexp {
+      prog: prog,
+      input: s.to_owned().clone()
+    }
+  }
+}
 
+impl CompiledRegexp {
+  // the same thing as re.match() in python, 
+  // but can't make match a function name in rust
+  fn run(&mut self, input: &str) {
+    self.prog.run(input);
+  }
+  fn search(&mut self, input: &str) {
+
+  }
+  fn replace(&mut self, input: &str) {
+
+  }
+  fn findall(&mut self, input: &str) {
+
+  }
+  fn split(&mut self, input: &str) {
+
+  }
+}
+
+// uncompiled regular expression
+// not parsed until compile is called...
+// compile returns a CompiledRegexp
 impl UncompiledRegexp {
   pub fn new(s: &str) -> UncompiledRegexp {
     UncompiledRegexp { input: s.clone().to_owned() }
   }
+}
+
+struct UncompiledRegexp {
+  input: ~str
 }
 
 impl UncompiledRegexp { 
@@ -39,26 +80,50 @@ impl UncompiledRegexp {
       }
     }
   }
-  fn compile(&mut self) -> Result<Prog, ParseCode> {
+  fn compile(&mut self) -> Result<CompiledRegexp, ParseCode> {
     let mut stack: ~[Instruction] = ~[];
     match self.parse() {
       Ok(ref re) => {
         compile_recursive(re, &mut stack);
-        Ok(Prog::new(stack))
+        let prog = Prog::new(stack);
+        Ok(CompiledRegexp::new_with_prog(prog, self.input))
       }
       Err(e) => {
         Err(e)
       }
     }
   }
+  // for these, just call compile, and
+  // run the corresponding CompiledRegex
+  // functions
   fn run(&mut self, input: &str) {
     match self.compile() {
-      Ok(ref mut prog) => {
-        prog.run(input); 
-      }
-      Err(e) => {
-        println(e.to_str());
-      }
+      Ok(ref mut re) => re.run(input),
+      Err(e) => println(e.to_str())
+    }
+  }
+  fn search(&mut self, input: &str) {
+    match self.compile() {
+      Ok(ref mut re) => re.search(input),
+      Err(e) => println(e.to_str())
+    }
+  }
+  fn replace(&mut self, input: &str) {
+    match self.compile() {
+      Ok(ref mut re) => re.replace(input),
+      Err(e) => println(e.to_str())
+    }
+  }
+  fn findall(&mut self, input: &str) {
+    match self.compile() {
+      Ok(ref mut re) => re.findall(input),
+      Err(e) => println(e.to_str())
+    }
+  }
+  fn split(&mut self, input: &str) {
+    match self.compile() {
+      Ok(ref mut re) => re.split(input),
+      Err(e) => println(e.to_str())
     }
   }
 }
@@ -75,6 +140,12 @@ fn main() {
   re.run("NOT A WEBSITE");
   re.run("http://virginia.edu");
   re.run("www.cnn.com");
+
+  println("--Case 2--");
+  let mut re = UncompiledRegexp::new("[^a-zA-Z0-9]*");
+  re.run("我是曾繁睿");
+
+  //debug_stack(stack);
 
   // println("--Case 2--");
   // UncompiledRegexp::new("a|b|c").compile();

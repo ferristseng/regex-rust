@@ -57,16 +57,14 @@ trait ExecStrategy {
 
 struct Thread {
   pc: uint, // some index of an instruction
-  sp: uint, // index of a char in the input
-  captures: ~[(uint, uint)]
+  sp: uint  // index of a char in the input
 }
 
 impl Thread {
   fn new(pc: uint, sp: uint) -> Thread {
     Thread { 
       pc: pc, 
-      sp: sp,
-      captures: ~[] 
+      sp: sp
     }
   }
 }
@@ -192,7 +190,7 @@ impl RecursiveBacktracking {
 
 impl ExecStrategy for RecursiveBacktracking {
   fn run(&mut self, input: &str) -> ExecCode {
-    let input = input.to_owned().append("\x03");
+    //let input = input.to_owned().append("\x03");
 
     ExecMatchFound
   }
