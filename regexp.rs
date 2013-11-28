@@ -44,7 +44,7 @@ impl UncompiledRegexp {
     match self.parse() {
       Ok(ref re) => {
         compile_recursive(re, &mut stack);
-        Prog::new(stack, "abcdefghijklmnopaaa").run(); 
+        Prog::new(stack, "ferristseng.nett").run(); 
       }
       Err(e) => {
         println(e.to_str());
@@ -58,7 +58,7 @@ fn main() {
   UncompiledRegexp::new("abc").compile();
 
   println("--Case 1--");
-  UncompiledRegexp::new("a|b").compile();
+  UncompiledRegexp::new("(www.)?ferristseng.(com|org|net)").compile();
 
   // println("--Case 2--");
   // UncompiledRegexp::new("a|b|c").compile();
@@ -113,6 +113,8 @@ fn main() {
   println("--Case 18--");
   UncompiledRegexp::new("(A|B)*").compile();
   */
+
+  println("OK");
 }
 
 #[cfg(test)]

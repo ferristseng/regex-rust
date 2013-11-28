@@ -61,3 +61,12 @@ pub mod ParseError {
     }
   }
 }
+
+pub mod ExecError {
+  pub enum ExecCode {
+    ExecMatchFound,
+    ExecMatchNotFound,
+    
+    ExecUnknownError
+  }
+}

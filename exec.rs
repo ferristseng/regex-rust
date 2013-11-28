@@ -1,8 +1,9 @@
 use std::vec::with_capacity;
 use std::util::swap;
-use compile::{Instruction, InstOpCode};
+use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, InstNoop};
+use error::ExecError::*;
 
 // object containing implementation
 // details for executing compiled 
@@ -32,7 +33,12 @@ impl Prog {
 
 impl Prog {
   pub fn run(&mut self) {
-    self.strat.run();
+    match self.strat.run() {
+      ExecMatchFound => {
+        println("[FOUND]");
+      }
+      _ => println("[NOT FOUND]")
+    } 
   }
 }
 
@@ -41,7 +47,7 @@ impl Prog {
 // instructions and execute them (see compile.rs)
 
 trait ExecStrategy {
-  fn run(&mut self);
+  fn run(&mut self) -> ExecCode;
 }
 
 // the implementation for both PikeVM
@@ -73,9 +79,12 @@ struct PikeVM {
 
 impl PikeVM {
   fn new(inst: ~[Instruction], input: &str) -> PikeVM {
+    // \x03 is an end of string indicator. it resolves issues
+    // the program reaches the end of the string, and still
+    // needs to perform instructions
     let len = inst.len();
     PikeVM {
-      input: input.to_owned(),
+      input: input.to_owned().append("\x03"),
       inst: inst,
       len: len 
     }
@@ -83,8 +92,7 @@ impl PikeVM {
 }
 
 impl ExecStrategy for PikeVM {
-  fn run(&mut self) {
-    // reset
+  fn run(&mut self) -> ExecCode {
     let mut sp = 0;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
@@ -98,42 +106,41 @@ impl ExecStrategy for PikeVM {
       let mut i = 0;
       let mut num = clist.len();
 
-      while(i < num) {
+      while (i < num) {
+        println(fmt!("RUNNING INST %?", clist[i]));
 
         let pc = clist[i].pc;
 
         match self.inst[pc].op {
           InstLiteral(m) => {
-            if (c != m) {
-              break;
+            if (c == m) {
+              println(fmt!("c(%c) | m(%c)", c, m));
+              nlist.push(Thread::new(pc + 1, clist[i].sp));
             }
-            nlist.push(Thread::new(pc + 1, sp));
           }
-          InstRange(s, e) => {
-            if (!(c >= s && c <= e)) {
-              break;
+          InstRange(start, end) => {
+            if (c >= start && c <= end) {
+              nlist.push(Thread::new(pc + 1, sp));
             }
-            nlist.push(Thread::new(pc + 1, sp));
           }
           InstMatch => {
-            println(fmt!("FOUND MATCH, %u-%u", clist[i].sp, sp));
-            return;
+            return ExecMatchFound;
           }
           InstJump(addr) => {
             println("JMP");
-            clist.push(Thread::new(addr, sp));
+            clist.push(Thread::new(addr, clist[i].sp));
           }
           InstCaptureStart => {
-          
+            clist.push(Thread::new(pc + 1, clist[i].sp));
           }
           InstCaptureEnd => {
-
+            clist.push(Thread::new(pc + 1, clist[i].sp));
           }
           InstSplit(laddr, raddr) => {
-            clist.push(Thread::new(laddr, sp));
-            clist.push(Thread::new(raddr, sp));
+            clist.push(Thread::new(laddr, clist[i].sp));
+            clist.push(Thread::new(raddr, clist[i].sp));
           }
-          InstNoop => { }
+          InstNoop => { } // continue
         }
 
         println(fmt!("BEFORE %u", i));
@@ -143,11 +150,8 @@ impl ExecStrategy for PikeVM {
 
         println(fmt!("clist: %?", clist));
         println(fmt!("nlist: %?", nlist));
-        println(fmt!("%u | %u", i, num));
       }
-      // this should be safe because nlist and clist 
-      // are vectors of the same size (their size shouldn't
-      // change as well).
+
       println("SWAPPING");
       swap(&mut clist, &mut nlist);
       println("AFTER");
@@ -157,6 +161,8 @@ impl ExecStrategy for PikeVM {
 
       sp += 1;
     }
+
+    ExecMatchNotFound
   }
 }
 
@@ -181,7 +187,7 @@ impl RecursiveBacktracking {
 }
 
 impl ExecStrategy for RecursiveBacktracking {
-  fn run(&mut self) {
-
+  fn run(&mut self) -> ExecCode {
+    ExecMatchFound
   }
 }
