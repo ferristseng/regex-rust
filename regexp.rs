@@ -44,7 +44,10 @@ impl UncompiledRegexp {
     match self.parse() {
       Ok(ref re) => {
         compile_recursive(re, &mut stack);
-        Prog::new(stack, "ferristseng.nett").run(); 
+        Prog::new(stack.clone(), "ferristseng.net").run(); 
+        Prog::new(stack.clone(), "www.reddit.com/").run();
+        Prog::new(stack.clone(), "http://cnn.com").run();
+        Prog::new(stack.clone(), "https://mtgox.com/").run();
       }
       Err(e) => {
         println(e.to_str());
@@ -58,7 +61,7 @@ fn main() {
   UncompiledRegexp::new("abc").compile();
 
   println("--Case 1--");
-  UncompiledRegexp::new("(www.)?ferristseng.(com|org|net)").compile();
+  UncompiledRegexp::new("(http(s)?://)?(www.)?[a-zA-Z0-9_]+.(com|org|net)/?").compile();
 
   // println("--Case 2--");
   // UncompiledRegexp::new("a|b|c").compile();

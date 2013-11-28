@@ -15,6 +15,7 @@ use state::*;
 //                second.
 // InstNoop     = placeholder in most cases
 
+#[deriving(Clone)]
 pub enum InstOpCode {
   InstLiteral(char),
   InstRange(char, char),
@@ -26,6 +27,7 @@ pub enum InstOpCode {
   InstNoop
 }
 
+#[deriving(Clone)]
 pub struct Instruction {
   op: InstOpCode 
 }

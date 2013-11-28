@@ -101,20 +101,20 @@ impl ExecStrategy for PikeVM {
     clist.push(Thread::new(0, sp));
 
     for c in self.input.iter() {
-      println(c.to_str());
+      //println(c.to_str());
 
       let mut i = 0;
       let mut num = clist.len();
 
       while (i < num) {
-        println(fmt!("RUNNING INST %?", clist[i]));
+        //println(fmt!("RUNNING INST %?", clist[i]));
 
         let pc = clist[i].pc;
 
         match self.inst[pc].op {
           InstLiteral(m) => {
             if (c == m) {
-              println(fmt!("c(%c) | m(%c)", c, m));
+              //println(fmt!("c(%c) | m(%c)", c, m));
               nlist.push(Thread::new(pc + 1, clist[i].sp));
             }
           }
@@ -127,7 +127,7 @@ impl ExecStrategy for PikeVM {
             return ExecMatchFound;
           }
           InstJump(addr) => {
-            println("JMP");
+            //println("JMP");
             clist.push(Thread::new(addr, clist[i].sp));
           }
           InstCaptureStart => {
@@ -143,20 +143,22 @@ impl ExecStrategy for PikeVM {
           InstNoop => { } // continue
         }
 
-        println(fmt!("BEFORE %u", i));
+        //println(fmt!("BEFORE %u", i));
 
         i += 1;
         num = clist.len();
 
-        println(fmt!("clist: %?", clist));
-        println(fmt!("nlist: %?", nlist));
+        //println(fmt!("clist: %?", clist));
+        //println(fmt!("nlist: %?", nlist));
       }
 
-      println("SWAPPING");
       swap(&mut clist, &mut nlist);
+      /*
+      println("SWAPPING");
       println("AFTER");
       println(fmt!("clist: %?", clist));
       println(fmt!("nlist: %?", nlist));
+      */
       nlist.clear();
 
       sp += 1;
