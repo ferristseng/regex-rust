@@ -14,17 +14,17 @@ struct Prog {
 }
 
 impl Prog {
-  pub fn new(inst: ~[Instruction], input: &str) -> Prog {
-    Prog::new_with_pike_vm(inst, input)
+  pub fn new(inst: ~[Instruction]) -> Prog {
+    Prog::new_with_pike_vm(inst)
   }
-  pub fn new_with_pike_vm(inst: ~[Instruction], input: &str) -> Prog {
-    let strat = ~PikeVM::new(inst, input) as ~ExecStrategy;
+  pub fn new_with_pike_vm(inst: ~[Instruction]) -> Prog {
+    let strat = ~PikeVM::new(inst) as ~ExecStrategy;
     Prog {
       strat: strat
    }
   }
-  pub fn new_with_recursive(inst: ~[Instruction], input: &str) -> Prog {
-    let strat = ~RecursiveBacktracking::new(inst, input) as ~ExecStrategy;
+  pub fn new_with_recursive(inst: ~[Instruction]) -> Prog {
+    let strat = ~RecursiveBacktracking::new(inst) as ~ExecStrategy;
     Prog {
       strat: strat
     }
@@ -32,8 +32,8 @@ impl Prog {
 }
 
 impl Prog {
-  pub fn run(&mut self) {
-    match self.strat.run() {
+  pub fn run(&mut self, input: &str) {
+    match self.strat.run(input) {
       ExecMatchFound => {
         println("[FOUND]");
       }
@@ -47,7 +47,7 @@ impl Prog {
 // instructions and execute them (see compile.rs)
 
 trait ExecStrategy {
-  fn run(&mut self) -> ExecCode;
+  fn run(&mut self, input: &str) -> ExecCode;
 }
 
 // the implementation for both PikeVM
@@ -72,19 +72,14 @@ impl Thread {
 }
 
 struct PikeVM {
-  input: ~str,
   inst: ~[Instruction],
   len: uint
 }
 
 impl PikeVM {
-  fn new(inst: ~[Instruction], input: &str) -> PikeVM {
-    // \x03 is an end of string indicator. it resolves issues
-    // the program reaches the end of the string, and still
-    // needs to perform instructions
+  fn new(inst: ~[Instruction]) -> PikeVM {
     let len = inst.len();
     PikeVM {
-      input: input.to_owned().append("\x03"),
       inst: inst,
       len: len 
     }
@@ -92,7 +87,13 @@ impl PikeVM {
 }
 
 impl ExecStrategy for PikeVM {
-  fn run(&mut self) -> ExecCode {
+  fn run(&mut self, input: &str) -> ExecCode {
+    // \x03 is an end of string indicator. it resolves issues
+    // the program reaches the end of the string, and still
+    // needs to perform instructions
+    let input = input.to_owned().append("\x03");
+
+    // setup
     let mut sp = 0;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
@@ -100,7 +101,7 @@ impl ExecStrategy for PikeVM {
     
     clist.push(Thread::new(0, sp));
 
-    for c in self.input.iter() {
+    for c in input.iter() {
       //println(c.to_str());
 
       let mut i = 0;
@@ -175,21 +176,24 @@ impl ExecStrategy for PikeVM {
 // in PikeVM
 
 struct RecursiveBacktracking {
-  input: ~str,
-  inst: ~[Instruction]
+  inst: ~[Instruction],
+  len: uint
 }
 
 impl RecursiveBacktracking {
-  fn new(inst: ~[Instruction], input: &str) -> RecursiveBacktracking {
+  fn new(inst: ~[Instruction]) -> RecursiveBacktracking {
+    let len = inst.len();
     RecursiveBacktracking {
-      input: input.to_owned(),
-      inst: inst
+      inst: inst,
+      len: len
     }
   }
 }
 
 impl ExecStrategy for RecursiveBacktracking {
-  fn run(&mut self) -> ExecCode {
+  fn run(&mut self, input: &str) -> ExecCode {
+    let input = input.to_owned().append("\x03");
+
     ExecMatchFound
   }
 }

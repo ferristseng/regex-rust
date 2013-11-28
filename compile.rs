@@ -86,7 +86,7 @@ pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
   _compile_recursive(re, stack);
   stack.push(Instruction::new(InstMatch));
 
-  debug_stack(stack);
+  //debug_stack(stack);
 }
 
 fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
@@ -221,8 +221,6 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     }
     _ => { }
   }
-
-  debug_stack(stack);
 }
 
 fn debug_stack(stack: &mut ~[Instruction]) {

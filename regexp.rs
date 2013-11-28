@@ -29,30 +29,37 @@ impl UncompiledRegexp {
   // from the user
   fn parse(&mut self) -> Result<state::Regexp, ParseCode> {
     let mut ps = ParseState::new();
-    match parse_recursive(&mut self.input, &mut ps) {
+    let mut input = self.input.clone();
+    match parse_recursive(&mut input, &mut ps) {
       ParseOk => {
         ps.pop()
       }
       e => {
-        println(e.to_str());
         Err(e)
       }
     }
   }
-  fn compile(&mut self) {
+  fn compile(&mut self) -> Result<Prog, ParseCode> {
     let mut stack: ~[Instruction] = ~[];
     match self.parse() {
       Ok(ref re) => {
         compile_recursive(re, &mut stack);
-        Prog::new(stack.clone(), "ferristseng.net").run(); 
-        Prog::new(stack.clone(), "www.reddit.com/").run();
-        Prog::new(stack.clone(), "http://cnn.com").run();
-        Prog::new(stack.clone(), "https://mtgox.com/").run();
+        Ok(Prog::new(stack))
+      }
+      Err(e) => {
+        Err(e)
+      }
+    }
+  }
+  fn run(&mut self, input: &str) {
+    match self.compile() {
+      Ok(ref mut prog) => {
+        prog.run(input); 
       }
       Err(e) => {
         println(e.to_str());
       }
-    };
+    }
   }
 }
 
@@ -61,7 +68,13 @@ fn main() {
   UncompiledRegexp::new("abc").compile();
 
   println("--Case 1--");
-  UncompiledRegexp::new("(http(s)?://)?(www.)?[a-zA-Z0-9_]+.(com|org|net)/?").compile();
+  let mut re = UncompiledRegexp::new("(http(s)?://)?(www.)?[a-zA-Z0-9_]+.(com|org|net|edu)/?");
+  re.run("http://ferristseng.com");
+  re.run("http://reddit.com/");
+  re.run("https://google.com/");
+  re.run("NOT A WEBSITE");
+  re.run("http://virginia.edu");
+  re.run("www.cnn.com");
 
   // println("--Case 2--");
   // UncompiledRegexp::new("a|b|c").compile();
