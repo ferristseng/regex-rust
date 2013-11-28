@@ -32,7 +32,7 @@ impl Prog {
 }
 
 impl Prog {
-  pub fn run(&mut self, input: &str) {
+  pub fn run(&self, input: &str) {
     match self.strat.run(input) {
       ExecMatchFound => {
         println("[FOUND]");
@@ -47,7 +47,7 @@ impl Prog {
 // instructions and execute them (see compile.rs)
 
 trait ExecStrategy {
-  fn run(&mut self, input: &str) -> ExecCode;
+  fn run(&self, input: &str) -> ExecCode;
 }
 
 // the implementation for both PikeVM
@@ -85,7 +85,7 @@ impl PikeVM {
 }
 
 impl ExecStrategy for PikeVM {
-  fn run(&mut self, input: &str) -> ExecCode {
+  fn run(&self, input: &str) -> ExecCode {
     // \x03 is an end of string indicator. it resolves issues
     // the program reaches the end of the string, and still
     // needs to perform instructions
@@ -189,7 +189,7 @@ impl RecursiveBacktracking {
 }
 
 impl ExecStrategy for RecursiveBacktracking {
-  fn run(&mut self, input: &str) -> ExecCode {
+  fn run(&self, input: &str) -> ExecCode {
     //let input = input.to_owned().append("\x03");
 
     ExecMatchFound

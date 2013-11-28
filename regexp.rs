@@ -12,7 +12,7 @@ mod compile;
 mod error;
 mod exec;
 
-struct CompiledRegexp {
+pub struct CompiledRegexp {
   input: ~str,
   prog: Prog
 }
@@ -35,19 +35,19 @@ impl CompiledRegexp {
 impl CompiledRegexp {
   // the same thing as re.match() in python, 
   // but can't make match a function name in rust
-  fn run(&mut self, input: &str) {
+  fn run(&self, input: &str) {
     self.prog.run(input);
   }
-  fn search(&mut self, input: &str) {
+  fn search(&self, input: &str) {
 
   }
-  fn replace(&mut self, input: &str) {
+  fn replace(&self, input: &str) {
 
   }
-  fn findall(&mut self, input: &str) {
+  fn findall(&self, input: &str) {
 
   }
-  fn split(&mut self, input: &str) {
+  fn split(&self, input: &str) {
 
   }
 }
@@ -55,14 +55,14 @@ impl CompiledRegexp {
 // uncompiled regular expression
 // not parsed until compile is called...
 // compile returns a CompiledRegexp
+pub struct UncompiledRegexp {
+  input: ~str
+}
+
 impl UncompiledRegexp {
   pub fn new(s: &str) -> UncompiledRegexp {
     UncompiledRegexp { input: s.clone().to_owned() }
   }
-}
-
-struct UncompiledRegexp {
-  input: ~str
 }
 
 impl UncompiledRegexp { 
@@ -232,5 +232,4 @@ mod tests {
   fn parse_capture_fail_test() {
     assert!(UncompiledRegexp::new("(hel(ABC)ok").parse().is_err());
   }
-
 }
