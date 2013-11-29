@@ -99,7 +99,6 @@ impl ExecStrategy for PikeVM {
 
     // setup
     let mut sp = 0;
-    let mut found = None;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
     let mut nlist: ~[Thread] = with_capacity(self.len);
@@ -122,17 +121,19 @@ impl ExecStrategy for PikeVM {
             if (c == m) {
               //println(fmt!("c: (%c) == m: (%c)", c, m));
               nlist.push(Thread::new(pc + 1, clist[i].sp));
+              break;
             }
           }
           InstRange(start, end) => {
             if (c >= start && c <= end) {
               //println(fmt!("c: (%c) within (%c-%c)", c, start, end));
               nlist.push(Thread::new(pc + 1, sp));
+              break;
             }
           }
           InstMatch => {
             clist[i].sp = sp;
-            found = Some(clist[i]); 
+            return Some(clist[i]) 
           }
           InstJump(addr) => {
             //println("JMP");
@@ -171,10 +172,13 @@ impl ExecStrategy for PikeVM {
       */
       nlist.clear();
       
+      // different encodings have different
+      // lengths, so we can't just increment
+      // by 1
       sp += c.len_utf8_bytes();
     }
 
-    found 
+    None
   }
 }
 
