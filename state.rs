@@ -90,7 +90,7 @@ impl Regexp {
   pub fn addFlag(&mut self, flag: u32) {
     self.flags = self.flags | flag;
   }
-  pub fn hasFlag(&mut self, flag: u32) -> bool {
+  pub fn hasFlag(&self, flag: u32) -> bool {
     (self.flags & flag) > 0
   }
 }
@@ -207,7 +207,7 @@ impl ParseState {
   pub fn addFlag(&mut self, flag: u32) {
     self.flags = self.flags | flag;
   }
-  pub fn hasFlag(&mut self, flag: u32) -> bool {
+  pub fn hasFlag(&self, flag: u32) -> bool {
     (self.flags & flag) > 0
   }
 }

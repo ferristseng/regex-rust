@@ -183,13 +183,20 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // ...
     &OpKleine => {
       let ptr_split = stack.len();
+      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
       placeholder!();
 
       recurse!(&re.state0);
       let jmp = Instruction::new(InstJump(ptr_split));
       stack.push(jmp);
 
-      let split = Instruction::new(InstSplit(ptr_split + 1, stack.len()));
+      let split = {
+        if (nongreedy) { 
+          Instruction::new(InstSplit(stack.len(), ptr_split + 1))
+        } else {
+          Instruction::new(InstSplit(ptr_split + 1, stack.len()))
+        }
+      };
       stack[ptr_split] = split;
     }
     // compile to:
@@ -200,9 +207,16 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // ...
     &OpOneOrMore => {
       let ptr_inst = stack.len();
+      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
       recurse!(&re.state0);
 
-      let split = Instruction::new(InstSplit(ptr_inst, stack.len() + 1));
+      let split = {
+        if (nongreedy) {
+          Instruction::new(InstSplit(stack.len() + 1, ptr_inst))
+        } else {
+          Instruction::new(InstSplit(ptr_inst, stack.len() + 1))
+        }
+      };
       stack.push(split);
     }
     // compile to:
@@ -212,11 +226,18 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // L2: ... 
     &OpZeroOrOne => {
       let ptr_split = stack.len();
+      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
       placeholder!();
 
       recurse!(&re.state0);
 
-      let split = Instruction::new(InstSplit(ptr_split + 1, stack.len()));
+      let split = {
+        if (nongreedy) {
+          Instruction::new(InstSplit(stack.len(), ptr_split + 1))
+        } else {
+          Instruction::new(InstSplit(ptr_split + 1, stack.len()))
+        }
+      };
       stack[ptr_split] = split;
     }
     _ => { }

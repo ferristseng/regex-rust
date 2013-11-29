@@ -130,7 +130,8 @@ impl UncompiledRegexp {
 
 fn main() {
   println("--Case 0--");
-  UncompiledRegexp::new("abc").compile();
+  let mut re = UncompiledRegexp::new("abc");
+  re.run("abc");
 
   println("--Case 1--");
   let mut re = UncompiledRegexp::new("(http(s)?://)?(www.)?[a-zA-Z0-9_]+.(com|org|net|edu)/?");

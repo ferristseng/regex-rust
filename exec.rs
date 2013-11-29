@@ -3,7 +3,6 @@ use std::util::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, InstNoop};
-use error::ExecError::*;
 
 // object containing implementation
 // details for executing compiled 
@@ -34,10 +33,11 @@ impl Prog {
 impl Prog {
   pub fn run(&self, input: &str) {
     match self.strat.run(input) {
-      ExecMatchFound => {
-        println("[FOUND]");
+      Some(t) => {
+        println(fmt!("[FOUND %u]", t.sp));
+        println(input.slice_to(t.sp));
       }
-      _ => println("[NOT FOUND]")
+      None => println("[NOT FOUND]")
     } 
   }
 }
@@ -47,7 +47,7 @@ impl Prog {
 // instructions and execute them (see compile.rs)
 
 trait ExecStrategy {
-  fn run(&self, input: &str) -> ExecCode;
+  fn run(&self, input: &str) -> Option<Thread>;
 }
 
 // the implementation for both PikeVM
@@ -69,9 +69,15 @@ impl Thread {
   }
 }
 
+impl ToStr for Thread {
+  fn to_str(&self) -> ~str {
+    fmt!("<Thread pc: %u, sp: %u>", self.pc, self.sp)
+  }
+}
+
 struct PikeVM {
-  inst: ~[Instruction],
-  len: uint
+  priv inst: ~[Instruction],
+  priv len: uint
 }
 
 impl PikeVM {
@@ -85,7 +91,7 @@ impl PikeVM {
 }
 
 impl ExecStrategy for PikeVM {
-  fn run(&self, input: &str) -> ExecCode {
+  fn run(&self, input: &str) -> Option<Thread> {
     // \x03 is an end of string indicator. it resolves issues
     // the program reaches the end of the string, and still
     // needs to perform instructions
@@ -93,6 +99,7 @@ impl ExecStrategy for PikeVM {
 
     // setup
     let mut sp = 0;
+    let mut found = None;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
     let mut nlist: ~[Thread] = with_capacity(self.len);
@@ -113,17 +120,19 @@ impl ExecStrategy for PikeVM {
         match self.inst[pc].op {
           InstLiteral(m) => {
             if (c == m) {
-              //println(fmt!("c(%c) | m(%c)", c, m));
+              //println(fmt!("c: (%c) == m: (%c)", c, m));
               nlist.push(Thread::new(pc + 1, clist[i].sp));
             }
           }
           InstRange(start, end) => {
             if (c >= start && c <= end) {
+              //println(fmt!("c: (%c) within (%c-%c)", c, start, end));
               nlist.push(Thread::new(pc + 1, sp));
             }
           }
           InstMatch => {
-            return ExecMatchFound;
+            clist[i].sp = sp;
+            found = Some(clist[i]); 
           }
           InstJump(addr) => {
             //println("JMP");
@@ -139,7 +148,9 @@ impl ExecStrategy for PikeVM {
             clist.push(Thread::new(laddr, clist[i].sp));
             clist.push(Thread::new(raddr, clist[i].sp));
           }
-          InstNoop => { } // continue
+          InstNoop => { 
+            clist.push(Thread::new(pc + 1, clist[i].sp));
+          } // continue
         }
 
         //println(fmt!("BEFORE %u", i));
@@ -159,11 +170,11 @@ impl ExecStrategy for PikeVM {
       println(fmt!("nlist: %?", nlist));
       */
       nlist.clear();
-
-      sp += 1;
+      
+      sp += c.len_utf8_bytes();
     }
 
-    ExecMatchNotFound
+    found 
   }
 }
 
@@ -174,8 +185,8 @@ impl ExecStrategy for PikeVM {
 // in PikeVM
 
 struct RecursiveBacktracking {
-  inst: ~[Instruction],
-  len: uint
+  priv inst: ~[Instruction],
+  priv len: uint
 }
 
 impl RecursiveBacktracking {
@@ -189,9 +200,9 @@ impl RecursiveBacktracking {
 }
 
 impl ExecStrategy for RecursiveBacktracking {
-  fn run(&self, input: &str) -> ExecCode {
-    //let input = input.to_owned().append("\x03");
+  fn run(&self, input: &str) -> Option<Thread> {
+    let input = input.to_owned().append("\x03");
 
-    ExecMatchFound
+    None
   }
 }
