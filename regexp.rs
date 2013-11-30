@@ -39,7 +39,13 @@ impl CompiledRegexp {
     self.prog.run(input);
   }
   fn search(&self, input: &str) {
+    let len = input.len();
 
+    for start in range(0, len) {
+      for end in range(0, len) {
+        self.prog.run(input.slice(start, end));
+      }
+    }
   }
   fn replace(&self, input: &str) {
 

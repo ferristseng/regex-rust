@@ -92,29 +92,34 @@ impl PikeVM {
 
 impl PikeVM {
   #[inline]
-  fn addThread(&self, t: Thread, tlist: &mut ~[Thread]) {
+  fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread]) {
     match self.inst[t.pc].op {
       InstJump(addr) => {
-        self.addThread(Thread::new(addr, t.sp), tlist);
+        t.pc = addr;
+        self.addThread(t, tlist);
       }
       InstSplit(laddr, raddr) => {
-        self.addThread(Thread::new(laddr, t.sp), tlist);
+        t.pc = laddr;
+        self.addThread(t, tlist);
         self.addThread(Thread::new(raddr, t.sp), tlist);
       }
       InstCaptureStart => {
-        self.addThread(Thread::new(t.pc + 1, t.sp), tlist);
+        t.pc = t.pc + 1;
+        self.addThread(t, tlist);
       }
       InstCaptureEnd => {
-        self.addThread(Thread::new(t.pc + 1, t.sp), tlist);
+        t.pc = t.pc + 1;
+        println(fmt!("Ending CAPTURE %u", t.sp));
+        self.addThread(t, tlist);
       }
       InstNoop => { 
-        self.addThread(Thread::new(t.pc + 1, t.sp), tlist);
+        t.pc = t.pc + 1;
+        self.addThread(t, tlist);
       }
       _ => { 
         tlist.push(t); 
       }
     }
-    //println(fmt!("%?", tlist));
   }
 }
 
@@ -140,6 +145,10 @@ impl ExecStrategy for PikeVM {
       let mut i = 0;
       let mut num = clist.len();
 
+      // some chars are different byte lengths, so 
+      // we can't just inc by 1
+      sp += c.len_utf8_bytes();
+
       while (i < num) {
         //println(fmt!("RUNNING INST %?", clist[i]));
 
@@ -147,19 +156,18 @@ impl ExecStrategy for PikeVM {
 
         match self.inst[pc].op {
           InstLiteral(m) => {
-            if (c == m && sp != input.len() - 1) {
+            if (c == m && sp != input.len()) {
               //println(fmt!("c: (%c) == m: (%c)", c, m));
-              self.addThread(Thread::new(pc + 1, clist[i].sp), &mut nlist);
+              self.addThread(Thread::new(pc + 1, sp), &mut nlist);
             }
           }
           InstRange(start, end) => {
-            if (c >= start && c <= end && sp != input.len() - 1) {
+            if (c >= start && c <= end && sp != input.len()) {
               //println(fmt!("c: (%c) within (%c-%c)", c, start, end));
-              self.addThread(Thread::new(pc + 1, clist[i].sp), &mut nlist);
+              self.addThread(Thread::new(pc + 1, sp), &mut nlist);
             }
           }
           InstMatch => {
-            clist[i].sp = sp;
             found = Some(clist[i]); 
             break;
           }
@@ -183,11 +191,6 @@ impl ExecStrategy for PikeVM {
       println(fmt!("nlist: %?", nlist));
       */
       nlist.clear();
-      
-      // different encodings have different
-      // lengths, so we can't just increment
-      // by 1
-      sp += c.len_utf8_bytes();
     }
 
     found 
