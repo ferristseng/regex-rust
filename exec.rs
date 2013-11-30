@@ -90,6 +90,34 @@ impl PikeVM {
   }
 }
 
+impl PikeVM {
+  #[inline]
+  fn addThread(&self, t: Thread, tlist: &mut ~[Thread]) {
+    match self.inst[t.pc].op {
+      InstJump(addr) => {
+        self.addThread(Thread::new(addr, t.sp), tlist);
+      }
+      InstSplit(laddr, raddr) => {
+        self.addThread(Thread::new(laddr, t.sp), tlist);
+        self.addThread(Thread::new(raddr, t.sp), tlist);
+      }
+      InstCaptureStart => {
+        self.addThread(Thread::new(t.pc + 1, t.sp), tlist);
+      }
+      InstCaptureEnd => {
+        self.addThread(Thread::new(t.pc + 1, t.sp), tlist);
+      }
+      InstNoop => { 
+        self.addThread(Thread::new(t.pc + 1, t.sp), tlist);
+      }
+      _ => { 
+        tlist.push(t); 
+      }
+    }
+    //println(fmt!("%?", tlist));
+  }
+}
+
 impl ExecStrategy for PikeVM {
   fn run(&self, input: &str) -> Option<Thread> {
     // \x03 is an end of string indicator. it resolves issues
@@ -99,11 +127,12 @@ impl ExecStrategy for PikeVM {
 
     // setup
     let mut sp = 0;
+    let mut found = None;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
     let mut nlist: ~[Thread] = with_capacity(self.len);
     
-    clist.push(Thread::new(0, sp));
+    self.addThread(Thread::new(0, sp), &mut clist);
 
     for c in input.iter() {
       //println(c.to_str());
@@ -118,40 +147,23 @@ impl ExecStrategy for PikeVM {
 
         match self.inst[pc].op {
           InstLiteral(m) => {
-            if (c == m) {
+            if (c == m && sp != input.len() - 1) {
               //println(fmt!("c: (%c) == m: (%c)", c, m));
-              nlist.push(Thread::new(pc + 1, clist[i].sp));
-              break;
+              self.addThread(Thread::new(pc + 1, clist[i].sp), &mut nlist);
             }
           }
           InstRange(start, end) => {
-            if (c >= start && c <= end) {
+            if (c >= start && c <= end && sp != input.len() - 1) {
               //println(fmt!("c: (%c) within (%c-%c)", c, start, end));
-              nlist.push(Thread::new(pc + 1, sp));
-              break;
+              self.addThread(Thread::new(pc + 1, clist[i].sp), &mut nlist);
             }
           }
           InstMatch => {
             clist[i].sp = sp;
-            return Some(clist[i]) 
+            found = Some(clist[i]); 
+            break;
           }
-          InstJump(addr) => {
-            //println("JMP");
-            clist.push(Thread::new(addr, clist[i].sp));
-          }
-          InstCaptureStart => {
-            clist.push(Thread::new(pc + 1, clist[i].sp));
-          }
-          InstCaptureEnd => {
-            clist.push(Thread::new(pc + 1, clist[i].sp));
-          }
-          InstSplit(laddr, raddr) => {
-            clist.push(Thread::new(laddr, clist[i].sp));
-            clist.push(Thread::new(raddr, clist[i].sp));
-          }
-          InstNoop => { 
-            clist.push(Thread::new(pc + 1, clist[i].sp));
-          } // continue
+          _ => unreachable!() 
         }
 
         //println(fmt!("BEFORE %u", i));
@@ -178,7 +190,7 @@ impl ExecStrategy for PikeVM {
       sp += c.len_utf8_bytes();
     }
 
-    None
+    found 
   }
 }
 

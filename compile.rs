@@ -176,7 +176,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     }
     // compile to:
     // ...
-    // L1: Split(L2, L3)
+    // L1: Split(L2, L3) | Split(L3, L2) (NonGreedy)
     // L2: (state0)
     //     Jump(L1)
     // L3: ...
@@ -202,7 +202,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // compile to:
     // ...
     // L1: (state0)
-    //     Split(L1, L2)
+    //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
     // L2: ...
     // ...
     &OpOneOrMore => {
@@ -221,7 +221,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     }
     // compile to:
     // ...
-    //     Split(L1, L2)
+    //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
     // L1: (state0)
     // L2: ... 
     &OpZeroOrOne => {

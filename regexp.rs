@@ -130,7 +130,7 @@ impl UncompiledRegexp {
 
 fn main() {
   println("--Case 0--");
-  let mut re = UncompiledRegexp::new("abc");
+  let mut re = UncompiledRegexp::new("[a-z]d|abc");
   re.run("abc");
 
   println("--Case 1--");
@@ -144,6 +144,10 @@ fn main() {
 
   println("--Case 2--");
   let mut re = UncompiledRegexp::new("[^a-zA-Z0-9]*");
+  re.run("我是曾繁睿");
+
+  println("--Case 2 (NonGreedy)--");
+  let mut re = UncompiledRegexp::new("[^a-zA-Z0-9]*?");
   re.run("我是曾繁睿");
 
   //debug_stack(stack);
