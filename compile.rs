@@ -170,9 +170,13 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // (state0)
     // CaptureEnd
     &OpCapture => {
-      stack.push(Instruction::new(InstCaptureStart));
-      recurse!(&re.state0);
-      stack.push(Instruction::new(InstCaptureEnd));
+      if (re.hasFlag(ParseFlags::NoCapture)) {
+        recurse!(&re.state0);
+      } else {
+        stack.push(Instruction::new(InstCaptureStart));
+        recurse!(&re.state0);
+        stack.push(Instruction::new(InstCaptureEnd));
+      }
     }
     // compile to:
     // ...

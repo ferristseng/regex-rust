@@ -36,7 +36,9 @@ impl Prog {
       Some(t) => {
         println(fmt!("[FOUND %u]", t.sp));
         println(input.slice_to(t.sp));
-        println(t.captures.to_str());
+        for &(start, end) in t.captures.iter() {
+          println(input.slice(start, end));
+        }
       }
       None => println("[NOT FOUND]")
     } 

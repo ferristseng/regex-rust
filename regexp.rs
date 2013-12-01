@@ -140,7 +140,7 @@ fn main() {
   re.run("abc");
 
   println("--Case 1--");
-  let mut re = UncompiledRegexp::new("(http(s)?://)?(www.)?[a-zA-Z0-9_]+.(com|org|net|edu)/?");
+  let mut re = UncompiledRegexp::new("(?:http(s)?://)?(www.)?([a-zA-Z0-9_.]+).(com|org|net|edu)/?");
   re.run("http://ferristseng.comuASDAFASFASBVZKXJVBKZXBVKJZBXVKBZXV");
   re.run("http://reddit.com/");
   re.run("https://google.com/");
@@ -156,6 +156,13 @@ fn main() {
   let mut re = UncompiledRegexp::new("[^a-zA-Z0-9]*?");
   re.run("我是曾繁睿");
 
+  println("--Case 3--");
+  let mut re = UncompiledRegexp::new("(a+?)*");
+  re.run("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+  println("--Case 4--");
+  let mut re = UncompiledRegexp::new("<([^>]+)>");
+  re.run("<html><head></head><div></div></html>");
   //debug_stack(stack);
 
   // println("--Case 2--");

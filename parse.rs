@@ -224,7 +224,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         }
 
         check_ok!(parse_recursive(t, ps));
-        ps.doLeftParen(false);
+        ps.doLeftParen(noncapturing);
         t.shift_char();
       }
       ')' => {
