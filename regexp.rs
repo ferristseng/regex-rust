@@ -42,7 +42,7 @@ impl CompiledRegexp {
     let len = input.len();
 
     for start in range(0, len) {
-      for end in range(0, len) {
+      for end in range(start, len) {
         self.prog.run(input.slice(start, end));
       }
     }
@@ -141,7 +141,7 @@ fn main() {
 
   println("--Case 1--");
   let mut re = UncompiledRegexp::new("(http(s)?://)?(www.)?[a-zA-Z0-9_]+.(com|org|net|edu)/?");
-  re.run("http://ferristseng.com");
+  re.run("http://ferristseng.comuASDAFASFASBVZKXJVBKZXBVKJZBXVKBZXV");
   re.run("http://reddit.com/");
   re.run("https://google.com/");
   //re.run("NOT A WEBSITE");

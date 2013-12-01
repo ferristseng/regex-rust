@@ -208,8 +208,23 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         ps.pushLeftParen();
 
         t.shift_char();
+
+        // check for ?: (non capturing group)
+        let noncapturing = {
+          if (t.len() > 1) {
+            t.char_at(0) == '?' && t.char_at(1) == ':'
+          } else {
+            false
+          }
+        };
+        
+        // adjust
+        if (noncapturing) {
+          t.shiftn_char(2);
+        }
+
         check_ok!(parse_recursive(t, ps));
-        ps.doLeftParen();
+        ps.doLeftParen(noncapturing);
         t.shift_char();
       }
       ')' => {

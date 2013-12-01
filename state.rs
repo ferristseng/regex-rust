@@ -3,26 +3,9 @@ use std::char::{from_u32, MAX};
 use error::ParseError::*;
 
 pub mod ParseFlags {
-  // Flags for parsing 
-  // Taken from re2 so there might be extras
-  pub static NoParseFlags:  u32 = 0b00000000000000000000000000000000;
-  pub static FoldCase:      u32 = 0b00000000000000000000000000000001;
-  pub static Literal:       u32 = 0b00000000000000000000000000000010;
-  pub static ClassNL:       u32 = 0b00000000000000000000000000000100;
-  pub static DotNL:         u32 = 0b00000000000000000000000000001000;
-  pub static MatchNL:       u32 = ClassNL | DotNL; 
-  pub static OneLine:       u32 = 0b00000000000000000000000000010000;
-  pub static Latin1:        u32 = 0b00000000000000000000000000100000;
-  pub static NonGreedy:     u32 = 0b00000000000000000000000001000000;
-  pub static PerlClasses:   u32 = 0b00000000000000000000000010000000;
-  pub static PerlB:         u32 = 0b00000000000000000000000100000000;
-  pub static PerlX:         u32 = 0b00000000000000000000001000000000;
-  pub static UnicodeGroups: u32 = 0b00000000000000000000010000000000;
-  pub static NeverNL:       u32 = 0b00000000000000000000100000000000;
-  pub static NeverCapture:  u32 = 0b00000000000000000001000000000000;
-  pub static LikePERL:      u32 = ClassNL | OneLine | PerlClasses | 
-                                  PerlB | PerlX | UnicodeGroups;
-  pub static WasDollar:     u32 = 0b00000000000000000010000000000000;
+  pub static NoParseFlags:  u8 = 0b00000000;
+  pub static NoCapture:     u8 = 0b00000010;
+  pub static NonGreedy:     u8 = 0b01000000;
 }
 
 pub mod ParseStack {
@@ -71,7 +54,7 @@ pub struct Regexp {
   op: OpCode, 
   state0: Option<~ParseStack::Entry>, 
   state1: Option<~ParseStack::Entry>,
-  flags: u32 
+  flags: u8 
 } 
 
 impl Regexp {
@@ -87,10 +70,10 @@ impl Regexp {
 }
 
 impl Regexp {
-  pub fn addFlag(&mut self, flag: u32) {
+  pub fn addFlag(&mut self, flag: u8) {
     self.flags = self.flags | flag;
   }
-  pub fn hasFlag(&self, flag: u32) -> bool {
+  pub fn hasFlag(&self, flag: u8) -> bool {
     (self.flags & flag) > 0
   }
 }
@@ -190,7 +173,7 @@ impl CharClass {
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
   priv nparen: uint, 
-  flags: u32 
+  flags: u8 
 }
 
 impl ParseState {
@@ -204,10 +187,10 @@ impl ParseState {
 }
 
 impl ParseState {
-  pub fn addFlag(&mut self, flag: u32) {
+  pub fn addFlag(&mut self, flag: u8) {
     self.flags = self.flags | flag;
   }
-  pub fn hasFlag(&self, flag: u32) -> bool {
+  pub fn hasFlag(&self, flag: u8) -> bool {
     (self.flags & flag) > 0
   }
 }
@@ -351,7 +334,7 @@ impl ParseState {
 
     ParseOk
   }
-  pub fn doLeftParen(&mut self) -> ParseCode { 
+  pub fn doLeftParen(&mut self, noncapturing: bool) -> ParseCode { 
     self.nparen -= 1;
     self.doConcatenation();
     let inner = self.stack.pop();
@@ -361,7 +344,10 @@ impl ParseState {
       Some(ParseStack::Op(OpLeftParen)) => { },
       _ => return ParseExpectedOperand 
     }
-    let r = Regexp::new(OpCapture, Some(~inner), None);
+    let mut r = Regexp::new(OpCapture, Some(~inner), None);
+    if (noncapturing) {
+      r.addFlag(ParseFlags::NoCapture);
+    }
     self.pushExpression(r);
 
     ParseOk
