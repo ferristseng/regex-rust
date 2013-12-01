@@ -26,7 +26,7 @@ pub mod ParseFlags {
 }
 
 pub mod ParseStack {
-  use super::*;
+  use super::{OpCode, Literal, Regexp, CharClass};
   // different representations of expressions on
   // the stack
   pub enum Entry {
@@ -485,36 +485,53 @@ mod char_class_tests {
   use std::char::MAX;
   use state::*;
   use error::ParseError::*;
+
+  macro_rules! create_cc(
+    ([ $(($start: expr, $end: expr)),+ ]) => (
+      {
+        let mut cc = CharClass::new();
+        $(
+        cc.addRange($start, $end);
+        )+
+        cc
+      }
+    )
+  )
+
+  macro_rules! expect_code(
+    ($f: expr, $code: pat) => (
+      {
+        let res = match $f {
+          $code => true,
+          _ => false
+        };
+        assert!(res);
+      }
+    )
+  )
   
   #[test]
   fn char_class_good() {
-    let mut cc = CharClass::new(); 
-    cc.addRange('A', 'Z');
-    cc.addRange('F', 'F');
-    cc.addRange('A', 'あ');
+    let cc = create_cc!([('A', 'Z'), ('F', 'F'), ('A', 'あ')]);
     assert_eq!(cc.ranges, ~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]); 
   }
 
   #[test]
   fn char_class_empty() {
     let mut cc = CharClass::new();
-    assert!(match cc.addRange('Z', 'A') { 
-      ParseEmptyCharClassRange => true, _ => false });
+    expect_code!(cc.addRange('Z', 'A'), ParseEmptyCharClassRange);
   }
 
   #[test]
   fn char_class_negate() {
-    let mut cc = CharClass::new();
-    cc.addRange('A', '\U0000FA08');
+    let mut cc = create_cc!([('A', '\U0000FA08')]);
     cc.negate();
     assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('\U0000FA09', MAX)]);
   }
 
   #[test]
   fn char_class_negate_multiple() {
-    let mut cc = CharClass::new();
-    cc.addRange('們', '我');
-    cc.addRange('A', 'Z');
+    let mut cc = create_cc!([('們', '我'), ('A', 'Z')]);
     cc.negate();
     assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('[', '\U00005010'), 
                ('\U00006212', MAX)])
@@ -522,47 +539,14 @@ mod char_class_tests {
 
   #[test]
   fn char_class_negate_overlap() {
-    let mut cc = CharClass::new();
-    cc.addRange('a', 'd');
-    cc.addRange('c', 'c');
+    let mut cc = create_cc!([('a', 'c'), ('c', 'c')]);
     cc.negate();
-    assert_eq!(cc.ranges, ~[('\U00000000', '`'), ('e', MAX)]);
+    assert_eq!(cc.ranges, ~[('\U00000000', '`'), ('d', MAX)]);
   }
 
   #[test]
   fn char_class_negate_bounds() {
-    let mut cc = CharClass::new();
-    cc.addRange('\U00000000', MAX);
-    assert!(match cc.negate() {
-      ParseEmptyCharClassRange => true, _ => false });
-  }
-}
-
-#[cfg(test)]
-mod flag_tests {
-  use super::*;
-
-  #[test]
-  fn test_add_flag_ok() {
-    let mut re = Regexp::new(OpNoop, None, None); 
-    re.addFlag(ParseFlags::OneLine);
-    assert!(re.flags == ParseFlags::OneLine)
-  }
-
-  #[test]
-  fn test_multiple_add_flag_ok() {
-    let mut re = Regexp::new(OpNoop, None, None);
-    re.addFlag(ParseFlags::OneLine);
-    re.addFlag(ParseFlags::NeverCapture);
-    assert!(re.flags == ParseFlags::OneLine | ParseFlags::NeverCapture);
-  }
-
-  #[test]
-  fn test_has_flag_ok() {
-    let mut re = Regexp::new(OpNoop, None, None);
-    re.addFlag(ParseFlags::NeverCapture);
-    re.addFlag(ParseFlags::OneLine);
-    re.addFlag(ParseFlags::NonGreedy);
-    assert!(re.hasFlag(ParseFlags::NonGreedy));
+    let mut cc = create_cc!([('\U00000000', MAX)]);
+    expect_code!(cc.negate(), ParseEmptyCharClassRange);
   }
 }

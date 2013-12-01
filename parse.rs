@@ -33,6 +33,7 @@ macro_rules! check_ok(
 // these take in a pointer to a ParseState and an input string,
 // and finish / modify the ParseState
 
+#[inline]
 fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
  
   let mut cc = CharClass::new();
@@ -112,6 +113,8 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 // {a,b}: from a to be inclusive
 // {a,}:  a unbounded
 // {a}:   exactly a
+
+#[inline]
 fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
   let mut buf = ~"";
