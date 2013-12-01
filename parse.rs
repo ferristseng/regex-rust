@@ -1,4 +1,3 @@
-use std::char::to_digit;
 use state::ParseState;
 use state::CharClass;
 use error::ParseError::*;
@@ -115,44 +114,77 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 // {a}:   exactly a
 fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
-  let buf = ~"";
-
-  if (t.len() > 1) {
-    let s = match t.char_at(0) {
-      x if x > '0' && x < '9' => to_digit(x, 10).unwrap(), 
-      _ => return ParseOk // not parsable
-    };
-    match t.char_at(1) {
-      ',' => { } // continue
-      '}' => {
-        t.shiftn_char(2); 
-        return ps.doBoundedRepetition(s, s);
+  // check to make sure there are still
+  // characters in the string
+  macro_rules! check_bounds(
+    () => (
+      if (len == t.len()) {
+        return ParseNotRepetition
       }
-      _ => return ParseOk // not parsable
-    }
+    )
+  )
 
-    if (t.len() > 2) {
-      let e = match t.char_at(2) {
-        '}' => {
-          t.shiftn_char(3);
-          return ps.doUnboundedRepetition(s);
-        }
-        x if x > '0' && x < '9' => to_digit(x, 10).unwrap(), 
-        _ => return ParseOk // not parsable
-      };
-      if (t.len() > 3) {
-        match t.char_at(3) {
-          '}' => {
-            t.shiftn_char(4);
-            return ps.doBoundedRepetition(s, e);
-          },
-          _ => return ParseOk // not parsable
-        } 
-      }
-    }
+  let mut buf = ~"";
+  let mut len = 0;
+
+  while (len < t.len() && t.char_at(len).is_digit()) {
+    buf.push_char(t.char_at(len));
+    len += 1;
   }
 
-  ParseOk
+  if (len == 0) {
+    return ParseNotRepetition // no digits or end of string
+  }
+
+  // this is guaranteed to be a digit because 
+  // we only append it to the buffer if the char
+  // is a digit
+  let start = from_str::<uint>(buf).unwrap(); 
+
+  buf.clear();
+
+  check_bounds!();
+
+  match t.char_at(len) {
+    ',' => { 
+      len += 1;
+    }
+    '}' => {
+      t.shiftn_char(len + 1);
+      return ps.doBoundedRepetition(start, start);
+    }
+    _ => return ParseNotRepetition
+  }
+
+  check_bounds!();
+
+  // if the next character is a }, unbounded repetition
+  match t.char_at(len) {
+    '}' => {
+      t.shiftn_char(len + 1);
+      return ps.doUnboundedRepetition(start);
+    }
+    x if x.is_digit() => { } // continue if x is a digit
+    _ => return ParseNotRepetition
+  }
+
+  // this should be the ending digit
+  while (len < t.len() && t.char_at(len).is_digit()) {
+    buf.push_char(t.char_at(len));
+    len += 1;
+  }
+
+  let end = from_str::<uint>(buf).unwrap();
+
+  check_bounds!();
+
+  match t.char_at(len) {
+    '}' => {
+      t.shiftn_char(len + 1);
+      return ps.doBoundedRepetition(start, end);
+    }
+    _ => return ParseNotRepetition
+  }
 }
 
 // parse an input string recursively
@@ -212,7 +244,12 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
       '{' => {
         t.shift_char();
-        check_ok!(parse_repetition(t, ps));
+
+        match parse_repetition(t, ps) {
+          ParseOk => { },
+          ParseNotRepetition => ps.pushLiteral("{"),
+          e => return e
+        }
       }
 
       '[' => {
@@ -236,5 +273,66 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
     ParseExpectedClosingParen
   } else {
     ParseOk
+  }
+}
+
+#[cfg(test)]
+mod parse_tests {
+  use super::*;
+  use state::*;
+  use error::ParseError::*;
+
+  macro_rules! test_repetition(
+    ($input: expr, $expect: pat) => (
+      {
+        let mut ps = ParseState::new(); 
+        let ok = match parse_recursive(&mut $input, &mut ps) {
+          $expect => true,
+          _ => false
+        };
+        ps.trace();
+        assert!(ok); 
+      }
+    );
+  )
+
+  #[test]
+  fn parse_bounded_repetition_ok() {
+    test_repetition!(~"a{10}", ParseOk);
+  }
+
+  #[test]
+  fn parse_unbounded_repetition_ok() {
+    test_repetition!(~"b{10,}", ParseOk);
+  }
+
+  #[test]
+  fn parse_bounded_range_repetition_ok() {
+    test_repetition!(~"c{10,12}", ParseOk);
+  }
+
+  #[test]
+  fn parse_bad_range_repetition_ok() {
+    test_repetition!(~"c{10,x}", ParseOk);
+  }
+
+  #[test]
+  fn parse_empty_range_err() {
+    test_repetition!(~"d{12,10}", ParseEmptyRepetitionRange);
+  }
+
+  #[test]
+  fn parse_negative_range_ok() {
+    test_repetition!(~"e{-11}", ParseOk);
+  }
+
+  #[test]
+  fn parse_no_comma_range_ok() {
+    test_repetition!(~"f{10 11}", ParseOk);
+  }
+
+  #[test]
+  fn parse_no_closing_curly_brace() {
+    test_repetition!(~"g{10", ParseOk);
   }
 }

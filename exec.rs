@@ -178,7 +178,6 @@ impl ExecStrategy for PikeVM {
 
         i += 1;
         num = clist.len();
-
         //println(fmt!("clist: %?", clist));
         //println(fmt!("nlist: %?", nlist));
       }

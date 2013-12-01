@@ -14,6 +14,9 @@ pub mod ParseError {
     ParseEmptyRepetition,
     ParseEmptyRepetitionRange,
 
+    // used internally
+    ParseNotRepetition,
+
     ParseExpectedClosingParen,
     ParseExpectedClosingBracket,
     ParseExpectedClosingBrace,
@@ -55,6 +58,7 @@ pub mod ParseError {
         ParseUnexpectedCharacter    => PARSE_ERR + "Unexpected character in input",
         ParseEmptyCharClassRange    => PARSE_ERR + "Empty character class",
         ParseInternalError |
+        ParseNotRepetition |
         ParseUnknownError           => PARSE_ERR + "Unknown error (probably a bug)",
         ParseEmptyStack             => PARSE_ERR + "Nothing on the stack"
       }
