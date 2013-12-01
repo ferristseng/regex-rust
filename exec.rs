@@ -36,6 +36,7 @@ impl Prog {
       Some(t) => {
         println(fmt!("[FOUND %u]", t.sp));
         println(input.slice_to(t.sp));
+        println(t.captures.to_str());
       }
       None => println("[NOT FOUND]")
     } 
@@ -55,16 +56,19 @@ trait ExecStrategy {
 // outlined here:
 // -> http://swtch.com/~rsc/regexp/regexp2.html
 
+#[deriving(Clone)]
 struct Thread {
-  pc: uint, // some index of an instruction
-  sp: uint  // index of a char in the input
+  pc: uint,
+  sp: uint,
+  captures: ~[(uint, uint)]
 }
 
 impl Thread {
   fn new(pc: uint, sp: uint) -> Thread {
     Thread { 
       pc: pc, 
-      sp: sp
+      sp: sp,
+      captures: ~[]
     }
   }
 }
@@ -85,7 +89,7 @@ impl PikeVM {
     let len = inst.len();
     PikeVM {
       inst: inst,
-      len: len 
+      len: len
     }
   }
 }
@@ -96,24 +100,35 @@ impl PikeVM {
     match self.inst[t.pc].op {
       InstJump(addr) => {
         t.pc = addr;
+
         self.addThread(t, tlist);
       }
       InstSplit(laddr, raddr) => {
+        let mut split = t.clone();
+        split.pc = raddr;
+
         t.pc = laddr;
+
         self.addThread(t, tlist);
-        self.addThread(Thread::new(raddr, t.sp), tlist);
+        self.addThread(split, tlist);
       }
       InstCaptureStart => {
         t.pc = t.pc + 1;
+        t.captures.push((t.sp, t.sp));
+
         self.addThread(t, tlist);
       }
       InstCaptureEnd => {
         t.pc = t.pc + 1;
-        println(fmt!("Ending CAPTURE %u", t.sp));
+
+        let (start, _) = t.captures.pop();
+        t.captures.unshift((start, t.sp));
+
         self.addThread(t, tlist);
       }
       InstNoop => { 
         t.pc = t.pc + 1;
+
         self.addThread(t, tlist);
       }
       _ => { 
@@ -142,42 +157,42 @@ impl ExecStrategy for PikeVM {
     for c in input.iter() {
       //println(c.to_str());
 
-      let mut i = 0;
-      let mut num = clist.len();
-
       // some chars are different byte lengths, so 
       // we can't just inc by 1
       sp += c.len_utf8_bytes();
 
-      while (i < num) {
+      while (clist.len() > 0) {
         //println(fmt!("RUNNING INST %?", clist[i]));
 
-        let pc = clist[i].pc;
+        let mut t = clist.pop();;
 
-        match self.inst[pc].op {
+        match self.inst[t.pc].op {
           InstLiteral(m) => {
             if (c == m && sp != input.len()) {
               //println(fmt!("c: (%c) == m: (%c)", c, m));
-              self.addThread(Thread::new(pc + 1, sp), &mut nlist);
+              t.pc = t.pc + 1;
+              t.sp = sp;
+
+              self.addThread(t, &mut nlist);
             }
           }
           InstRange(start, end) => {
             if (c >= start && c <= end && sp != input.len()) {
               //println(fmt!("c: (%c) within (%c-%c)", c, start, end));
-              self.addThread(Thread::new(pc + 1, sp), &mut nlist);
+              t.pc = t.pc + 1;
+              t.sp = sp;
+
+              self.addThread(t, &mut nlist);
             }
           }
           InstMatch => {
-            found = Some(clist[i]); 
+            found = Some(t.clone()); 
             break;
           }
           _ => unreachable!() 
         }
 
         //println(fmt!("BEFORE %u", i));
-
-        i += 1;
-        num = clist.len();
         //println(fmt!("clist: %?", clist));
         //println(fmt!("nlist: %?", nlist));
       }

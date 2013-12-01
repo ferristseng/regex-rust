@@ -144,7 +144,7 @@ fn main() {
   re.run("http://ferristseng.com");
   re.run("http://reddit.com/");
   re.run("https://google.com/");
-  re.run("NOT A WEBSITE");
+  //re.run("NOT A WEBSITE");
   re.run("http://virginia.edu");
   re.run("www.cnn.com");
 
