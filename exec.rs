@@ -164,7 +164,7 @@ impl ExecStrategy for PikeVM {
       while (clist.len() > 0) {
         //println(fmt!("RUNNING INST %?", clist[i]));
 
-        let mut t = clist.pop();;
+        let mut t = clist.shift();;
 
         match self.inst[t.pc].op {
           InstLiteral(m) => {
