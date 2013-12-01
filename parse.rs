@@ -18,7 +18,7 @@ impl RegexInputStr for ~str {
   }
 }
 
-// check for an err,
+// check for an err
 macro_rules! check_ok(
   ($f: expr) => (
     match $f {
@@ -290,7 +290,7 @@ mod parse_tests {
           $expect => true,
           _ => false
         };
-        ps.trace();
+        //ps.trace();
         assert!(ok); 
       }
     );
@@ -332,7 +332,12 @@ mod parse_tests {
   }
 
   #[test]
-  fn parse_no_closing_curly_brace() {
+  fn parse_no_closing_curly_brace_ok() {
     test_repetition!(~"g{10", ParseOk);
+  }
+
+  #[test]
+  fn parse_no_repetition_target_specified_err() {
+    test_repetition!(~"{10,}", ParseEmptyRepetition); 
   }
 }

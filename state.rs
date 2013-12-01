@@ -449,7 +449,7 @@ impl ParseState {
           return ParseEmptyRepetitionRange
         }
       }
-      None => return ParseEmptyStack
+      None => return ParseEmptyRepetition
     }
 
     ParseOk
@@ -461,7 +461,7 @@ impl ParseState {
         let expr = Regexp::new(OpRepeatOp(start, None), Some(~s), None);
         self.pushExpression(expr); 
       }
-      None => return ParseEmptyStack
+      None => return ParseEmptyRepetition
     }
 
     ParseOk
