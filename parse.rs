@@ -114,6 +114,9 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 // {a}:   exactly a
 fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
+  let mut buf = ~"";
+  let mut len = 0;
+
   // check to make sure there are still
   // characters in the string
   macro_rules! check_bounds(
@@ -123,9 +126,6 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
       }
     )
   )
-
-  let mut buf = ~"";
-  let mut len = 0;
 
   while (len < t.len() && t.char_at(len).is_digit()) {
     buf.push_char(t.char_at(len));
