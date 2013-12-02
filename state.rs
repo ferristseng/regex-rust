@@ -2,6 +2,24 @@ use extra::sort::merge_sort;
 use std::char::{from_u32, MAX};
 use error::ParseError::*;
 
+pub mod ParseFlags {
+  pub static NoParseFlags:  u8 = 0b00000000;
+  pub static NoCapture:     u8 = 0b00000010;
+  pub static NonGreedy:     u8 = 0b01000000;
+}
+
+pub mod ParseStack {
+  use super::{OpCode, Literal, Regexp, CharClass};
+  // different representations of expressions on
+  // the stack
+  pub enum Entry {
+    Op(OpCode),
+    Literal(Literal),
+    Expression(Regexp),
+    CharClass(CharClass)
+  }
+}
+
 // A Regex Operation
 pub enum OpCode {
   OpConcatenation,
@@ -15,16 +33,6 @@ pub enum OpCode {
   OpCapture,
   OpRepeatOp(uint, Option<uint>),
   OpNoop
-}
-
-// Flags for parsing 
-// i'm including a bunch of extra flags for now,
-// but we can add support for them as we go
-//
-// actually, not really sure how these work
-enum ParseFlags {
-  NoParseFlags  = 0,
-  FoldCase      = 1 << 0
 }
 
 // Regexp Literal
@@ -42,16 +50,31 @@ impl Literal {
 // Regexp
 // represents a variable number of states with an
 // operator applied to them. 
-struct Regexp { 
+pub struct Regexp { 
   op: OpCode, 
   state0: Option<~ParseStack::Entry>, 
-  state1: Option<~ParseStack::Entry>
+  state1: Option<~ParseStack::Entry>,
+  flags: u8 
 } 
 
 impl Regexp {
   pub fn new(op: OpCode, state0: Option<~ParseStack::Entry>, 
              state1: Option<~ParseStack::Entry>) -> Regexp {
-    Regexp { op: op, state0: state0, state1: state1 }
+    Regexp { 
+      op: op, 
+      state0: state0, 
+      state1: state1,
+      flags: ParseFlags::NoParseFlags
+    }
+  }
+}
+
+impl Regexp {
+  pub fn addFlag(&mut self, flag: u8) {
+    self.flags = self.flags | flag;
+  }
+  pub fn hasFlag(&self, flag: u8) -> bool {
+    (self.flags & flag) > 0
   }
 }
 
@@ -146,28 +169,29 @@ impl CharClass {
   }
 }
 
-pub mod ParseStack {
-  use state::{OpCode, Literal, Regexp, CharClass};
-  // different representations of expressions on
-  // the stack
-  pub enum Entry {
-    Op(OpCode),
-    Literal(Literal),
-    Expression(Regexp),
-    CharClass(CharClass)
-  }
-}
-
 // current state of parsing
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
   priv nparen: uint, 
-  flags: ParseFlags
+  flags: u8 
 }
 
 impl ParseState {
   pub fn new() -> ParseState {
-    ParseState { stack: ~[], nparen: 0, flags: NoParseFlags } 
+    ParseState { 
+      stack: ~[], 
+      nparen: 0, 
+      flags: ParseFlags::NoParseFlags 
+    } 
+  }
+}
+
+impl ParseState {
+  pub fn addFlag(&mut self, flag: u8) {
+    self.flags = self.flags | flag;
+  }
+  pub fn hasFlag(&self, flag: u8) -> bool {
+    (self.flags & flag) > 0
   }
 }
 
@@ -310,7 +334,7 @@ impl ParseState {
 
     ParseOk
   }
-  pub fn doLeftParen(&mut self) -> ParseCode { 
+  pub fn doLeftParen(&mut self, noncapturing: bool) -> ParseCode { 
     self.nparen -= 1;
     self.doConcatenation();
     let inner = self.stack.pop();
@@ -320,7 +344,10 @@ impl ParseState {
       Some(ParseStack::Op(OpLeftParen)) => { },
       _ => return ParseExpectedOperand 
     }
-    let r = Regexp::new(OpCapture, Some(~inner), None);
+    let mut r = Regexp::new(OpCapture, Some(~inner), None);
+    if (noncapturing) {
+      r.addFlag(ParseFlags::NoCapture);
+    }
     self.pushExpression(r);
 
     ParseOk
@@ -331,7 +358,7 @@ impl ParseState {
         let mut r = r;
         // check if we should have apply a 
         // nongreedy flag
-        let mut nongreedy = match op {
+        let nongreedy = match op {
           OpZeroOrOne => true,
           _ => false
         };
@@ -365,7 +392,7 @@ impl ParseState {
             if (nongreedy) {
               match r {
                 ParseStack::Expression(ref mut e) => {
-                  // set greedy flag
+                  e.addFlag(ParseFlags::NonGreedy);
                 }
                 _ => { } // should never hit this case
               }
@@ -408,7 +435,7 @@ impl ParseState {
           return ParseEmptyRepetitionRange
         }
       }
-      None => return ParseEmptyStack
+      None => return ParseEmptyRepetition
     }
 
     ParseOk
@@ -420,7 +447,7 @@ impl ParseState {
         let expr = Regexp::new(OpRepeatOp(start, None), Some(~s), None);
         self.pushExpression(expr); 
       }
-      None => return ParseEmptyStack
+      None => return ParseEmptyRepetition
     }
 
     ParseOk
@@ -437,41 +464,60 @@ impl ParseState {
   }
 }
 
+// tests
+
 #[cfg(test)]
 mod char_class_tests {
   use std::char::MAX;
-  use state::{CharClass};
+  use state::*;
   use error::ParseError::*;
+
+  macro_rules! create_cc(
+    ([ $(($start: expr, $end: expr)),+ ]) => (
+      {
+        let mut cc = CharClass::new();
+        $(
+        cc.addRange($start, $end);
+        )+
+        cc
+      }
+    )
+  )
+
+  macro_rules! expect_code(
+    ($f: expr, $code: pat) => (
+      {
+        let res = match $f {
+          $code => true,
+          _ => false
+        };
+        assert!(res);
+      }
+    )
+  )
   
   #[test]
   fn char_class_good() {
-    let mut cc = CharClass::new(); 
-    cc.addRange('A', 'Z');
-    cc.addRange('F', 'F');
-    cc.addRange('A', 'あ');
+    let cc = create_cc!([('A', 'Z'), ('F', 'F'), ('A', 'あ')]);
     assert_eq!(cc.ranges, ~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]); 
   }
 
   #[test]
   fn char_class_empty() {
     let mut cc = CharClass::new();
-    assert!(match cc.addRange('Z', 'A') { 
-      ParseEmptyCharClassRange => true, _ => false });
+    expect_code!(cc.addRange('Z', 'A'), ParseEmptyCharClassRange);
   }
 
   #[test]
   fn char_class_negate() {
-    let mut cc = CharClass::new();
-    cc.addRange('A', '\U0000FA08');
+    let mut cc = create_cc!([('A', '\U0000FA08')]);
     cc.negate();
     assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('\U0000FA09', MAX)]);
   }
 
   #[test]
   fn char_class_negate_multiple() {
-    let mut cc = CharClass::new();
-    cc.addRange('們', '我');
-    cc.addRange('A', 'Z');
+    let mut cc = create_cc!([('們', '我'), ('A', 'Z')]);
     cc.negate();
     assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('[', '\U00005010'), 
                ('\U00006212', MAX)])
@@ -479,19 +525,14 @@ mod char_class_tests {
 
   #[test]
   fn char_class_negate_overlap() {
-    let mut cc = CharClass::new();
-    cc.addRange('a', 'd');
-    cc.addRange('c', 'c');
+    let mut cc = create_cc!([('a', 'c'), ('c', 'c')]);
     cc.negate();
-    assert_eq!(cc.ranges, ~[('\U00000000', '`'), ('e', MAX)]);
+    assert_eq!(cc.ranges, ~[('\U00000000', '`'), ('d', MAX)]);
   }
 
   #[test]
   fn char_class_negate_bounds() {
-    let mut cc = CharClass::new();
-    cc.addRange('\U00000000', MAX);
-    assert!(match cc.negate() {
-      ParseEmptyCharClassRange => true, _ => false });
+    let mut cc = create_cc!([('\U00000000', MAX)]);
+    expect_code!(cc.negate(), ParseEmptyCharClassRange);
   }
 }
-

@@ -13,8 +13,10 @@ use state::*;
 // Split        = start a new thread with one jumping to the
 //                first uint, and the next jumping to the
 //                second.
+// InstNoop     = placeholder in most cases
 
-enum InstOpCode {
+#[deriving(Clone)]
+pub enum InstOpCode {
   InstLiteral(char),
   InstRange(char, char),
   InstMatch,
@@ -25,12 +27,13 @@ enum InstOpCode {
   InstNoop
 }
 
-struct Instruction {
+#[deriving(Clone)]
+pub struct Instruction {
   op: InstOpCode 
 }
 
 impl Instruction {
-  fn new(op: InstOpCode) -> Instruction {
+  pub fn new(op: InstOpCode) -> Instruction {
     Instruction { op: op }
   }
 }
@@ -56,22 +59,26 @@ fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
   }
 }
 fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
-  let mut current_stack_size = stack.len();
-  let mut current_range_len = cc.ranges.len();
-  let range_size = current_stack_size + current_range_len * 3;
+  let mut ssize = stack.len();
+  let mut rlen = cc.ranges.len();
+  let rsize = ssize + rlen * 3;
 
   for &(start, end) in cc.ranges.iter() {
-    if (current_range_len >= 2) {
-      stack.push(Instruction::new(InstSplit(current_stack_size + 1, current_stack_size + 3)));
-      current_stack_size += 3;
-      current_range_len -= 1;
+    if (rlen >= 2) {
+      let split = Instruction::new(InstSplit(ssize + 1, ssize + 3));
+      stack.push(split);
+
+      ssize += 3;
+      rlen  -= 1;
     }
+
     if (start == end) {
       stack.push(Instruction::new(InstLiteral(start)));
     } else {
       stack.push(Instruction::new(InstRange(start, end)));
     }
-    stack.push(Instruction::new(InstJump(range_size - 1)));
+
+    stack.push(Instruction::new(InstJump(rsize - 1)));
   }
 }
 
@@ -79,7 +86,7 @@ pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
   _compile_recursive(re, stack);
   stack.push(Instruction::new(InstMatch));
 
-  debug_stack(stack);
+  //debug_stack(stack);
 }
 
 fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
@@ -101,6 +108,13 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
           _ => { } // unreachable
         }
       }
+    );
+  )
+
+  // insert a InstNoop...to be replaced later
+  macro_rules! placeholder(
+    () => (
+      stack.push(Instruction::new(InstNoop))
     );
   )
 
@@ -128,11 +142,11 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // L3:  ...
     &OpAlternation => {
       let ptr_split = stack.len();
-      stack.push(Instruction::new(InstNoop)); // placeholder
+      placeholder!();
       recurse!(&re.state0);
 
       let ptr_jmp = stack.len();
-      stack.push(Instruction::new(InstNoop)); // placeholder
+      placeholder!();
       recurse!(&re.state1);
       
       let split = Instruction::new(InstSplit(ptr_split + 1, ptr_jmp + 1));
@@ -151,17 +165,87 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       recurse!(&re.state1);
     }
     // compile to:
-    //
-    //
+    // ...
+    // CaptureStart
+    // (state0)
+    // CaptureEnd
     &OpCapture => {
-      stack.push(Instruction::new(InstCaptureStart));
+      if (re.hasFlag(ParseFlags::NoCapture)) {
+        recurse!(&re.state0);
+      } else {
+        stack.push(Instruction::new(InstCaptureStart));
+        recurse!(&re.state0);
+        stack.push(Instruction::new(InstCaptureEnd));
+      }
+    }
+    // compile to:
+    // ...
+    // L1: Split(L2, L3) | Split(L3, L2) (NonGreedy)
+    // L2: (state0)
+    //     Jump(L1)
+    // L3: ...
+    // ...
+    &OpKleine => {
+      let ptr_split = stack.len();
+      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
+      placeholder!();
+
       recurse!(&re.state0);
-      stack.push(Instruction::new(InstCaptureEnd));
+      let jmp = Instruction::new(InstJump(ptr_split));
+      stack.push(jmp);
+
+      let split = {
+        if (nongreedy) { 
+          Instruction::new(InstSplit(stack.len(), ptr_split + 1))
+        } else {
+          Instruction::new(InstSplit(ptr_split + 1, stack.len()))
+        }
+      };
+      stack[ptr_split] = split;
+    }
+    // compile to:
+    // ...
+    // L1: (state0)
+    //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
+    // L2: ...
+    // ...
+    &OpOneOrMore => {
+      let ptr_inst = stack.len();
+      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
+      recurse!(&re.state0);
+
+      let split = {
+        if (nongreedy) {
+          Instruction::new(InstSplit(stack.len() + 1, ptr_inst))
+        } else {
+          Instruction::new(InstSplit(ptr_inst, stack.len() + 1))
+        }
+      };
+      stack.push(split);
+    }
+    // compile to:
+    // ...
+    //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
+    // L1: (state0)
+    // L2: ... 
+    &OpZeroOrOne => {
+      let ptr_split = stack.len();
+      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
+      placeholder!();
+
+      recurse!(&re.state0);
+
+      let split = {
+        if (nongreedy) {
+          Instruction::new(InstSplit(stack.len(), ptr_split + 1))
+        } else {
+          Instruction::new(InstSplit(ptr_split + 1, stack.len()))
+        }
+      };
+      stack[ptr_split] = split;
     }
     _ => { }
   }
-
-  debug_stack(stack);
 }
 
 fn debug_stack(stack: &mut ~[Instruction]) {
