@@ -1,12 +1,18 @@
-Basing the lib off of this [resource](http://swtch.com/~rsc/regexp/), which covers how to generate, and how to traverse an NFA as well as some other good examples.
+A regular expression library implemented natively in Rust, that is inspired by this [series of articles](http://swtch.com/~rsc/regexp/).
 
-Other resources I found useful: 
+The library aims to cover a subset of the ones available for PCRE, namely:
 
-  * [Creating an NFA from a Regular Expression](http://stackoverflow.com/questions/11819185/steps-to-creating-an-nfa-from-a-regular-expression)
-  * [Regular Expression to NFA Generator](http://hackingoff.com/compilers/regular-expression-to-nfa-dfa)
-  * [re2 Code (C implemntation of regular expressions by the guy who wrote the above paper)](http://code.google.com/p/re2/source/browse/re2/parse.cc)
-  * [Rust Regexp Wiki Spec](https://github.com/mozilla/rust/wiki/Lib-re)
+(currently, not all of these are fully implemented)
 
-[A-]]
-[A-Z1] ---- range from A to Z OR range from 1 to 1
-[A-Z]1 range from A-Z and 1
+  * Consistent escaping rules
+  * Extended character classes 
+  * Minimal matching (a.k.a. “ungreedy”)
+  * Unicode character properties 
+  * Multiline matching 
+  * Newline/linebreak options 
+  * Named subpatterns 
+  * Backreferences 
+  * Look-ahead and look-behind assertions 
+  * Comments 
+
+The library provides an interface and suite of functions similar to the one available in the Python regular expression library. 
