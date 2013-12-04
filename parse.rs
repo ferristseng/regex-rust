@@ -32,21 +32,63 @@ macro_rules! check_ok(
 //
 // these take in a pointer to a ParseState and an input string,
 // and finish / modify the ParseState
+
+#[inline]
 fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+
   let mut cc = CharClass::new();
-  match t.char_at(0) {
-    'd' => {
-      match cc.addRange('0', '9') {
-        ParseOk => { 
-          ps.pushCharClass(cc); 
-          t.shift_char();
-        }
-        e => return e
+
+  if (t.len() > 0) {
+    let esc = t.char_at(0);
+
+    match esc {
+      'd' | 'D' => {
+        check_ok!(cc.addRange('0', '9'));
+
+        t.shift_char();
       }
-    } 
-    _ => { }
+      'w' | 'W' => {
+        check_ok!(cc.addRange('a', 'z'));
+        check_ok!(cc.addRange('A', 'Z'));
+        check_ok!(cc.addRange('_', '_'));
+
+        t.shift_char();
+      }
+      's' | 'S' => {
+        check_ok!(cc.addRange('\n', '\n'));
+        check_ok!(cc.addRange('\t', '\t'));
+        check_ok!(cc.addRange('\r', '\r'));
+
+        t.shift_char();
+      }
+      _ => return parse_escape_char(t, ps) 
+    }
+
+    if (esc.is_uppercase()) {
+      cc.negate();
+    }
+
+    ps.pushCharClass(cc);
+
+    ParseOk
+  } else {
+    ParseIncompleteEscapeSeq
   }
+}
+
+#[inline]
+fn parse_escape_char(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+
+  match t.char_at(0) {
+    c => {
+      ps.pushLiteral(c.to_str());
+    }
+  }
+
+  t.shift_char();
+
   ParseOk
+
 }
 
 #[inline]
@@ -319,7 +361,7 @@ mod parse_tests {
   use state::*;
   use error::ParseError::*;
 
-  macro_rules! test_repetition(
+  macro_rules! test_parse(
     ($input: expr, $expect: pat) => (
       {
         let mut ps = ParseState::new(); 
@@ -335,46 +377,51 @@ mod parse_tests {
 
   #[test]
   fn parse_bounded_repetition_ok() {
-    test_repetition!(~"a{10}", ParseOk);
+    test_parse!(~"a{10}", ParseOk);
   }
 
   #[test]
   fn parse_unbounded_repetition_ok() {
-    test_repetition!(~"b{10,}", ParseOk);
+    test_parse!(~"b{10,}", ParseOk);
   }
 
   #[test]
   fn parse_bounded_range_repetition_ok() {
-    test_repetition!(~"c{10,12}", ParseOk);
+    test_parse!(~"c{10,12}", ParseOk);
   }
 
   #[test]
   fn parse_bad_range_repetition_ok() {
-    test_repetition!(~"c{10,x}", ParseOk);
+    test_parse!(~"c{10,x}", ParseOk);
   }
 
   #[test]
   fn parse_empty_range_err() {
-    test_repetition!(~"d{12,10}", ParseEmptyRepetitionRange);
+    test_parse!(~"d{12,10}", ParseEmptyRepetitionRange);
   }
 
   #[test]
   fn parse_negative_range_ok() {
-    test_repetition!(~"e{-11}", ParseOk);
+    test_parse!(~"e{-11}", ParseOk);
   }
 
   #[test]
   fn parse_no_comma_range_ok() {
-    test_repetition!(~"f{10 11}", ParseOk);
+    test_parse!(~"f{10 11}", ParseOk);
   }
 
   #[test]
   fn parse_no_closing_curly_brace_ok() {
-    test_repetition!(~"g{10", ParseOk);
+    test_parse!(~"g{10", ParseOk);
   }
 
   #[test]
   fn parse_no_repetition_target_specified_err() {
-    test_repetition!(~"{10,}", ParseEmptyRepetition); 
+    test_parse!(~"{10,}", ParseEmptyRepetition); 
+  }
+
+  #[test]
+  fn parse_backward_slash_err() {
+    test_parse!(~"\\", ParseIncompleteEscapeSeq);
   }
 }
