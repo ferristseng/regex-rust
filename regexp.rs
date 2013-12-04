@@ -161,8 +161,12 @@ fn main() {
   re.run("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
   println("--Case 4--");
-  let mut re = UncompiledRegexp::new("<([^>]+)>");
+  let mut re = UncompiledRegexp::new("<((\\w|[^>])+)>");
   re.run("<html><head></head><div></div></html>");
+
+  println("--Case 5--");
+  let mut re = UncompiledRegexp::new("\\d+");
+  re.run("1258102958012895danzxnvhlhl4314");
 
   // println("--Case 2--");
   // UncompiledRegexp::new("a|b|c").compile();

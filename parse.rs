@@ -39,22 +39,41 @@ fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   let mut cc = CharClass::new();
 
   if (t.len() > 0) {
-    match t.char_at(0) {
-      'd' => {
-        match cc.addRange('0', '9') {
-          ParseOk => { 
-            ps.pushCharClass(cc); 
-            t.shift_char();
-          }
-          e => return e
-        }
-      } 
+    let esc = t.char_at(0);
+
+    match esc {
+      'd' | 'D' => {
+        check_ok!(cc.addRange('0', '9'));
+
+        t.shift_char();
+      }
+      'w' | 'W' => {
+        check_ok!(cc.addRange('a', 'z'));
+        check_ok!(cc.addRange('A', 'Z'));
+        check_ok!(cc.addRange('_', '_'));
+
+        t.shift_char();
+      }
+      's' | 'S' => {
+        check_ok!(cc.addRange('\n', '\n'));
+        check_ok!(cc.addRange('\t', '\t'));
+        check_ok!(cc.addRange('\r', '\r'));
+
+        t.shift_char();
+      }
       _ => return parse_escape_char(t, ps) 
     }
+
+    if (esc.is_uppercase()) {
+      cc.negate();
+    }
+
+    ps.pushCharClass(cc);
+
+    ParseOk
+  } else {
+    ParseIncompleteEscapeSeq
   }
-
-  ParseIncompleteEscapeSeq
-
 }
 
 #[inline]
