@@ -31,17 +31,28 @@ impl Prog {
 }
 
 impl Prog {
-  pub fn run(&self, input: &str) {
-    match self.strat.run(input) {
+  pub fn run(&self, input: &str) -> Option<Thread> {    
+	match self.strat.run(input) {
       Some(t) => {
         println(fmt!("[FOUND %u]", t.sp));
         println(input.slice_to(t.sp));
         for &(start, end) in t.captures.iter() {
           println(input.slice(start, end));
         }
+	  return Some(t);		
       }
-      None => println("[NOT FOUND]")
+      None => {println("[NOT FOUND]"); return None;}
     } 
+  }
+
+  pub fn replace(&self, input: &str, repstr: &str) {
+    match self.strat.run(input) {
+      Some(t) => {
+        let matchstr = input.slice_to(t.sp);
+		println(input.replace(matchstr, repstr));
+	  }
+	  None => println("[NOT FOUND]")
+    }
   }
 }
 

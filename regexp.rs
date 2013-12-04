@@ -38,6 +38,8 @@ impl CompiledRegexp {
   fn run(&self, input: &str) {
     self.prog.run(input);
   }
+  
+  // should only find the first
   fn search(&self, input: &str) {
     let len = input.len();
 
@@ -47,12 +49,33 @@ impl CompiledRegexp {
       }
     }
   }
-  fn replace(&self, input: &str) {
 
+  // not really working how replace should	
+  fn replace(&self, input: &str, repstr: &str) {
+	self.prog.replace(input, repstr);
   }
+  
+  // ugly, but functional?
   fn findall(&self, input: &str) {
-
+	let mut start = 0;
+	let mut buff = 0;
+	let len = input.len();
+	while start < len {
+	  match self.prog.run(input.slice(start, len)) {
+        Some(t) => { 
+		  if t.sp == 0 { 
+		    start = start + 1;
+          }
+          else {
+            start = t.sp + buff; 
+          }
+		  buff = start;
+        }
+        None => { start = start + 1; }
+      }
+    }
   }
+
   fn split(&self, input: &str) {
 
   }
@@ -114,9 +137,9 @@ impl UncompiledRegexp {
       Err(e) => println(e.to_str())
     }
   }
-  fn replace(&mut self, input: &str) {
+  fn replace(&mut self, input: &str, repstr: &str) {
     match self.compile() {
-      Ok(ref mut re) => re.replace(input),
+      Ok(ref mut re) => re.replace(input, repstr),
       Err(e) => println(e.to_str())
     }
   }
@@ -159,6 +182,9 @@ fn main() {
   println("--Case 3--");
   let mut re = UncompiledRegexp::new("(a+?)*");
   re.run("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+  println("--case 3a--");
+  re.findall("aaaaabaaaba");
 
   println("--Case 4--");
   let mut re = UncompiledRegexp::new("<([^>]+)>");
