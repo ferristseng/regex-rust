@@ -140,7 +140,7 @@ fn main() {
   re.run("abc");
 
   println("--Case 1--");
-  let mut re = UncompiledRegexp::new("(?:http(s)?://)?(www.)?([a-zA-Z0-9_.]+).(com|org|net|edu)/?");
+  let mut re = UncompiledRegexp::new("(?:http(s)?:\\/\\/)?(www.)?([a-zA-Z0-9_.]+).(com|org|net|edu)\\/?");
   re.run("http://ferristseng.comuASDAFASFASBVZKXJVBKZXBVKJZBXVKBZXV");
   re.run("http://reddit.com/");
   re.run("https://google.com/");

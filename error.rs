@@ -28,6 +28,8 @@ pub mod ParseError {
     ParseUnexpectedOperand,
     ParseUnexpectedCharacter,
 
+    ParseIncompleteEscapeSeq,
+
     // char class errors
     ParseEmptyCharClassRange,
 
@@ -56,6 +58,7 @@ pub mod ParseError {
         ParseUnexpectedClosingParen => PARSE_ERR + "Unexpected closing parenthases in input",
         ParseUnexpectedOperand      => PARSE_ERR + "Unexpected operand was on the stack",
         ParseUnexpectedCharacter    => PARSE_ERR + "Unexpected character in input",
+        ParseIncompleteEscapeSeq    => PARSE_ERR + "Expected a character to escape",
         ParseEmptyCharClassRange    => PARSE_ERR + "Empty character class",
         ParseInternalError |
         ParseNotRepetition |
