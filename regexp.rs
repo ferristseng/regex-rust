@@ -44,32 +44,29 @@ impl CompiledRegexp {
     let len = input.len();
 
     for start in range(0, len) {
-      for end in range(start, len) {
-        self.prog.run(input.slice(start, end));
-      }
+      self.prog.run(input.slice(start, len));
     }
   }
 
   // not really working how replace should	
   fn replace(&self, input: &str, repstr: &str) {
-	self.prog.replace(input, repstr);
+    self.prog.replace(input, repstr);
   }
   
   // ugly, but functional?
   fn findall(&self, input: &str) {
-	let mut start = 0;
-	let mut buff = 0;
-	let len = input.len();
-	while start < len {
-	  match self.prog.run(input.slice(start, len)) {
+    let mut start = 0;
+    let mut buff = 0;
+    let len = input.len();
+    while start < len {
+      match self.prog.run(input.slice(start, len)) {
         Some(t) => { 
-		  if t.sp == 0 { 
-		    start = start + 1;
-          }
-          else {
+          if t.sp == 0 { 
+            start = start + 1;
+          } else {
             start = t.sp + buff; 
           }
-		  buff = start;
+          buff = start;
         }
         None => { start = start + 1; }
       }
