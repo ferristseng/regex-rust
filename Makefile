@@ -1,11 +1,12 @@
 all:
-	rustc --opt-level=3 regexp.rs
+	rustc --opt-level=3 --lib lib.rs
 
 test: 
-	rust test regexp.rs
+	rust test lib.rs
 
 run: all
-	./regexp
+	rustc test.rs -L .
+	./test
 
 clean:
-	rm -r *~* regexp 
+	rm -r *~* test *.dSYM *.dylib 

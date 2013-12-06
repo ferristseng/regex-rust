@@ -32,16 +32,19 @@ impl Prog {
 
 impl Prog {
   pub fn run(&self, input: &str) -> Option<Thread> {    
-	match self.strat.run(input) {
+    match self.strat.run(input) {
       Some(t) => {
         println(fmt!("[FOUND %u]", t.sp));
         println(input.slice_to(t.sp));
         for &(start, end) in t.captures.iter() {
           println(input.slice(start, end));
         }
-	  return Some(t);		
+        return Some(t);		
       }
-      None => {println("[NOT FOUND]"); return None;}
+      None => {
+        println("[NOT FOUND]"); 
+        return None;
+      }
     } 
   }
 
@@ -49,9 +52,9 @@ impl Prog {
     match self.strat.run(input) {
       Some(t) => {
         let matchstr = input.slice_to(t.sp);
-		println(input.replace(matchstr, repstr));
-	  }
-	  None => println("[NOT FOUND]")
+        println(input.replace(matchstr, repstr));
+      }
+      None => println("[NOT FOUND]")
     }
   }
 }
@@ -168,21 +171,16 @@ impl ExecStrategy for PikeVM {
     self.addThread(Thread::new(0, sp), &mut clist);
 
     for c in input.iter() {
-      //println(c.to_str());
-
       // some chars are different byte lengths, so 
       // we can't just inc by 1
       sp += c.len_utf8_bytes();
 
       while (clist.len() > 0) {
-        //println(fmt!("RUNNING INST %?", clist[i]));
-
         let mut t = clist.shift();;
 
         match self.inst[t.pc].op {
           InstLiteral(m) => {
             if (c == m && sp != input.len()) {
-              //println(fmt!("c: (%c) == m: (%c)", c, m));
               t.pc = t.pc + 1;
               t.sp = sp;
 
@@ -191,7 +189,6 @@ impl ExecStrategy for PikeVM {
           }
           InstRange(start, end) => {
             if (c >= start && c <= end && sp != input.len()) {
-              //println(fmt!("c: (%c) within (%c-%c)", c, start, end));
               t.pc = t.pc + 1;
               t.sp = sp;
 
@@ -204,19 +201,9 @@ impl ExecStrategy for PikeVM {
           }
           _ => unreachable!() 
         }
-
-        //println(fmt!("BEFORE %u", i));
-        //println(fmt!("clist: %?", clist));
-        //println(fmt!("nlist: %?", nlist));
       }
 
       swap(&mut clist, &mut nlist);
-      /*
-      println("SWAPPING");
-      println("AFTER");
-      println(fmt!("clist: %?", clist));
-      println(fmt!("nlist: %?", nlist));
-      */
       nlist.clear();
     }
 
