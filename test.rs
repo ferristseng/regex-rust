@@ -1,7 +1,6 @@
 // a test file that imports the library
 
 extern mod re;
-use std::{libc, io, run, os, path, uint};
 
 use re::UncompiledRegexp;
 
