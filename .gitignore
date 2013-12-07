@@ -11,3 +11,4 @@ test
 *~*
 *.dylib
 *.so
+.rust
