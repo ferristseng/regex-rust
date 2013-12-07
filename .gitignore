@@ -6,3 +6,4 @@ compile
 regexp
 parse
 *~*
+.so
