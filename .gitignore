@@ -2,9 +2,12 @@
 *.txt
 .DS_STORE
 *.dSYM
+
 compile
 regexp
 parse
+test
+
 *~*
 *.dylib
 *.so
