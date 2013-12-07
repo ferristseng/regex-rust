@@ -52,8 +52,7 @@ impl Prog {
 }
 
 #[deriving(Clone)]
-
-struct Match {
+pub struct Match {
   start: uint,
   end: uint,
   input: ~str,
@@ -69,6 +68,18 @@ impl Match {
       input: input.to_owned(),
       groups: groups
     }
+  }
+}
+
+impl Match {
+  pub fn group(&self, index: uint) -> ~str {
+    if (index < self.groups.len()) {
+      match self.groups[index] {
+        Some(ref group) => return self.input.slice(group.start, group.end).to_owned(),
+        None => return ~""
+      }
+    }
+    return ~""
   }
 }
 
@@ -178,7 +189,7 @@ impl PikeVM {
         
         // fill in spaces with None, if there is no
         // knowledge of a capture instruction
-        while (t.captures.len() != num + 1) {
+        while (t.captures.len() < num + 1) {
           t.captures.push(None);
         }
 

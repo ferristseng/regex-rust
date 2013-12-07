@@ -27,12 +27,12 @@ impl CompiledRegexp {
 impl CompiledRegexp {
   // the same thing as re.match() in python, 
   // but can't make match a function name in rust
-  fn run(&self, input: &str) -> Option<Match> {
+  pub fn run(&self, input: &str) -> Option<Match> {
     self.prog.run(input)
   }
   
   // should only find the first
-  fn search(&self, input: &str) -> Option<Match> {
+  pub fn search(&self, input: &str) -> Option<Match> {
     let len = input.len();
 
     for start in range(0, len) {
@@ -46,12 +46,12 @@ impl CompiledRegexp {
   }
 
   // not really working how replace should	
-  fn replace(&self, input: &str, repstr: &str) {
+  pub fn replace(&self, input: &str, repstr: &str) {
     self.prog.replace(input, repstr);
   }
   
   // ugly, but functional?
-  fn findall(&self, input: &str) -> ~[Match] {
+  pub fn findall(&self, input: &str) -> ~[Match] {
     let mut start = 0;
     let mut buff = 0;
     let mut found = ~[];
@@ -73,7 +73,7 @@ impl CompiledRegexp {
     found
   }
 
-  fn split(&self, input: &str) {
+  pub fn split(&self, input: &str) {
 
   }
 }
