@@ -93,49 +93,4 @@ fn main() {
   */
 
   println("OK");
-  let args: ~[~str] = os::args();
-  if (args.len()>1){
-    println(args[1]);
-    let contents = load(args[1]);
-    static CMD_PROMPT_INIT: &'static str = "Enter your expression > ";
-    print(CMD_PROMPT_INIT);
-    let line = std::io::stdin().read_line();
-    let mut exx = fmt!("%?", line);
-    let mut exp=exx.slice(2,line.len()+2);
-    println(fmt!("Rule given: %?",exp));
-    let mut re = UncompiledRegexp::new(exp);
-    re.run(exp);
-  }
-  else{
-    static CMD_PROMPT_INIT: &'static str = "No file given...Enter your expression > ";
-    print(CMD_PROMPT_INIT);
-    let line = std::io::stdin().read_line();
-    let mut exx = fmt!("%?", line);
-    let mut exp=exx.slice(2,line.len()+2);
-    println(fmt!("Rule given: %?",exp));
-    let mut re = UncompiledRegexp::new(exp);
-    static CMD_PROMPT: &'static str = "Input string > ";
-    loop{
-      print(CMD_PROMPT);
-      //let mut argv: ~[~str] = line.split_iter(' ').filter(|&x| x != "")
-      //                             .transform(|x| x.to_owned()).collect();
-      let line = std::io::stdin().read_line();
-      println(fmt!("Testing: %?", line));
-      re.run(line);
-    }
-  }
-  
-}
-
-fn load(filename: ~str) -> ~[~str] {
-  let read_result: Result<@Reader, ~str>;
-  read_result = io::file_reader(~path::Path(filename));
-
-  if read_result.is_ok() {
-    let file = read_result.unwrap();
-    return file.read_lines();
-  }
-
-  println(fmt!("Error reading file: %?", read_result.unwrap_err()));
-  return ~[];
 }
