@@ -31,20 +31,12 @@ impl Prog {
 }
 
 impl Prog {
-  pub fn run(&self, input: &str) -> Option<Thread> {    
+  pub fn run(&self, input: &str) -> Option<Match> {    
     match self.strat.run(input) {
       Some(t) => {
-        println(fmt!("[FOUND %u]", t.sp));
-        println(input.slice_to(t.sp));
-        for &(start, end) in t.captures.iter() {
-          println(input.slice(start, end));
-        }
-        return Some(t);		
+        Some(Match::new(0, t.sp, input.to_owned(), t.captures.clone()))
       }
-      None => {
-        println("[NOT FOUND]"); 
-        return None;
-      }
+      None => None 
     } 
   }
 
@@ -55,6 +47,59 @@ impl Prog {
         println(input.replace(matchstr, repstr));
       }
       None => println("[NOT FOUND]")
+    }
+  }
+}
+
+#[deriving(Clone)]
+
+struct Match {
+  start: uint,
+  end: uint,
+  input: ~str,
+  groups: ~[Option<CapturingGroup>]
+}
+
+impl Match {
+  fn new(start: uint, end: uint, input: &str, 
+         groups: ~[Option<CapturingGroup>]) -> Match {
+    Match {
+      start: start,
+      end: end,
+      input: input.to_owned(),
+      groups: groups
+    }
+  }
+}
+
+impl ToStr for Match {
+  fn to_str(&self) -> ~str {
+    fmt!("<Match str: %s groups: %u>", self.input.slice(self.start, self.end), 
+         self.groups.len())
+  }
+}
+
+// capturing group
+
+#[deriving(Clone)]
+struct CapturingGroup {
+  start: uint,
+  end: uint,
+  name: ~str,
+  num: uint
+}
+
+impl CapturingGroup {
+  fn new(start: uint, end: uint, name: &Option<~str>, num: uint) -> CapturingGroup {
+    let name = match name {
+      &Some(ref s) => s.to_owned(),
+      &None => num.to_str()
+    };
+    CapturingGroup {
+      start: start,
+      end: end,
+      name: name,
+      num: num
     }
   }
 }
@@ -76,7 +121,7 @@ trait ExecStrategy {
 struct Thread {
   pc: uint,
   sp: uint,
-  captures: ~[(uint, uint)]
+  captures: ~[Option<CapturingGroup>]
 }
 
 impl Thread {
@@ -128,17 +173,28 @@ impl PikeVM {
         self.addThread(t, tlist);
         self.addThread(split, tlist);
       }
-      InstCaptureStart => {
+      InstCaptureStart(num, ref id) => {
         t.pc = t.pc + 1;
-        t.captures.push((t.sp, t.sp));
+        
+        // fill in spaces with None, if there is no
+        // knowledge of a capture instruction
+        while (t.captures.len() != num + 1) {
+          t.captures.push(None);
+        }
+
+        t.captures[num] = Some(CapturingGroup::new(t.sp, t.sp, id, num));
 
         self.addThread(t, tlist);
       }
-      InstCaptureEnd => {
+      InstCaptureEnd(num) => {
         t.pc = t.pc + 1;
 
-        let (start, _) = t.captures.pop();
-        t.captures.unshift((start, t.sp));
+        match t.captures[num] {
+          Some(ref mut cap) => {
+            cap.end = t.sp;
+          }
+          None => unreachable!()
+        }
 
         self.addThread(t, tlist);
       }

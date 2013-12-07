@@ -30,7 +30,7 @@ pub enum OpCode {
   OpLineStart,
   OpLineEnd,
   OpLeftParen,
-  OpCapture,
+  OpCapture(uint, Option<~str>),
   OpRepeatOp(uint, Option<uint>),
   OpNoop
 }
@@ -170,10 +170,16 @@ impl CharClass {
 }
 
 // current state of parsing
+//
+// | - nparen:
+// |   number of parenthases not resolved
+// | - ncaps:
+// |   number of parenthases seen
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
-  priv nparen: uint, 
-  flags: u8 
+  priv nparen: uint,
+  priv ncaps: uint,
+  priv flags: u8 
 }
 
 impl ParseState {
@@ -181,6 +187,7 @@ impl ParseState {
     ParseState { 
       stack: ~[], 
       nparen: 0, 
+      ncaps: 0,
       flags: ParseFlags::NoParseFlags 
     } 
   }
@@ -344,10 +351,15 @@ impl ParseState {
       Some(ParseStack::Op(OpLeftParen)) => { },
       _ => return ParseExpectedOperand 
     }
-    let mut r = Regexp::new(OpCapture, Some(~inner), None);
+    let mut r = Regexp::new(OpCapture(self.ncaps, None), 
+                            Some(~inner), 
+                            None);
     if (noncapturing) {
       r.addFlag(ParseFlags::NoCapture);
+    } else {
+      self.ncaps += 1;
     }
+
     self.pushExpression(r);
 
     ParseOk

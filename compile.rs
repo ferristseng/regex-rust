@@ -21,8 +21,8 @@ pub enum InstOpCode {
   InstRange(char, char),
   InstMatch,
   InstJump(uint),
-  InstCaptureStart,
-  InstCaptureEnd,
+  InstCaptureStart(uint, Option<~str>),
+  InstCaptureEnd(uint),
   InstSplit(uint, uint),
   InstNoop
 }
@@ -41,14 +41,14 @@ impl Instruction {
 impl ToStr for Instruction {
   fn to_str(&self) -> ~str {
     match self.op {
-      InstLiteral(c)    => fmt!("InstLiteral %c", c), 
-      InstRange(s, e)   => fmt!("InstRange %c-%c", s, e),
-      InstMatch         => ~"InstMatch", 
-      InstJump(i)       => fmt!("InstJump %u", i),
-      InstCaptureStart  => ~"InstCaptureStart",
-      InstCaptureEnd    => ~"InstCaptureEnd",
-      InstSplit(l, r)   => fmt!("InstSplit %u | %u", l, r),
-      InstNoop          => ~"InstNoop"
+      InstLiteral(c)            => fmt!("InstLiteral %c", c), 
+      InstRange(s, e)           => fmt!("InstRange %c-%c", s, e),
+      InstMatch                 => ~"InstMatch", 
+      InstJump(i)               => fmt!("InstJump %u", i),
+      InstCaptureStart(id, _)   => fmt!("InstCaptureStart %u", id),
+      InstCaptureEnd(id)        => fmt!("InstCaptureEnd %u", id),
+      InstSplit(l, r)           => fmt!("InstSplit %u | %u", l, r),
+      InstNoop                  => ~"InstNoop"
     }
   }
 }
@@ -169,13 +169,13 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     // CaptureStart
     // (state0)
     // CaptureEnd
-    &OpCapture => {
+    &OpCapture(id, ref name) => {
       if (re.hasFlag(ParseFlags::NoCapture)) {
         recurse!(&re.state0);
       } else {
-        stack.push(Instruction::new(InstCaptureStart));
+        stack.push(Instruction::new(InstCaptureStart(id, name.clone())));
         recurse!(&re.state0);
-        stack.push(Instruction::new(InstCaptureEnd));
+        stack.push(Instruction::new(InstCaptureEnd(id)));
       }
     }
     // compile to:

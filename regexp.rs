@@ -19,7 +19,7 @@ impl CompiledRegexp {
   fn new_with_prog(prog: Prog, s: &str) -> CompiledRegexp {
     CompiledRegexp {
       prog: prog,
-      input: s.to_owned().clone()
+      input: s.to_owned()
     }
   }
 }
@@ -53,10 +53,10 @@ impl CompiledRegexp {
     while start < len {
       match self.prog.run(input.slice(start, len)) {
         Some(t) => { 
-          if t.sp == 0 { 
+          if t.start == 0 { 
             start = start + 1;
           } else {
-            start = t.sp + buff; 
+            start = t.start + buff; 
           }
           buff = start;
         }
