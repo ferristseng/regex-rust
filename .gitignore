@@ -2,13 +2,14 @@
 *.txt
 .DS_STORE
 *.dSYM
+*~*
+*.dylib
+*.so
 
 compile
 regexp
 parse
 test
 
-*~*
-*.dylib
-*.so
+build
 .rust

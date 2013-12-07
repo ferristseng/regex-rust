@@ -1,5 +1,6 @@
 #[link(
   name = "re",
+  package_id = "re",
   vers = "0.1",
   url = "https://github.com/ferristseng/regex-rust/tree/master"
  )];
