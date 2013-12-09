@@ -1,6 +1,10 @@
 # Test generator
 
+import re
 from datetime import datetime
+
+MATCH = 1
+NOMATCH = 0
 
 # These are the tests we generate functions for
 # (re, input, expected, groups)
@@ -10,13 +14,13 @@ TESTS = [
   ("[^al-obc]+", "kpd", MATCH),
   ("[^al-obc]+", "abc", NOMATCH),
   ("[al-obc]+", "almocb", MATCH),
-  ("[al-obc]+", "defzx", NOMATCH)
+  ("[al-obc]+", "defzx", NOMATCH),
+  ("a(?:b|c|d)(.)", "ace", MATCH),
+  ("a(?:b|c|d)*(.)", "ace", MATCH),
+  ("a(?:b|c|d)+?(.)", "ace", MATCH)
 ]
 
 FILE = open('src/re/test.rs', 'w')
-
-MATCH = 1
-NOMATCH = 0
 
 OUTPUT = """
 // This is an auto-generated test file
@@ -54,9 +58,10 @@ TEST_FN = """
   }
 """
 
-def generate_test_case(ident, re, input_str, expected):
+def generate_test_case(ident, regexp, input_str, expected):
   match = "Some(_)" if expected == 1 else "None"
-  return TEST_FN % (ident, re, input_str, match)
+  regexp = re.sub("\\\\", "\\\\", regexp)
+  return TEST_FN % (ident, regexp, input_str, match)
 
 if __name__ == "__main__":
   date = datetime.today().strftime("%B %d %Y %I:%M%p")
