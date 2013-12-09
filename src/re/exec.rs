@@ -75,7 +75,9 @@ impl Match {
   pub fn group(&self, index: uint) -> ~str {
     if (index < self.groups.len()) {
       match self.groups[index] {
-        Some(ref group) => return self.input.slice(group.start, group.end).to_owned(),
+        Some(ref group) => {
+          return self.input.slice(group.start, group.end).to_owned()
+        }
         None => return ~""
       }
     }
@@ -93,7 +95,7 @@ impl ToStr for Match {
 // capturing group
 
 #[deriving(Clone)]
-struct CapturingGroup {
+pub struct CapturingGroup {
   start: uint,
   end: uint,
   name: ~str,
