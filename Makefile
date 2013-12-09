@@ -1,19 +1,27 @@
-SRC = src/re
+SRC 	= src
+RE 		= re
+TEST 	= test
+
+OPT_LEVEL = 3
+FLAGS = --opt-level=$(OPT_LEVEL)
+
 SOURCES = lib.rs compile.rs error.rs exec.rs parse.rs regexp.rs \
 					state.rs
-LIBSOURCES = $(addprefix $(SRC)/, $(SOURCES))
-OPT_LEVEL = 3
+LIBSOURCES = $(addprefix $(SRC)/$(RE)/, $(SOURCES))
 
-all: lib
+all: build
 
-lib: $(LIBSOURCES)
-	rustc --opt-level=$(OPT_LEVEL) --lib $(SRC)/lib.rs
-	echo "~ Compiled lib.rs ~"
+build: $(LIBSOURCES)
+	mkdir build/
+	rustc $(FLAGS) --lib --out-dir build $(SRC)/$(RE)/lib.rs
 
-test:
-	rust test src/re/lib.rs
+test: $(SRC)/$(RE)/test
+	./build/test
 
-run: $(LIBSOURCES) 
-	rustc --opt-level=$(OPT_LEVEL) $(SRC)/lib.rs
-	./$(SRC)/lib
+$(SRC)/$(RE)/test: build $(SRC)/$(TEST)/test_generator.py
+	python $(SRC)/$(TEST)/test_generator.py
+	rustc $(FLAGS) --test  -L build/ --out-dir build $(SRC)/$(RE)/test.rs
+
+clean:
+	rm -r build/
 

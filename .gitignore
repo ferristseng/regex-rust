@@ -9,7 +9,6 @@
 compile
 regexp
 parse
-test
 main
 main.rs
 

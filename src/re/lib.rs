@@ -17,7 +17,6 @@ mod exec;
 mod compile;
 mod parse;
 mod state;
-mod test;
 
 pub mod regexp;
 
