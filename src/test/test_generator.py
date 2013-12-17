@@ -15,9 +15,9 @@ TESTS = [
   ("[^al-obc]+", "abc", NOMATCH),
   ("[al-obc]+", "almocb", MATCH),
   ("[al-obc]+", "defzx", NOMATCH),
-  ("a(?:b|c|d)(.)", "ace", MATCH),
-  ("a(?:b|c|d)*(.)", "ace", MATCH),
-  ("a(?:b|c|d)+?(.)", "ace", MATCH)
+#  ("a(?:b|c|d)(.)", "ace", MATCH),
+#  ("a(?:b|c|d)*(.)", "ace", MATCH),
+#  ("a(?:b|c|d)+?(.)", "ace", MATCH)
 ]
 
 FILE = open('src/re/test.rs', 'w')

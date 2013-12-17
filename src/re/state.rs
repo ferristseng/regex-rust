@@ -172,9 +172,6 @@ impl CharClass {
   }
 }
 
-impl CharClass {
-}
-
 // current state of parsing
 //
 // | - nparen:
@@ -183,6 +180,8 @@ impl CharClass {
 // |   number of parenthases seen
 // | - ptr:
 // |   reference to a position in the regexp input str
+// | - len:
+// |   length of the regexp input str
 // | - flags:
 // |   global flags
 pub struct ParseState {
@@ -190,16 +189,18 @@ pub struct ParseState {
   priv nparen: uint,
   priv ncaps: uint,
   priv ptr: uint,
+  priv len: uint,
   priv flags: u8 
 }
 
 impl ParseState {
-  pub fn new() -> ParseState {
+  pub fn new(regexp: &str) -> ParseState {
     ParseState { 
       stack: ~[], 
       nparen: 0, 
       ncaps: 0,
       ptr: 0,
+      len: regexp.len(),
       flags: ParseFlags::NoParseFlags 
     } 
   }
@@ -211,6 +212,22 @@ impl ParseState {
   }
   pub fn hasFlag(&self, flag: u8) -> bool {
     (self.flags & flag) > 0
+  }
+}
+
+impl ParseState {
+  pub fn incr(&mut self, num: uint) -> uint {
+    let ptr = self.ptr;
+
+    self.ptr += num;
+
+    return ptr
+  }
+  pub fn ptr(&mut self) -> uint {
+    return self.ptr
+  }
+  pub fn remainder(&mut self) -> uint {
+    return self.len - self.ptr
   }
 }
 

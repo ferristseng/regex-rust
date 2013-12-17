@@ -2,22 +2,6 @@ use state::ParseState;
 use state::CharClass;
 use error::ParseError::*;
 
-// add functionality to
-// build in ~str to shift a number
-// of characters from the beginning
-
-trait RegexInputStr {
-  fn shiftn_char(&mut self, times: uint);
-}
-
-impl RegexInputStr for ~str {
-  fn shiftn_char(&mut self, times: uint) {
-    for _ in range(0, times) {
-      self.shift_char();
-    }
-  }
-}
-
 // check for an err
 macro_rules! check_ok(
   ($f: expr) => (
@@ -38,28 +22,28 @@ fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
   let mut cc = CharClass::new();
 
-  if (t.len() > 0) {
-    let esc = t.char_at(0);
+  if (ps.remainder() > 0) {
+    let esc = t.char_at(ps.ptr());
 
     match esc {
       'd' | 'D' => {
         check_ok!(cc.addRange('0', '9'));
 
-        t.shift_char();
+        ps.incr(1);
       }
       'w' | 'W' => {
         check_ok!(cc.addRange('a', 'z'));
         check_ok!(cc.addRange('A', 'Z'));
         check_ok!(cc.addRange('_', '_'));
 
-        t.shift_char();
+        ps.incr(1);
       }
       's' | 'S' => {
         check_ok!(cc.addRange('\n', '\n'));
         check_ok!(cc.addRange('\t', '\t'));
         check_ok!(cc.addRange('\r', '\r'));
 
-        t.shift_char();
+        ps.incr(1);
       }
       _ => return parse_escape_char(t, ps) 
     }
@@ -79,13 +63,13 @@ fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 #[inline]
 fn parse_escape_char(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
-  match t.char_at(0) {
+  match t.char_at(ps.ptr()) {
     c => {
       ps.pushLiteral(c.to_str());
     }
   }
 
-  t.shift_char();
+  ps.incr(1);
 
   ParseOk
 
@@ -104,23 +88,23 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
   // class
-  let negate = match t.char_at(0) {
+  let negate = match t.char_at(ps.ptr()) {
     '^' => {
-      t.shift_char();
+      ps.incr(1);
       true
     },
     _ => false
   };
 
-  while (t.len() > 0) {
+  while (ps.remainder() > 0) {
 
-    match t.char_at(0) {
+    match t.char_at(ps.ptr()) {
       '[' => {
         nbracket += 1;
-        t.shift_char();
+        ps.incr(1);
       },
       ']' => {
-        t.shift_char();
+        ps.incr(1);
         if (nbracket > 0) {
           nbracket -= 1;
         } else {
@@ -132,19 +116,19 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         }
       }
       c => {
-        t.shift_char();
+        ps.incr(1);
         
         // check to see if its this is part of a 
         // range
-        if (t.len() > 1) {
-          match t.char_at(0) {
+        if (ps.remainder() > 1) {
+          match t.char_at(ps.ptr()) {
             '-' => {
-              if (t.char_at(1) != ']') {
-                match cc.addRange(c, t.char_at(1)) {
+              if (t.char_at(ps.ptr() + 1) != ']') {
+                match cc.addRange(c, t.char_at(ps.ptr() + 1)) {
                   ParseOk => { },
                   e => return e,
                 }
-                t.shiftn_char(2);
+                ps.incr(2);
               } else {
                 cc.addRange(c, c);
               }
@@ -182,14 +166,14 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   // characters in the string
   macro_rules! check_bounds(
     () => (
-      if (len == t.len()) {
+      if (len == ps.remainder()) {
         return ParseNotRepetition
       }
     )
   )
 
-  while (len < t.len() && t.char_at(len).is_digit()) {
-    buf.push_char(t.char_at(len));
+  while (len < ps.remainder() && t.char_at(ps.ptr() + len).is_digit()) {
+    buf.push_char(t.char_at(ps.ptr() + len));
     len += 1;
   }
 
@@ -206,12 +190,12 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
   check_bounds!();
 
-  match t.char_at(len) {
+  match t.char_at(ps.ptr() + len) {
     ',' => { 
       len += 1;
     }
     '}' => {
-      t.shiftn_char(len + 1);
+      ps.incr(len + 1);
       return ps.doBoundedRepetition(start, start);
     }
     _ => return ParseNotRepetition
@@ -220,9 +204,9 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   check_bounds!();
 
   // if the next character is a }, unbounded repetition
-  match t.char_at(len) {
+  match t.char_at(ps.ptr() + len) {
     '}' => {
-      t.shiftn_char(len + 1);
+      ps.incr(len + 1);
       return ps.doUnboundedRepetition(start);
     }
     x if x.is_digit() => { } // continue if x is a digit
@@ -230,8 +214,8 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   }
 
   // this should be the ending digit
-  while (len < t.len() && t.char_at(len).is_digit()) {
-    buf.push_char(t.char_at(len));
+  while (len < ps.remainder() && t.char_at(ps.ptr() + len).is_digit()) {
+    buf.push_char(t.char_at(ps.ptr() + len));
     len += 1;
   }
 
@@ -239,9 +223,9 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
   check_bounds!();
 
-  match t.char_at(len) {
+  match t.char_at(ps.ptr() + len) {
     '}' => {
-      t.shiftn_char(len + 1);
+      ps.incr(len + 1);
       return ps.doBoundedRepetition(start, end);
     }
     _ => return ParseNotRepetition
@@ -258,19 +242,19 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   // cases for
   // parsing different characters
   // in the input string
-  while (t.len() > 0) {
+  while (ps.remainder() > 0) {
 
-    match t.char_at(0) {
+    match t.char_at(ps.ptr()) {
       '(' => {
         ps.doConcatenation();
         ps.pushLeftParen();
 
-        t.shift_char();
+        ps.incr(1);
 
         // check for ?: (non capturing group)
         let noncapturing = {
-          if (t.len() > 1) {
-            t.char_at(0) == '?' && t.char_at(1) == ':'
+          if (ps.remainder() > 1) {
+            t.char_at(ps.ptr()) == '?' && t.char_at(ps.ptr() + 1) == ':'
           } else {
             false
           }
@@ -278,15 +262,15 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         
         // adjust
         if (noncapturing) {
-          t.shiftn_char(2);
+          ps.incr(2);
         }
 
         check_ok!(parse_recursive(t, ps));
         ps.doLeftParen(noncapturing);
-        t.shift_char();
+        ps.incr(1);
       }
       ')' => {
-        if (ps.hasUnmatchedParens() && t.len() > 0) {
+        if (ps.hasUnmatchedParens() && ps.remainder() > 0) {
           break;
         }
         return ParseUnexpectedClosingParen;
@@ -296,7 +280,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         ps.doConcatenation();
         ps.pushAlternation();
 
-        t.shift_char();
+        ps.incr(1);
         check_ok!(parse_recursive(t, ps));
         ps.doAlternation();
         
@@ -306,20 +290,20 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
       }
 
       '*' => {
-        t.shift_char();
+        ps.incr(1);
         ps.doKleine();
       }
       '?' => {
-        t.shift_char();
+        ps.incr(1);
         ps.doZeroOrOne();
       }
       '+' => {
-        t.shift_char();
+        ps.incr(1);
         ps.doOneOrMore();
       }
 
       '{' => {
-        t.shift_char();
+        ps.incr(1);
 
         match parse_repetition(t, ps) {
           ParseOk => { },
@@ -329,16 +313,16 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
       }
 
       '[' => {
-        t.shift_char();
+        ps.incr(1);
         check_ok!(parse_charclass(t, ps));
       }
       '\\' => {
-        t.shift_char();
+        ps.incr(1);
         check_ok!(parse_escape(t, ps));
       }
       c => {
         ps.pushLiteral(c.to_str());
-        t.shift_char();
+        ps.incr(1);
       }
     }
 
@@ -348,7 +332,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
   ps.doConcatenation();
 
-  if (ps.hasUnmatchedParens() && t.len() == 0) {
+  if (ps.hasUnmatchedParens() && ps.remainder() == 0) {
     ParseExpectedClosingParen
   } else {
     ParseOk
@@ -364,8 +348,8 @@ mod parse_tests {
   macro_rules! test_parse(
     ($input: expr, $expect: pat) => (
       {
-        let mut ps = ParseState::new(); 
-        let ok = match parse_recursive(&mut $input, &mut ps) {
+        let mut ps = ParseState::new($input); 
+        let ok = match parse_recursive(&mut ~$input, &mut ps) {
           $expect => true,
           _ => false
         };
@@ -377,51 +361,51 @@ mod parse_tests {
 
   #[test]
   fn parse_bounded_repetition_ok() {
-    test_parse!(~"a{10}", ParseOk);
+    test_parse!("a{10}", ParseOk);
   }
 
   #[test]
   fn parse_unbounded_repetition_ok() {
-    test_parse!(~"b{10,}", ParseOk);
+    test_parse!("b{10,}", ParseOk);
   }
 
   #[test]
   fn parse_bounded_range_repetition_ok() {
-    test_parse!(~"c{10,12}", ParseOk);
+    test_parse!("c{10,12}", ParseOk);
   }
 
   #[test]
   fn parse_bad_range_repetition_ok() {
-    test_parse!(~"c{10,x}", ParseOk);
+    test_parse!("c{10,x}", ParseOk);
   }
 
   #[test]
   fn parse_empty_range_err() {
-    test_parse!(~"d{12,10}", ParseEmptyRepetitionRange);
+    test_parse!("d{12,10}", ParseEmptyRepetitionRange);
   }
 
   #[test]
   fn parse_negative_range_ok() {
-    test_parse!(~"e{-11}", ParseOk);
+    test_parse!("e{-11}", ParseOk);
   }
 
   #[test]
   fn parse_no_comma_range_ok() {
-    test_parse!(~"f{10 11}", ParseOk);
+    test_parse!("f{10 11}", ParseOk);
   }
 
   #[test]
   fn parse_no_closing_curly_brace_ok() {
-    test_parse!(~"g{10", ParseOk);
+    test_parse!("g{10", ParseOk);
   }
 
   #[test]
   fn parse_no_repetition_target_specified_err() {
-    test_parse!(~"{10,}", ParseEmptyRepetition); 
+    test_parse!("{10,}", ParseEmptyRepetition); 
   }
 
   #[test]
   fn parse_backward_slash_err() {
-    test_parse!(~"\\", ParseIncompleteEscapeSeq);
+    test_parse!("\\", ParseIncompleteEscapeSeq);
   }
 }

@@ -95,7 +95,7 @@ impl UncompiledRegexp {
   // we should hide the underlying parsing algorithm
   // from the user
   fn parse(&mut self) -> Result<Regexp, ParseCode> {
-    let mut ps = ParseState::new();
+    let mut ps = ParseState::new(self.input);
     let mut input = self.input.clone();
     match parse_recursive(&mut input, &mut ps) {
       ParseOk => {
