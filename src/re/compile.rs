@@ -53,11 +53,14 @@ impl ToStr for Instruction {
   }
 }
 
+#[inline]
 fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
   for c in lit.value.iter() {
     stack.push(Instruction::new(InstLiteral(c)));
   }
 }
+
+#[inline]
 fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
   let mut ssize = stack.len();
   let mut rlen = cc.ranges.len();
@@ -79,6 +82,16 @@ fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
     }
 
     stack.push(Instruction::new(InstJump(rsize - 1)));
+  }
+}
+
+// generates a split instruction
+#[inline]
+fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instruction {
+  if (nongreedy) {
+    Instruction::new(InstSplit(left, right))
+  } else {
+    Instruction::new(InstSplit(right, left))
   }
 }
 
@@ -194,14 +207,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       let jmp = Instruction::new(InstJump(ptr_split));
       stack.push(jmp);
 
-      let split = {
-        if (nongreedy) { 
-          Instruction::new(InstSplit(stack.len(), ptr_split + 1))
-        } else {
-          Instruction::new(InstSplit(ptr_split + 1, stack.len()))
-        }
-      };
-      stack[ptr_split] = split;
+      stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
     }
     // compile to:
     // ...
@@ -212,15 +218,10 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     &OpOneOrMore => {
       let ptr_inst = stack.len();
       let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
-      recurse!(&re.state0);
 
-      let split = {
-        if (nongreedy) {
-          Instruction::new(InstSplit(stack.len() + 1, ptr_inst))
-        } else {
-          Instruction::new(InstSplit(ptr_inst, stack.len() + 1))
-        }
-      };
+      recurse!(&re.state0);
+      
+      let split = generate_repeat_split(stack.len() + 1, ptr_inst, nongreedy);
       stack.push(split);
     }
     // compile to:
@@ -235,14 +236,50 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
 
       recurse!(&re.state0);
 
-      let split = {
-        if (nongreedy) {
-          Instruction::new(InstSplit(stack.len(), ptr_split + 1))
-        } else {
-          Instruction::new(InstSplit(ptr_split + 1, stack.len()))
+      stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
+    }
+    // there are 3 cases for a repeat op
+    // that depend on end:
+    //
+    //    1. end == start...exact repetition of start times
+    //    2. end == Some(n)...bounded repetition 
+    //       from start to end
+    //    3. end == None...unbounded repetition
+    &OpRepeatOp(start, end) => {
+      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
+
+      for _ in range(0, start) {
+        recurse!(&re.state0);
+      }
+
+      match end {
+        // corresponds to the 2nd case
+        Some(n) if n != start => {
+          // each iteration should compile something 
+          // similar to the '?' operator
+          for _ in range(0, n - start) {
+            let ptr_split = stack.len();
+            placeholder!();
+
+            recurse!(&re.state0);
+
+            stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
+          }
         }
-      };
-      stack[ptr_split] = split;
+        // this should look like a '*' operator
+        None => {
+          let ptr_split = stack.len();
+          placeholder!();
+
+          recurse!(&re.state0);
+          let jmp = Instruction::new(InstJump(ptr_split));
+          stack.push(jmp);
+
+          stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
+        }
+        // this corresponds to the 1st case
+        _ => { }
+      }
     }
     _ => { }
   }
