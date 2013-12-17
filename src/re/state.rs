@@ -2,6 +2,24 @@ use extra::sort::merge_sort;
 use std::char::{from_u32, MAX};
 use error::ParseError::*;
 
+// try to get the previous unicode character 
+// in sequence
+fn prev_char(c: char) -> Option<char> {
+  match from_u32(c as u32 - 1) {
+    None => None,
+    r    => r   
+  }
+}
+
+// try to get the next unicode character 
+// in sequence
+fn next_char(c: char) -> Option<char> {
+  match from_u32(c as u32 + 1) {
+    None => None,
+    r    => r
+  }
+}
+
 pub mod ParseFlags {
   pub static NoParseFlags:  u8 = 0b00000000;
   pub static NoCapture:     u8 = 0b00000010;
@@ -104,7 +122,7 @@ impl CharClass {
     self.ranges = ~[];
 
     for &(start, end) in ordered.iter() {
-      match CharClass::prev_char(start) {
+      match prev_char(start) {
         Some(e) => {
           if (min < e) {
             self.addRange(min, e); 
@@ -113,7 +131,7 @@ impl CharClass {
         None => { } // continue
       };
       if (min < end) {
-        min = match CharClass::next_char(end) {
+        min = match next_char(end) {
           Some(c) => c,
           None => end
         };
@@ -155,18 +173,6 @@ impl CharClass {
 }
 
 impl CharClass {
-  fn prev_char(c: char) -> Option<char> {
-    match from_u32(c as u32 - 1) {
-      None => None,
-      r    => r   
-    }
-  }
-  fn next_char(c: char) -> Option<char> {
-    match from_u32(c as u32 + 1) {
-      None => None,
-      r    => r
-    }
-  }
 }
 
 // current state of parsing
@@ -175,10 +181,15 @@ impl CharClass {
 // |   number of parenthases not resolved
 // | - ncaps:
 // |   number of parenthases seen
+// | - ptr:
+// |   reference to a position in the regexp input str
+// | - flags:
+// |   global flags
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
   priv nparen: uint,
   priv ncaps: uint,
+  priv ptr: uint,
   priv flags: u8 
 }
 
@@ -188,6 +199,7 @@ impl ParseState {
       stack: ~[], 
       nparen: 0, 
       ncaps: 0,
+      ptr: 0,
       flags: ParseFlags::NoParseFlags 
     } 
   }
@@ -228,25 +240,25 @@ impl ParseState {
 }
 
 impl ParseState {
-  pub fn pushLiteral(&mut self, s: &str) -> () {
+  pub fn pushLiteral(&mut self, s: &str) {
     self.stack.push(ParseStack::Literal(Literal::new(s)));
   }
-  pub fn pushOperation(&mut self, op: OpCode) -> () {
+  pub fn pushOperation(&mut self, op: OpCode) {
     self.stack.push(ParseStack::Op(op));
   }
-  pub fn pushExpression(&mut self, r: Regexp) -> () {
+  pub fn pushExpression(&mut self, r: Regexp) {
     self.stack.push(ParseStack::Expression(r));
   }
-  pub fn pushCharClass(&mut self, cc: CharClass) -> () {
+  pub fn pushCharClass(&mut self, cc: CharClass) {
     self.stack.push(ParseStack::CharClass(cc));
   }
 }
 
 impl ParseState {
-  pub fn pushAlternation(&mut self) -> () {
+  pub fn pushAlternation(&mut self) {
     self.pushOperation(OpAlternation);
   }
-  pub fn pushLeftParen(&mut self) -> () {
+  pub fn pushLeftParen(&mut self) {
     self.nparen += 1;
     self.pushOperation(OpLeftParen);
   }
@@ -417,7 +429,7 @@ impl ParseState {
             let expr = Regexp::new(op, Some(~r), None);
             self.pushExpression(expr);
           }
-          _ => { } // should never hit this case
+          _ => unreachable!() 
         }
       }
       _ => {
