@@ -22,6 +22,10 @@ $(SRC)/$(RE)/test: build $(SRC)/$(TEST)/test_generator.py
 	python $(SRC)/$(TEST)/test_generator.py
 	rustc $(FLAGS) --test  -L build/ --out-dir build $(SRC)/$(RE)/test.rs
 
+run: build
+	rustc $(FLAGS) --out-dir build $(SRC)/$(RE)/lib.rs
+	./build/lib	
+
 clean:
 	rm -r build/
 
