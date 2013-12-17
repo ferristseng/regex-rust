@@ -34,11 +34,12 @@ fn main() {
     None => { }
   }
 
-  let mut re = UncompiledRegexp::new("((a)|(ab))((c)|(bc))");
-  let ma = re.run("abc");
+  let mut re = UncompiledRegexp::new("[al-obc]+");
+  let ma = re.run("almocb");
 
   match ma {
     Some(matched) => {
+      println("Found Match");
       for i in range(0, matched.groups.len()) {
         println(matched.group(i));
       } 
