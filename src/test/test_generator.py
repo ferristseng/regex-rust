@@ -40,17 +40,17 @@ macro_rules! run_tests(
     {
       let mut re = UncompiledRegexp::new($re);
       let res = re.run($input);
-      let mut success = false;
-      success = match res {
+      let expect_test = match res {
         $expect => true, 
         _ => false
       };
-      if (res.is_some()) {
-        success = {
-          res.unwrap().matched() == $matched
-        };
+      if (!expect_test) {
+        assert!(expect_test);
+        return
       }
-      assert!(success);
+      if (res.is_some()) {
+        assert!(res.unwrap().matched() == $matched)
+      }
     }
   )
 )

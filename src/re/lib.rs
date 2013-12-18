@@ -13,11 +13,11 @@ extern mod extra;
 pub use regexp::UncompiledRegexp;
 
 mod error;
-mod exec;
 mod compile;
 mod parse;
 mod state;
 
+pub mod exec;
 pub mod regexp;
 
 // this is test code
