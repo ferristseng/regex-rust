@@ -23,7 +23,7 @@ fn next_char(c: char) -> Option<char> {
 pub mod ParseFlags {
   pub static NoParseFlags:  u8 = 0b00000000;
   pub static NoCapture:     u8 = 0b00000010;
-  pub static NonGreedy:     u8 = 0b01000000;
+  pub static NonGreedy:     u8 = 0b00000100;
 }
 
 pub mod ParseStack {
@@ -50,6 +50,7 @@ pub enum OpCode {
   OpLeftParen,
   OpCapture(uint, Option<~str>),
   OpRepeatOp(uint, Option<uint>),
+  OpDotAll,
   OpNoop
 }
 

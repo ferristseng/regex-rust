@@ -7,17 +7,22 @@ MATCH = 1
 NOMATCH = 0
 
 # These are the tests we generate functions for
-# (re, input, expected, groups)
+# (re, input, matched_str, expected, groups)
 TESTS = [
-  ("[^^]+", "abc", MATCH),
-  ("[^^]+", "^", NOMATCH),
-  ("[^al-obc]+", "kpd", MATCH),
-  ("[^al-obc]+", "abc", NOMATCH),
-  ("[al-obc]+", "almocb", MATCH),
-  ("[al-obc]+", "defzx", NOMATCH),
-#  ("a(?:b|c|d)(.)", "ace", MATCH),
-#  ("a(?:b|c|d)*(.)", "ace", MATCH),
-#  ("a(?:b|c|d)+?(.)", "ace", MATCH)
+  # 0
+  ("[^^]+", "abc", "abc", MATCH),
+  ("[^^]+", "^", "", NOMATCH),
+  ("[^al-obc]+", "kpd", "kpd",  MATCH),
+  ("[^al-obc]+", "abc", "", NOMATCH),
+  ("[al-obc]+", "almocb", "almocb", MATCH),
+  ("[al-obc]+", "defzx", "", NOMATCH),
+#  ("a(?:b|c|d)(.)", "ace", "ace", MATCH),
+#  ("a(?:b|c|d)*(.)", "ace", "ace", MATCH),
+#  ("a(?:b|c|d)+?(.)", "ace", "ace", MATCH)
+  ("a{5}", "aaaaa", "aaaaa", MATCH),
+  ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
+  ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),
+  ("a{5,}", "aaaa", "", NOMATCH)
 ]
 
 FILE = open('src/re/test.rs', 'w')
@@ -31,13 +36,21 @@ OUTPUT = """
 extern mod re;
 
 macro_rules! run_tests(
-  ($re: expr, $input: expr, $expect: pat) => (
+  ($re: expr, $input: expr, $matched: expr, $expect: pat) => (
     {
       let mut re = UncompiledRegexp::new($re);
-      match re.run($input) {
-        $expect => assert!(true),
-        _ => assert!(false)
+      let res = re.run($input);
+      let mut success = false;
+      success = match res {
+        $expect => true, 
+        _ => false
+      };
+      if (res.is_some()) {
+        success = {
+          res.unwrap().matched() == $matched
+        };
       }
+      assert!(success);
     }
   )
 )
@@ -54,14 +67,15 @@ mod python_tests {
 TEST_FN = """
   #[test]
   fn test_case_ident_%s() {
-    run_tests!(\"%s\", \"%s\", %s)
+    run_tests!(\"%s\", \"%s\", ~\"%s\", %s)
   }
 """
 
-def generate_test_case(ident, regexp, input_str, expected):
+def generate_test_case(ident, regexp, input_str, 
+    matched_str, expected):
   match = "Some(_)" if expected == 1 else "None"
   regexp = re.sub("\\\\", "\\\\", regexp)
-  return TEST_FN % (ident, regexp, input_str, match)
+  return TEST_FN % (ident, regexp, input_str, matched_str, match)
 
 if __name__ == "__main__":
   date = datetime.today().strftime("%B %d %Y %I:%M%p")
@@ -69,7 +83,7 @@ if __name__ == "__main__":
 
   for (i, test) in enumerate(TESTS):
     buf += \
-      generate_test_case(i, test[0], test[1], test[2])
+      generate_test_case(i, test[0], test[1], test[2], test[3])
 
   FILE.write(OUTPUT % (date, buf))
 

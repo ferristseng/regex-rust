@@ -1,7 +1,7 @@
 #[link(
   name = "re",
   package_id = "re",
-  vers = "0.1",
+  vers = "0.1.1",
   url = "https://github.com/ferristseng/regex-rust/tree/master"
  )];
 
@@ -34,12 +34,13 @@ fn main() {
     None => { }
   }
 
-  let mut re = UncompiledRegexp::new("[al-obc]+");
-  let ma = re.run("almocb");
+  let mut re = UncompiledRegexp::new("a{5,8}");
+  let ma = re.run("aaaa");
 
   match ma {
     Some(matched) => {
       println("Found Match");
+      println(matched.matched());
       for i in range(0, matched.groups.len()) {
         println(matched.group(i));
       } 

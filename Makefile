@@ -1,36 +1,38 @@
 SRC 	= src
 RE 		= re
 TEST 	= test
+BUILD = build
 
 OPT_LEVEL = 3
 FLAGS = --opt-level=$(OPT_LEVEL)
+
+DYLIB = libre-bdb08f4b4768859d-0.1.1.dylib
 
 SOURCES = lib.rs compile.rs error.rs exec.rs parse.rs regexp.rs \
 					state.rs
 LIBSOURCES = $(addprefix $(SRC)/$(RE)/, $(SOURCES))
 
-all: build
+all: $(BUILD) $(BUILD)/$(DYLIB) $(BUILD)/test $(BUILD)/librun $(BUILD)/libtest
 
-build: 
-	mkdir build/
-
-lib: build $(LIBSOURCES)
-	rustc $(FLAGS) --lib --out-dir build $(SRC)/$(RE)/lib.rs
-
-libtest: build $(LIBSOURCES)
-	rustc $(FLAGS) --test --out-dir build $(SRC)/$(RE)/lib.rs
-	./build/lib
-
-test: $(SRC)/$(RE)/test
+test: $(BUILD)/test
 	./build/test
 
-$(SRC)/$(RE)/test: lib $(SRC)/$(TEST)/test_generator.py
-	python $(SRC)/$(TEST)/test_generator.py
-	rustc $(FLAGS) --test  -L build/ --out-dir build $(SRC)/$(RE)/test.rs
+$(BUILD)/$(DYLIB): $(LIBSOURCES)
+	test -d $(BUILD) || mkdir $(BUILD)
+	rustc $(FLAGS) --lib --out-dir $(BUILD) $(SRC)/$(RE)/lib.rs
 
-run: build
-	rustc $(FLAGS) --out-dir build $(SRC)/$(RE)/lib.rs
-	./build/lib	
+$(BUILD)/libtest: $(BUILD) $(LIBSOURCES)
+	test -d $(BUILD) || mkdir $(BUILD)
+	rustc $(FLAGS) --test -o $(BUILD)/libtest $(SRC)/$(RE)/lib.rs
+
+$(BUILD)/librun: $(BUILD) $(LIBSOURCES)
+	test -d $(BUILD) || mkdir $(BUILD)
+	rustc $(FLAGS) -o $(BUILD)/librun  $(SRC)/$(RE)/lib.rs
+
+$(BUILD)/test: $(BUILD)/$(DYLIB) $(SRC)/$(TEST)/test_generator.py
+	test -d $(BUILD) || mkdir $(BUILD)
+	python $(SRC)/$(TEST)/test_generator.py
+	rustc $(FLAGS) --test -L $(BUILD) -o $(BUILD)/test $(SRC)/$(RE)/test.rs
 
 clean:
 	rm -r build/

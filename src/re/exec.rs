@@ -83,6 +83,9 @@ impl Match {
     }
     return ~""
   }
+  pub fn matched(&self) -> ~str {
+    self.input.slice(self.start, self.end).to_owned()
+  }
 }
 
 impl ToStr for Match {
