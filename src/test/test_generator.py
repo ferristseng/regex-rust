@@ -1,31 +1,8 @@
 # Test generator
 
 import re
+from cases import TESTS
 from datetime import datetime
-
-MATCH = 1
-NOMATCH = 0
-
-# These are the tests we generate functions for
-# (re, input, matched_str, expected, groups)
-TESTS = [
-  # 0
-  ("[^^]+", "abc", "abc", MATCH),
-  ("[^^]+", "^", "", NOMATCH),
-  ("[^al-obc]+", "kpd", "kpd",  MATCH),
-  ("[^al-obc]+", "abc", "", NOMATCH),
-  ("[al-obc]+", "almocb", "almocb", MATCH),
-  ("[al-obc]+", "defzx", "", NOMATCH),
-  ("a(?:b|c|d)(.)", "ace", "ace", MATCH),
-  ("a(?:b|c|d)*(.)", "ace", "ace", MATCH),
-  ("a(?:b|c|d)+?(.)", "ace", "ace", MATCH),
-#  ("<TAG\\b[^>]*>(.*?)</TAG>", "one<TAG>two</TAG>three", "<TAG>two</TAG>", MATCH),
-  ("[-+]?[0-9]*\\.?[0-9]+", "3.14", "3.14", MATCH),
-  ("a{5}", "aaaaa", "aaaaa", MATCH),
-  ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
-  ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),
-  ("a{5,}", "aaaa", "", NOMATCH)
-]
 
 FILE = open('src/re/test.rs', 'w')
 
@@ -39,7 +16,7 @@ macro_rules! run_tests(
   ($re: expr, $input: expr, $matched: expr, $expect: pat) => (
     {
       let mut re = UncompiledRegexp::new($re);
-      let res = re.run($input);
+      let res = re.search($input);
       let expect_test = match res {
         $expect => true, 
         _ => false
@@ -71,6 +48,12 @@ TEST_FN = """
   }
 """
 
+def generate_test_num(num, digits):
+  ret = str(num)
+  for i in range(0, digits - len(ret)):
+    ret = "0" + ret
+  return ret
+
 def generate_test_case(ident, regexp, input_str, 
     matched_str, expected):
   match = "Some(_)" if expected == 1 else "None"
@@ -82,8 +65,9 @@ if __name__ == "__main__":
   buf = ""
 
   for (i, test) in enumerate(TESTS):
+    ident = generate_test_num(i, len(str(len(TESTS))))
     buf += \
-      generate_test_case(i, test[0], test[1], test[2], test[3])
+      generate_test_case(ident, test[0], test[1], test[2], test[3])
 
   FILE.write(OUTPUT % (date, buf))
 
