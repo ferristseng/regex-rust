@@ -3,7 +3,7 @@ use std::util::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, InstDotAll, 
-  InstNoop};
+  InstLineStart, InstLineEnd, InstNoop};
 
 // object containing implementation
 // details for executing compiled 
@@ -39,16 +39,6 @@ impl Prog {
       }
       None => None 
     } 
-  }
-
-  pub fn replace(&self, input: &str, repstr: &str) {
-    match self.strat.run(input) {
-      Some(t) => {
-        let matchstr = input.slice_to(t.sp);
-        println(input.replace(matchstr, repstr));
-      }
-      None => println("[NOT FOUND]")
-    }
   }
 }
 
@@ -243,7 +233,7 @@ impl ExecStrategy for PikeVM {
     
     self.addThread(Thread::new(0, sp), &mut clist);
 
-    for c in input.iter() {
+    for (i, c) in input.iter().enumerate() {
       // some chars are different byte lengths, so 
       // we can't just inc by 1
       sp += c.len_utf8_bytes();
@@ -253,7 +243,7 @@ impl ExecStrategy for PikeVM {
 
         match self.inst[t.pc].op {
           InstLiteral(m) => {
-            if (c == m && sp != input.len()) {
+            if (c == m && i != input.len() - 1) {
               t.pc = t.pc + 1;
               t.sp = sp;
 
@@ -261,7 +251,7 @@ impl ExecStrategy for PikeVM {
             }
           }
           InstRange(start, end) => {
-            if (c >= start && c <= end && sp != input.len()) {
+            if (c >= start && c <= end && i != input.len() - 1) {
               t.pc = t.pc + 1;
               t.sp = sp;
 
@@ -273,6 +263,22 @@ impl ExecStrategy for PikeVM {
             t.sp = sp;
 
             self.addThread(t, &mut nlist);
+          }
+          InstLineStart => {
+            if (c == '\n' || i == 0) {
+              t.pc = t.pc + 1;
+              t.sp = sp;
+
+              self.addThread(t, &mut nlist);
+            }
+          }
+          InstLineEnd => {
+            if (i == input.len() - 1) {
+              t.pc = t.pc + 1;
+              t.sp = sp;
+
+              self.addThread(t, &mut nlist);
+            }
           }
           InstMatch => {
             found = Some(t.clone()); 

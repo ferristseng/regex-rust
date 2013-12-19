@@ -4,6 +4,7 @@
 
 MATCH = 1
 NOMATCH = 0
+PARSEERR = -1
 
 # These are the tests we generate functions for
 # (re, input, matched_str, expected, groups)
@@ -20,6 +21,11 @@ TESTS = [
   ("a(?:b|c|d)+?(.)", "ace", "ace", MATCH),
   ("[-+]?[0-9]*\\.?[0-9]+", "3.14", "3.14", MATCH),
 #  ("<TAG\\b[^>]*>(.*?)</TAG>", "one<TAG>two</TAG>three", "<TAG>two</TAG>", MATCH),
+  #("①②③", "①②③", "①②③", MATCH),
+  #("①②③", "①②③④⑤", "①②③", MATCH),
+  #("①(②)③", "①②③", "①②③", MATCH),
+  #("[①②③]*", "①②③", "①②③", MATCH),
+  #("[^④⑤]*", "①②③", "①②③", MATCH),
   #--
   # INSERT SKIPPED TESTS HERE
   #--
@@ -46,6 +52,7 @@ TESTS = [
   ("ab{0,1}bc", "abc", "abc", MATCH),
   ("ab?bc", "abbbbc", "", NOMATCH),
   ("ab?c", "abc", "abc", MATCH),
+
   #--
   # Custom Tests
   #--

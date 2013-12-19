@@ -4,6 +4,8 @@ use state::{ParseState, Regexp};
 use compile::{Instruction, compile_recursive};
 use error::ParseError::*;
 
+// CompiledRegexp
+
 pub struct CompiledRegexp {
   input: ~str,
   prog: Prog
@@ -27,7 +29,7 @@ impl CompiledRegexp {
 impl CompiledRegexp {
   // the same thing as re.match() in python, 
   // but can't make match a function name in rust
-  pub fn run(&self, input: &str) -> Option<Match> {
+  pub fn exec(&self, input: &str) -> Option<Match> {
     self.prog.run(input)
   }
   
@@ -43,38 +45,6 @@ impl CompiledRegexp {
     }
 
     None
-  }
-
-  // not really working how replace should	
-  pub fn replace(&self, input: &str, repstr: &str) {
-    self.prog.replace(input, repstr);
-  }
-  
-  // ugly, but functional?
-  pub fn findall(&self, input: &str) -> ~[Match] {
-    let mut start = 0;
-    let mut buff = 0;
-    let mut found = ~[];
-    let len = input.len();
-    while start < len {
-      match self.prog.run(input.slice(start, len)) {
-        Some(t) => { 
-          if t.start == 0 { 
-            start = start + 1;
-          } else {
-            start = t.start + buff; 
-          }
-          buff = start;
-          found.push(t);
-        }
-        None => { start = start + 1; }
-      }
-    }
-    found
-  }
-
-  pub fn split(&self, input: &str) {
-
   }
 }
 
@@ -122,34 +92,16 @@ impl UncompiledRegexp {
   // for these, just call compile, and
   // run the corresponding CompiledRegex
   // functions
-  pub fn run(&mut self, input: &str) -> Option<Match> {
+  pub fn exec(&mut self, input: &str) -> Result<Option<Match>, ParseCode> {
     match self.compile() {
-      Ok(ref mut re) => re.run(input),
-      Err(e) => fail!(e.to_str())
+      Ok(ref mut re) => Ok(re.exec(input)),
+      Err(e) => Err(e)
     }
   }
-  pub fn search(&mut self, input: &str) -> Option<Match> {
+  pub fn search(&mut self, input: &str) -> Result<Option<Match>, ParseCode> {
     match self.compile() {
-      Ok(ref mut re) => re.search(input),
-      Err(e) => fail!(e.to_str())
-    }
-  }
-  pub fn replace(&mut self, input: &str, repstr: &str) {
-    match self.compile() {
-      Ok(ref mut re) => re.replace(input, repstr),
-      Err(e) => fail!(e.to_str())
-    }
-  }
-  pub fn findall(&mut self, input: &str) -> ~[Match] {
-    match self.compile() {
-      Ok(ref mut re) => re.findall(input),
-      Err(e) => fail!(e.to_str())
-    }
-  }
-  pub fn split(&mut self, input: &str) {
-    match self.compile() {
-      Ok(ref mut re) => re.split(input),
-      Err(e) => fail!(e.to_str())
+      Ok(ref mut re) => Ok(re.search(input)),
+      Err(e) => Err(e)
     }
   }
 }

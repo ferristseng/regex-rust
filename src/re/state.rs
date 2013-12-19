@@ -284,6 +284,14 @@ impl ParseState {
     let r = Regexp::new(OpDotAll, None, None);
     self.pushExpression(r);
   }
+  pub fn pushLineStart(&mut self) {
+    let r = Regexp::new(OpLineStart, None, None);
+    self.pushExpression(r);
+  }
+  pub fn pushLineEnd(&mut self) {
+    let r = Regexp::new(OpLineEnd, None, None);
+    self.pushExpression(r);
+  }
 }
 
 impl ParseState {

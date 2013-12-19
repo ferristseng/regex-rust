@@ -25,8 +25,13 @@ macro_rules! run_tests(
         assert!(expect_test);
         return
       }
-      if (res.is_some()) {
-        assert!(res.unwrap().matched() == $matched)
+      if (res.is_ok()) {
+        match res.unwrap() {
+          Some(ma) => {
+            assert!(ma.matched() == $matched)
+          }
+          _ => { }
+        }
       }
     }
   )
@@ -56,7 +61,7 @@ def generate_test_num(num, digits):
 
 def generate_test_case(ident, regexp, input_str, 
     matched_str, expected):
-  match = "Some(_)" if expected == 1 else "None"
+  match = "Ok(Some(_))" if expected == 1 else "Ok(None)"
   regexp = re.sub("\\\\", "\\\\\\\\", regexp)
   return TEST_FN % (ident, regexp, input_str, matched_str, match)
 

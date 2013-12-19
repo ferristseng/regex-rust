@@ -12,9 +12,15 @@ SOURCES = lib.rs compile.rs error.rs exec.rs parse.rs regexp.rs \
 					state.rs
 LIBSOURCES = $(addprefix $(SRC)/$(RE)/, $(SOURCES))
 
-all: $(BUILD) $(BUILD)/$(DYLIB) $(BUILD)/test $(BUILD)/librun $(BUILD)/libtest
+TESTS = test_generator.py cases.py
+TESTSOURCES = $(addprefix $(SRC)/$(TEST)/, $(TESTS))
+
+all: $(BUILD)/$(DYLIB) $(BUILD)/test $(BUILD)/librun $(BUILD)/libtest
 
 test: test_correctness
+    
+run: $(BUILD)/librun
+	./build/librun
 
 test_all: $(BUILD)/libtest
 	./build/libtest
@@ -26,7 +32,7 @@ $(BUILD)/$(DYLIB): $(LIBSOURCES)
 	test -d $(BUILD) || mkdir $(BUILD)
 	rustc $(FLAGS) --lib --out-dir $(BUILD) $(SRC)/$(RE)/lib.rs
 
-$(BUILD)/libtest: $(BUILD)/$(DYLIB) $(LIBSOURCES) $(SRC)/$(TEST)/test_generator.py
+$(BUILD)/libtest: $(BUILD)/$(DYLIB) $(LIBSOURCES) $(TESTSOURCES) 
 	test -d $(BUILD) || mkdir $(BUILD)
 	python $(SRC)/$(TEST)/test_generator.py
 	rustc $(FLAGS) --test -o $(BUILD)/libtest $(SRC)/$(RE)/lib.rs

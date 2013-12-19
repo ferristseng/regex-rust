@@ -24,28 +24,59 @@ pub mod regexp;
 // this is test code
 fn main() {
   let mut re = UncompiledRegexp::new("(?:http(s)?:\\/\\/)?(www\\.)?([a-zA-Z0-9_.]+)\\.(com|org|net|edu)\\/?");
-  let ma = re.run("http://ferristseng.comuASDAFASFASBVZKXJVBKZXBVKJZBXVKBZXV");
+  let ma = re.exec("http://ferristseng.comuASDAFASFASBVZKXJVBKZXBVKJZBXVKBZXV");
 
   match ma {
-    Some(matched) => {
-      for i in range(0, matched.groups.len()) {
-        println(matched.group(i));
-      } 
+    Ok(result) => {
+      match result {
+        Some(matched) => {
+          println("Found Match");
+          println(matched.matched());
+          for i in range(0, matched.groups.len()) {
+            println(matched.group(i));
+          } 
+        }
+        None => { }
+      }
     }
-    None => { }
+    Err(e) => println(e.to_str())
   }
 
   let mut re = UncompiledRegexp::new("a{5,8}");
-  let ma = re.run("aaaa");
+  let ma = re.exec("aaaa");
 
   match ma {
-    Some(matched) => {
-      println("Found Match");
-      println(matched.matched());
-      for i in range(0, matched.groups.len()) {
-        println(matched.group(i));
-      } 
+    Ok(result) => {
+      match result {
+        Some(matched) => {
+          println("Found Match");
+          println(matched.matched());
+          for i in range(0, matched.groups.len()) {
+            println(matched.group(i));
+          } 
+        }
+        None => { }
+      }
     }
-    None => { }
+    Err(e) => println(e.to_str())
+  }
+
+  let mut re = UncompiledRegexp::new("①②③");
+  let ma = re.exec("①②③");
+
+  match ma {
+    Ok(result) => {
+      match result {
+        Some(matched) => {
+          println("Found Match");
+          println(matched.matched());
+          for i in range(0, matched.groups.len()) {
+            println(matched.group(i));
+          } 
+        }
+        None => { }
+      }
+    }
+    Err(e) => println(e.to_str())
   }
 }
