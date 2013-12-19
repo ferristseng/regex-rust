@@ -33,8 +33,6 @@ OUTPUT = """
 //
 // Last Modified: %s
 
-extern mod re;
-
 macro_rules! run_tests(
   ($re: expr, $input: expr, $matched: expr, $expect: pat) => (
     {
@@ -57,7 +55,7 @@ macro_rules! run_tests(
 
 #[cfg(test)]
 mod python_tests {
-  use re::UncompiledRegexp;
+  use regexp::UncompiledRegexp;
 
   // Tests start here
   %s
