@@ -16,9 +16,11 @@ TESTS = [
   ("[^al-obc]+", "abc", "", NOMATCH),
   ("[al-obc]+", "almocb", "almocb", MATCH),
   ("[al-obc]+", "defzx", "", NOMATCH),
-#  ("a(?:b|c|d)(.)", "ace", "ace", MATCH),
-#  ("a(?:b|c|d)*(.)", "ace", "ace", MATCH),
-#  ("a(?:b|c|d)+?(.)", "ace", "ace", MATCH)
+  ("a(?:b|c|d)(.)", "ace", "ace", MATCH),
+  ("a(?:b|c|d)*(.)", "ace", "ace", MATCH),
+  ("a(?:b|c|d)+?(.)", "ace", "ace", MATCH),
+#  ("<TAG\\b[^>]*>(.*?)</TAG>", "one<TAG>two</TAG>three", "<TAG>two</TAG>", MATCH),
+  ("[-+]?[0-9]*\\.?[0-9]+", "3.14", "3.14", MATCH),
   ("a{5}", "aaaaa", "aaaaa", MATCH),
   ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
   ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),
@@ -72,7 +74,7 @@ TEST_FN = """
 def generate_test_case(ident, regexp, input_str, 
     matched_str, expected):
   match = "Some(_)" if expected == 1 else "None"
-  regexp = re.sub("\\\\", "\\\\", regexp)
+  regexp = re.sub("\\\\", "\\\\\\\\", regexp)
   return TEST_FN % (ident, regexp, input_str, matched_str, match)
 
 if __name__ == "__main__":

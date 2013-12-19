@@ -280,6 +280,10 @@ impl ParseState {
     self.nparen += 1;
     self.pushOperation(OpLeftParen);
   }
+  pub fn pushDotAll(&mut self) {
+    let r = Regexp::new(OpDotAll, None, None);
+    self.pushExpression(r);
+  }
 }
 
 impl ParseState {

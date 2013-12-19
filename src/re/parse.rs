@@ -312,6 +312,11 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         }
       }
 
+      '.' => {
+        ps.incr(1);
+        ps.pushDotAll();
+      }
+
       '[' => {
         ps.incr(1);
         check_ok!(parse_charclass(t, ps));

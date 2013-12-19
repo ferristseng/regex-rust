@@ -2,7 +2,8 @@ use std::vec::with_capacity;
 use std::util::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
-  InstCaptureStart, InstCaptureEnd, InstSplit, InstNoop};
+  InstCaptureStart, InstCaptureEnd, InstSplit, InstDotAll, 
+  InstNoop};
 
 // object containing implementation
 // details for executing compiled 
@@ -266,6 +267,12 @@ impl ExecStrategy for PikeVM {
 
               self.addThread(t, &mut nlist);
             }
+          }
+          InstDotAll => {
+            t.pc = t.pc + 1;
+            t.sp = sp;
+
+            self.addThread(t, &mut nlist);
           }
           InstMatch => {
             found = Some(t.clone()); 
