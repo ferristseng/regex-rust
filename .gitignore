@@ -16,3 +16,4 @@ lib
 bin
 build
 .rust
+**/__pycache__
