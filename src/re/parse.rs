@@ -1,5 +1,5 @@
 use state::ParseState;
-use state::CharClass;
+use charclass::CharClass;
 use error::ParseError::*;
 
 // check for an err

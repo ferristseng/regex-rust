@@ -1,4 +1,5 @@
 use state::*;
+use charclass::CharClass;
 
 // instruction opcodes
 //
@@ -44,13 +45,13 @@ impl Instruction {
 impl ToStr for Instruction {
   fn to_str(&self) -> ~str {
     match self.op {
-      InstLiteral(c)            => fmt!("InstLiteral %c", c), 
-      InstRange(s, e)           => fmt!("InstRange %c-%c", s, e),
+      InstLiteral(c)            => format!("InstLiteral {:c}", c), 
+      InstRange(s, e)           => format!("InstRange {:c}-{:c}", s, e),
       InstMatch                 => ~"InstMatch", 
-      InstJump(i)               => fmt!("InstJump %u", i),
-      InstCaptureStart(id, _)   => fmt!("InstCaptureStart %u", id),
-      InstCaptureEnd(id)        => fmt!("InstCaptureEnd %u", id),
-      InstSplit(l, r)           => fmt!("InstSplit %u | %u", l, r),
+      InstJump(i)               => format!("InstJump {:u}", i),
+      InstCaptureStart(id, _)   => format!("InstCaptureStart {:u}", id),
+      InstCaptureEnd(id)        => format!("InstCaptureEnd {:u}", id),
+      InstSplit(l, r)           => format!("InstSplit {:u} | {:u}", l, r),
       InstDotAll                => ~"InstDotAll",
       InstLineStart             => ~"InstLineStart",
       InstLineEnd               => ~"InstLineEnd",
@@ -61,7 +62,7 @@ impl ToStr for Instruction {
 
 #[inline]
 fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
-  for c in lit.value.iter() {
+  for c in lit.value.chars() {
     stack.push(Instruction::new(InstLiteral(c)));
   }
 }
@@ -305,7 +306,7 @@ fn debug_stack(stack: &mut ~[Instruction]) {
 
   println("--COMPILE STACK--");
   for e in stack.iter() {
-    println(fmt!("%u: %s", count, e.to_str()));
+    println(format!("{:u}: {:s}", count, e.to_str()));
     count += 1;
   }
 }

@@ -81,8 +81,8 @@ impl Match {
 
 impl ToStr for Match {
   fn to_str(&self) -> ~str {
-    fmt!("<Match str: %s groups: %u>", self.input.slice(self.start, self.end), 
-         self.groups.len())
+    format!("<Match str: {:s} groups: {:u}>", self.input.slice(self.start, self.end), 
+            self.groups.len())
   }
 }
 
@@ -143,7 +143,7 @@ impl Thread {
 
 impl ToStr for Thread {
   fn to_str(&self) -> ~str {
-    fmt!("<Thread pc: %u, sp: %u>", self.pc, self.sp)
+    format!("<Thread pc: {:u}, sp: {:u}>", self.pc, self.sp)
   }
 }
 
@@ -233,7 +233,7 @@ impl ExecStrategy for PikeVM {
     
     self.addThread(Thread::new(0, sp), &mut clist);
 
-    for (i, c) in input.iter().enumerate() {
+    for (i, c) in input.chars().enumerate() {
       // some chars are different byte lengths, so 
       // we can't just inc by 1
       sp += c.len_utf8_bytes();

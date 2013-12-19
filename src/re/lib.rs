@@ -5,6 +5,9 @@
   url = "https://github.com/ferristseng/regex-rust/tree/master"
  )];
 
+#[feature(globs)];
+#[feature(macro_rules)];
+
 #[license = "MIT"];
 #[comment = "Regular Expression Engine in Rust"];
 
@@ -17,6 +20,7 @@ mod compile;
 mod parse;
 mod state;
 mod test;
+mod charclass;
 
 pub mod exec;
 pub mod regexp;
