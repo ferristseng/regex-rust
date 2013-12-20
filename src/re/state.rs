@@ -27,8 +27,8 @@ pub enum OpCode {
   OpKleine,
   OpZeroOrOne,
   OpOneOrMore,
-  OpLineStart,
-  OpLineEnd,
+  OpAssertStart,
+  OpAssertEnd,
   OpLeftParen,
   OpCapture(uint, Option<~str>),
   OpRepeatOp(uint, Option<uint>),
@@ -189,12 +189,12 @@ impl ParseState {
     let r = Regexp::new(OpDotAll, None, None);
     self.pushExpression(r);
   }
-  pub fn pushLineStart(&mut self) {
-    let r = Regexp::new(OpLineStart, None, None);
+  pub fn pushAssertStart(&mut self) {
+    let r = Regexp::new(OpAssertStart, None, None);
     self.pushExpression(r);
   }
-  pub fn pushLineEnd(&mut self) {
-    let r = Regexp::new(OpLineEnd, None, None);
+  pub fn pushAssertEnd(&mut self) {
+    let r = Regexp::new(OpAssertEnd, None, None);
     self.pushExpression(r);
   }
 }

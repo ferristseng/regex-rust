@@ -3,7 +3,7 @@ use std::util::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, InstDotAll, 
-  InstLineStart, InstLineEnd, InstNoop};
+  InstAssertStart, InstAssertEnd, InstNoop};
 use result::{Match, CapturingGroup};
 
 // object containing implementation
@@ -33,10 +33,10 @@ impl Prog {
 }
 
 impl Prog {
-  pub fn run(&self, input: &str) -> Option<Match> {    
-    match self.strat.run(input) {
+  pub fn run(&self, input: &str, start: uint) -> Option<Match> {    
+    match self.strat.run(input, start) {
       Some(t) => {
-        Some(Match::new(0, t.sp, input.to_owned(), t.captures.clone()))
+        Some(Match::new(start, t.sp, input.to_owned(), t.captures.clone()))
       }
       None => None 
     } 
@@ -48,7 +48,7 @@ impl Prog {
 // instructions and execute them (see compile.rs)
 
 trait ExecStrategy {
-  fn run(&self, input: &str) -> Option<Thread>;
+  fn run(&self, input: &str, start_index: uint) -> Option<Thread>;
 }
 
 // the implementation for both PikeVM
@@ -150,14 +150,15 @@ impl PikeVM {
 }
 
 impl ExecStrategy for PikeVM {
-  fn run(&self, input: &str) -> Option<Thread> {
+  fn run(&self, input: &str, start_index: uint) -> Option<Thread> {
+    println(input.slice_from(start_index));
     // \x03 is an end of string indicator. it resolves issues
     // the program reaches the end of the string, and still
     // needs to perform instructions
     let input = input.to_owned().append("\x03");
 
     // setup
-    let mut sp = 0;
+    let mut sp = 0; 
     let mut found = None;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
@@ -165,17 +166,24 @@ impl ExecStrategy for PikeVM {
     
     self.addThread(Thread::new(0, sp), &mut clist);
 
-    for (i, c) in input.chars().enumerate() {
+    for i in range(0, input.char_len()) {
+      let c = input.char_at(sp);
+
       // some chars are different byte lengths, so 
       // we can't just inc by 1
       sp += c.len_utf8_bytes();
+
+      // wait until the start_index is hit
+      if (i < start_index) {
+        continue; 
+      }
 
       while (clist.len() > 0) {
         let mut t = clist.shift();;
 
         match self.inst[t.pc].op {
           InstLiteral(m) => {
-            if (c == m && i != input.len() - 1) {
+            if (c == m && i != input.char_len()) {
               t.pc = t.pc + 1;
               t.sp = sp;
 
@@ -183,7 +191,7 @@ impl ExecStrategy for PikeVM {
             }
           }
           InstRange(start, end) => {
-            if (c >= start && c <= end && i != input.len() - 1) {
+            if (c >= start && c <= end && i != input.char_len()) {
               t.pc = t.pc + 1;
               t.sp = sp;
 
@@ -196,15 +204,15 @@ impl ExecStrategy for PikeVM {
 
             self.addThread(t, &mut nlist);
           }
-          InstLineStart => {
+          InstAssertStart => {
             if (c == '\n' || i == 0) {
               t.pc = t.pc + 1;
 
               self.addThread(t, &mut clist);
             }
           }
-          InstLineEnd => {
-            if (i == input.len() - 1) {
+          InstAssertEnd => {
+            if (i == input.char_len() - 1) {
               t.pc = t.pc + 1;
 
               self.addThread(t, &mut clist);
@@ -248,7 +256,7 @@ impl RecursiveBacktracking {
 }
 
 impl ExecStrategy for RecursiveBacktracking {
-  fn run(&self, input: &str) -> Option<Thread> {
+  fn run(&self, input: &str, start_index: uint) -> Option<Thread> {
     let input = input.to_owned().append("\x03");
 
     None

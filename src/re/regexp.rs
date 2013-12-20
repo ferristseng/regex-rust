@@ -31,7 +31,7 @@ impl CompiledRegexp {
   // the same thing as re.match() in python, 
   // but can't make match a function name in rust
   pub fn exec(&self, input: &str) -> Option<Match> {
-    self.prog.run(input)
+    self.prog.run(input, 0)
   }
   
   // should only find the first
@@ -39,7 +39,7 @@ impl CompiledRegexp {
     let len = input.len();
 
     for start in range(0, len + 1) {
-      match self.prog.run(input.slice(start, len)) {
+      match self.prog.run(input, start) {
         Some(m) => return Some(m),
         None => { }
       }

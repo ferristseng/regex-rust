@@ -26,8 +26,8 @@ pub enum InstOpCode {
   InstCaptureEnd(uint),
   InstSplit(uint, uint),
   InstDotAll,
-  InstLineStart,
-  InstLineEnd,
+  InstAssertStart,
+  InstAssertEnd,
   InstNoop
 }
 
@@ -53,8 +53,8 @@ impl ToStr for Instruction {
       InstCaptureEnd(id)        => format!("InstCaptureEnd {:u}", id),
       InstSplit(l, r)           => format!("InstSplit {:u} | {:u}", l, r),
       InstDotAll                => ~"InstDotAll",
-      InstLineStart             => ~"InstLineStart",
-      InstLineEnd               => ~"InstLineEnd",
+      InstAssertStart           => ~"InstLineStart",
+      InstAssertEnd             => ~"InstLineEnd",
       InstNoop                  => ~"InstNoop"
     }
   }
@@ -292,11 +292,11 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     &OpDotAll => {
       stack.push(Instruction::new(InstDotAll));
     }
-    &OpLineStart => {
-      stack.push(Instruction::new(InstLineStart));
+    &OpAssertStart => {
+      stack.push(Instruction::new(InstAssertStart));
     }
-    &OpLineEnd => {
-      stack.push(Instruction::new(InstLineEnd));
+    &OpAssertEnd => {
+      stack.push(Instruction::new(InstAssertEnd));
     }
     _ => { } // these are not covered cases...remove when all cases are completely covered
   }

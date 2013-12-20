@@ -25,15 +25,20 @@ impl Match {
     if (index < self.groups.len()) {
       match self.groups[index] {
         Some(ref group) => {
-          return self.input.slice(group.start, group.end).to_owned()
+          self.input.slice(group.start, group.end).to_owned()
         }
-        None => return ~""
+        None => ~""
       }
+    } else {
+      ~""
     }
-    return ~""
   }
   pub fn matched(&self) -> ~str {
-    self.input.slice(self.start, self.end).to_owned()
+    if (self.start < self.input.len()) {
+      self.input.slice(self.start, self.end).to_owned()
+    } else {
+      ~""
+    }
   }
 }
 
