@@ -29,21 +29,21 @@ fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
       'd' | 'D' => {
         check_ok!(cc.addRange('0', '9'));
 
-        ps.incr(1);
+        ps.incr(esc.len_utf8_bytes());
       }
       'w' | 'W' => {
         check_ok!(cc.addRange('a', 'z'));
         check_ok!(cc.addRange('A', 'Z'));
         check_ok!(cc.addRange('_', '_'));
 
-        ps.incr(1);
+        ps.incr(esc.len_utf8_bytes());
       }
       's' | 'S' => {
         check_ok!(cc.addRange('\n', '\n'));
         check_ok!(cc.addRange('\t', '\t'));
         check_ok!(cc.addRange('\r', '\r'));
 
-        ps.incr(1);
+        ps.incr(esc.len_utf8_bytes());
       }
       _ => return parse_escape_char(t, ps) 
     }
@@ -66,10 +66,9 @@ fn parse_escape_char(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
   match t.char_at(ps.ptr()) {
     c => {
       ps.pushLiteral(c.to_str());
+      ps.incr(c.len_utf8_bytes());
     }
   }
-
-  ps.incr(1);
 
   ParseOk
 
@@ -116,7 +115,7 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         }
       }
       c => {
-        ps.incr(1);
+        ps.incr(c.len_utf8_bytes());
         
         // check to see if its this is part of a 
         // range
@@ -128,7 +127,7 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
                   ParseOk => { },
                   e => return e,
                 }
-                ps.incr(2);
+                ps.incr(c.len_utf8_bytes() + 1);
               } else {
                 cc.addRange(c, c);
               }
@@ -334,7 +333,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
       }
       c => {
         ps.pushLiteral(c.to_str());
-        ps.incr(1);
+        ps.incr(c.len_utf8_bytes());
       }
     }
 

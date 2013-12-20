@@ -91,6 +91,7 @@ impl Regexp {
 // |   length of the regexp input str
 // | - flags:
 // |   global flags
+
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
   priv nparen: uint,
@@ -125,16 +126,14 @@ impl ParseState {
 impl ParseState {
   pub fn incr(&mut self, num: uint) -> uint {
     let ptr = self.ptr;
-
     self.ptr += num;
-
-    return ptr
+    ptr
   }
   pub fn ptr(&mut self) -> uint {
-    return self.ptr
+    self.ptr
   }
   pub fn remainder(&mut self) -> uint {
-    return self.len - self.ptr
+    self.len - self.ptr
   }
 }
 
