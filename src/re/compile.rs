@@ -150,7 +150,8 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
         Some(~ParseStack::CharClass(ref cc)) => {
           compile_charclass(cc, stack);
         }
-        _ => { } // unreachable
+        None => { }
+        _ => unreachable!() // unreachable
       };
     }
     // compile to:

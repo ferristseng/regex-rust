@@ -38,7 +38,7 @@ impl CompiledRegexp {
   pub fn search(&self, input: &str) -> Option<Match> {
     let len = input.len();
 
-    for start in range(0, len) {
+    for start in range(0, len + 1) {
       match self.prog.run(input.slice(start, len)) {
         Some(m) => return Some(m),
         None => { }

@@ -54,10 +54,18 @@ TESTS = [
   ("ab{0,1}bc", "abc", "abc", MATCH),
   ("ab?bc", "abbbbc", "", NOMATCH),
   ("ab?c", "abc", "abc", MATCH),
-
+  ("ab{0,1}c", "abc", "abc", MATCH),
+  ("^abc$", "abc", "abc", MATCH),
+  ("^abc$", "abcc", "", NOMATCH),
+  ("^abc", "abcc", "abc", MATCH),
+  ("^abc$", "aabc", "", NOMATCH),
+  ("abc$", "abcc", "", NOMATCH),
+  ("^", "abc", "", MATCH),
+  ("$", "abc", "", MATCH),
   #--
   # Custom Tests
   #--
+  ("", "", "", MATCH),
   ("a{5}", "aaaaa", "aaaaa", MATCH),
   ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
   ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),

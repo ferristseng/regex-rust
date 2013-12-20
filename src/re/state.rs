@@ -148,7 +148,7 @@ impl ParseState {
         Ok(Regexp::new(OpNoop, Some(~ParseStack::CharClass(r)), None))
       },
       Some(ParseStack::Op(_)) => Err(ParseInternalError), 
-      None => Err(ParseEmptyStack)
+      None => Ok(Regexp::new(OpNoop, None, None)) 
     }
   }
 }

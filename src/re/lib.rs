@@ -38,12 +38,12 @@ fn main() {
       match result {
         Some(matched) => {
           println("Found Match");
-          println(matched.matched());
+          println(format!("Matched: {:?}", matched.matched()));
           for i in range(0, matched.groups.len()) {
             println(matched.group(i));
           } 
         }
-        None => { }
+        None => println("No Match") 
       }
     }
     Err(e) => println(e.to_str())
@@ -57,31 +57,31 @@ fn main() {
       match result {
         Some(matched) => {
           println("Found Match");
-          println(matched.matched());
+          println(format!("Matched: {:?}", matched.matched()));
           for i in range(0, matched.groups.len()) {
             println(matched.group(i));
           } 
         }
-        None => { }
+        None => println("No Match") 
       }
     }
     Err(e) => println(e.to_str())
   }
 
-  let mut re = UncompiledRegexp::new("①②③");
-  let ma = re.exec("①②③");
+  let mut re = UncompiledRegexp::new("");
+  let ma = re.exec("");
 
   match ma {
     Ok(result) => {
       match result {
         Some(matched) => {
           println("Found Match");
-          println(matched.matched());
+          println(format!("Matched: {:?}", matched.matched()));
           for i in range(0, matched.groups.len()) {
             println(matched.group(i));
           } 
         }
-        None => { }
+        None => println("No Match") 
       }
     }
     Err(e) => println(e.to_str())

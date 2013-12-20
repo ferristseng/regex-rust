@@ -32,7 +32,7 @@ $(BUILD)/$(DYLIB): $(LIBSOURCES)
 	test -d $(BUILD) || mkdir $(BUILD)
 	rustc $(FLAGS) --lib --out-dir $(BUILD) $(SRC)/$(RE)/lib.rs
 
-$(BUILD)/libtest: $(BUILD)/$(DYLIB) $(LIBSOURCES) $(TESTSOURCES) 
+$(BUILD)/libtest: $(LIBSOURCES) $(TESTSOURCES) 
 	test -d $(BUILD) || mkdir $(BUILD)
 	python $(SRC)/$(TEST)/test_generator.py
 	rustc $(FLAGS) --test -o $(BUILD)/libtest $(SRC)/$(RE)/lib.rs

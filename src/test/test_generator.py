@@ -28,7 +28,7 @@ macro_rules! run_tests(
       if (res.is_ok()) {
         match res.unwrap() {
           Some(ma) => {
-            assert!(ma.matched() == $matched)
+            assert_eq!(ma.matched(), $matched)
           }
           _ => { }
         }

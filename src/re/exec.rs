@@ -199,17 +199,15 @@ impl ExecStrategy for PikeVM {
           InstLineStart => {
             if (c == '\n' || i == 0) {
               t.pc = t.pc + 1;
-              t.sp = sp;
 
-              self.addThread(t, &mut nlist);
+              self.addThread(t, &mut clist);
             }
           }
           InstLineEnd => {
             if (i == input.len() - 1) {
               t.pc = t.pc + 1;
-              t.sp = sp;
 
-              self.addThread(t, &mut nlist);
+              self.addThread(t, &mut clist);
             }
           }
           InstMatch => {
