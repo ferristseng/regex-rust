@@ -15,7 +15,7 @@ LIBSOURCES = $(addprefix $(SRC)/$(RE)/, $(SOURCES))
 TESTS = test_generator.py cases.py
 TESTSOURCES = $(addprefix $(SRC)/$(TEST)/, $(TESTS))
 
-all: $(BUILD)/$(DYLIB) $(BUILD)/test $(BUILD)/librun $(BUILD)/libtest
+all: $(BUILD)/$(DYLIB) $(BUILD)/librun $(BUILD)/libtest
 
 test: test_correctness
     

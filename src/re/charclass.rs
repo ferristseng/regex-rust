@@ -34,11 +34,11 @@ impl CharClass {
 
 impl CharClass {
   pub fn negate(&mut self) -> ParseCode {
-    let ordered = do merge_sort(self.ranges) |range1, range2| {
+    let ordered = merge_sort(self.ranges, |range1, range2| {
       let &(start1, _) = range1;
       let &(start2, _) = range2;
       start1 <= start2
-    };
+    });
 
     let mut min: char = '\U00000000'; 
     let max: char = MAX;
@@ -101,7 +101,7 @@ impl CharClass {
 #[cfg(test)]
 mod char_class_tests {
   use std::char::MAX;
-  use state::*;
+  use charclass::*;
   use error::ParseError::*;
 
   macro_rules! create_cc(

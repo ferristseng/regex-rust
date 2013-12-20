@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Add cases below
 # These are used to generated a file of unit tests
 # in Rust
@@ -21,7 +23,7 @@ TESTS = [
   ("a(?:b|c|d)+?(.)", "ace", "ace", MATCH),
   ("[-+]?[0-9]*\\.?[0-9]+", "3.14", "3.14", MATCH),
 #  ("<TAG\\b[^>]*>(.*?)</TAG>", "one<TAG>two</TAG>three", "<TAG>two</TAG>", MATCH),
-  #("①②③", "①②③", "①②③", MATCH),
+  ("①②③", "①②③", "①②③", MATCH),
   #("①②③", "①②③④⑤", "①②③", MATCH),
   #("①(②)③", "①②③", "①②③", MATCH),
   #("[①②③]*", "①②③", "①②③", MATCH),

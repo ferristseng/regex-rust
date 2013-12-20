@@ -1,4 +1,5 @@
-use exec::{Prog, Match};
+use exec::Prog;
+use result::Match;
 use parse::parse_recursive;
 use state::{ParseState, Regexp};
 use compile::{Instruction, compile_recursive};

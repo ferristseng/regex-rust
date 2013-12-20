@@ -8,6 +8,8 @@
 #[feature(globs)];
 #[feature(macro_rules)];
 
+#[allow(dead_code)];
+
 #[license = "MIT"];
 #[comment = "Regular Expression Engine in Rust"];
 
@@ -21,8 +23,9 @@ mod parse;
 mod state;
 mod test;
 mod charclass;
+mod exec;
 
-pub mod exec;
+pub mod result;
 pub mod regexp;
 
 // this is test code
