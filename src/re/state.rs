@@ -43,8 +43,8 @@ pub struct Literal {
 }
 
 impl Literal {
-  pub fn new(s: &str) -> Literal {
-    Literal { value: s.clone().to_owned() }
+  pub fn new(s: ~str) -> Literal {
+    Literal { value: s }
   }
 }
 
@@ -145,7 +145,7 @@ impl ParseState {
 }
 
 impl ParseState {
-  pub fn pushLiteral(&mut self, s: &str) {
+  pub fn pushLiteral(&mut self, s: ~str) {
     self.stack.push(ParseStack::Literal(Literal::new(s)));
   }
   pub fn pushOperation(&mut self, op: OpCode) {

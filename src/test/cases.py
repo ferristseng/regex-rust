@@ -77,6 +77,17 @@ TESTS = [
   ("a[", "-", "", PARSEERR),
   ("a\\", "-", "", PARSEERR),
   ("abc)", "-", "", PARSEERR),
+  ("(abc", "-", "", PARSEERR),
+  ("a]", "a]", "a]", MATCH),
+  ("a[]]b", "a]b", "a]b", MATCH),
+  ("a[\\]]b", "a]b", "a]b", MATCH),
+  ("a[^bc]d", "aed", "aed", MATCH),
+  ("a[^bc]d", "abd", "", NOMATCH),
+  ("a[^-b]c", "adc", "adc", MATCH),
+  ("a[^-b]c", "a-c", "", NOMATCH),
+  ("a[^]b]c", "a]c", "", NOMATCH),
+  ("a[^]b]c", "adc", "", MATCH),
+
   #--
   # Custom Tests
   #--

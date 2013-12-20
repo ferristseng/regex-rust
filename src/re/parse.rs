@@ -22,55 +22,47 @@ pub fn parse(t: &str, ps: &mut ParseState) -> ParseCode {
 #[inline]
 fn parse_escape(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   let mut cc = CharClass::new();
+  let current = p.current();
 
-  if (!p.isEnd()) {
-    let esc = p.current();
-
-    match esc {
-      'd' | 'D' => {
-        check_ok!(cc.addRange('0', '9'));
-
-        p.next();
-      }
-      'w' | 'W' => {
-        check_ok!(cc.addRange('a', 'z'));
-        check_ok!(cc.addRange('A', 'Z'));
-        check_ok!(cc.addRange('_', '_'));
-
-        p.next();
-      }
-      's' | 'S' => {
-        check_ok!(cc.addRange('\n', '\n'));
-        check_ok!(cc.addRange('\t', '\t'));
-        check_ok!(cc.addRange('\r', '\r'));
-
-        p.next();
-      }
-      _ => return parse_escape_char(p, ps) 
+  match current {
+    Some('d') | Some('D') => {
+      check_ok!(cc.addRange('0', '9'));
     }
-
-    if (esc.is_uppercase()) {
-      cc.negate();
+    Some('w') | Some('W') => {
+      check_ok!(cc.addRange('a', 'z'));
+      check_ok!(cc.addRange('A', 'Z'));
+      check_ok!(cc.addRange('_', '_'));
     }
-
-    ps.pushCharClass(cc);
-
-    ParseOk
-  } else {
-    ParseIncompleteEscapeSeq
+    Some('s') | Some('S') => {
+      check_ok!(cc.addRange('\n', '\n'));
+      check_ok!(cc.addRange('\t', '\t'));
+      check_ok!(cc.addRange('\r', '\r'));
+    }
+    Some(_) => return parse_escape_char(p, ps),
+    None => return ParseIncompleteEscapeSeq
   }
+
+  if (current.unwrap().is_uppercase()) {
+    cc.negate();
+  }
+
+  p.next();
+
+  ps.pushCharClass(cc);
+
+  ParseOk
 }
 
 #[inline]
 fn parse_escape_char(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   match p.current() {
-    c => {
+    Some(c) => {
       ps.pushLiteral(c.to_str());
       p.next();
+      ParseOk
     }
+    None => ParseIncompleteEscapeSeq 
   }
-
-  ParseOk
 }
 
 #[inline]
@@ -85,20 +77,31 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
   // class 
-  let negate = if (!p.isEnd() && p.current() == '^') {
-    p.next();
-    true
-  } else {
-    false 
+  let negate = match p.current() {
+    Some('^') => {
+      p.next();
+      true
+    }
+    _ => false
   };
 
-  while (!p.isEnd()) {
+  // if the first character in a char class is ], 
+  // it is treated as a literal
+  match p.current() {
+    Some(']') => {
+      cc.addRange(']', ']');
+      p.next();
+    }
+    _ => { }
+  }
+
+  loop {
     match p.current() {
-      '[' => {
+      Some('[') => {
         nbracket += 1;
         p.next();
       },
-      ']' => {
+      Some(']') => {
         p.next();
         if (nbracket > 0) {
           nbracket -= 1;
@@ -113,33 +116,44 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
           return ParseOk;
         }
       }
-      '\\' => {
+      Some('\\') => {
+        p.next();
+        match p.current() {
+          Some(c) => {
+            cc.addRange(c, c);
+          }
+          None => return ParseIncompleteEscapeSeq
+        }
         p.next();
       }
-      c => {
+      Some(c) => {
         p.next();
         
         // check to see if its this is part of a 
         // range
-        if (p.len() > 1) {
-          match p.current() {
-            '-' => {
-              if (p.peek() != ']') {
-                check_ok!(cc.addRange(c, p.peek()));
-                p.consume(2);
-              } else {
+        match p.current() {
+          Some('-') => {
+            match p.peek() {
+              // Not a range...something like [a-]
+              Some(']') => {
                 cc.addRange(c, c);
               }
-            }
-            _ => {
-              cc.addRange(c, c);
+              // A range...something like [a-b]
+              Some(e) => {
+                check_ok!(cc.addRange(c, e));
+                p.consume(2);
+              }
+              // End of string
+              None => break
             }
           }
-        // single character case (no range)
-        } else {
-          cc.addRange(c, c); 
+          // A single character...something like [a]
+          Some(_) | None => {
+            cc.addRange(c, c);
+          }
         }
       }
+      None => break
     }
 
   }
@@ -154,7 +168,6 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 // {a,b}: from a to be inclusive
 // {a,}:  a unbounded
 // {a}:   exactly a
-
 #[inline]
 fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   // these help parse numbers with more than
@@ -162,19 +175,14 @@ fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   let mut buf = ~"";
   let mut len = 0;
 
-  // check to make sure there are still
-  // characters in the string
-  macro_rules! check_bounds(
-    () => (
-      if (len == p.len()) {
-        return ParseNotRepetition
+  loop {
+    match p.peekn(len) {
+      Some(d) if d.is_digit() => {
+        buf.push_char(d);
+        len += 1;
       }
-    )
-  )
-
-  while (len < p.len() && p.peekn(len).is_digit()) {
-    buf.push_char(p.peekn(len));
-    len += 1;
+      _ => break
+    }
   }
 
   if (len == 0) {
@@ -188,48 +196,47 @@ fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 
   buf.clear();
 
-  check_bounds!();
-
   // check for a ',' or a '}'
   // if there is a ',', then there either 
   // is or isn't a bound
   // if there is a '}', there is an
   // exact repetition
   match p.peekn(len) {
-    ',' => { 
+    Some(',') => { 
       len += 1;
     }
-    '}' => {
+    Some('}') => {
       p.consume(len + 1);
       return ps.doBoundedRepetition(start, start);
     }
     _ => return ParseNotRepetition
   }
 
-  check_bounds!();
-
   // if the next character is a }, unbounded repetition
   match p.peekn(len) {
-    '}' => {
+    Some('}') => {
       p.consume(len + 1);
       return ps.doUnboundedRepetition(start);
     }
-    x if x.is_digit() => { } // continue if x is a digit
+    Some(x) if x.is_digit() => { } // continue if x is a digit
     _ => return ParseNotRepetition
   }
 
   // this should be the ending digit
-  while (len < p.len()  && p.peekn(len).is_digit()) {
-    buf.push_char(p.peekn(len));
-    len += 1;
+  loop {
+    match p.peekn(len) {
+      Some(d) if d.is_digit() => {
+        buf.push_char(d);
+        len += 1;
+      }
+      _ => break
+    }
   }
 
   let end = from_str::<uint>(buf).unwrap();
 
-  check_bounds!();
-
   match p.peekn(len) {
-    '}' => {
+    Some('}') => {
       p.consume(len + 1);
       return ps.doBoundedRepetition(start, end);
     }
@@ -246,9 +253,9 @@ fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   // cases for
   // parsing different characters
   // in the input string
-  while (!p.isEnd()) {
+  loop {
     match p.current() {
-      '(' => {
+      Some('(') => {
         ps.doConcatenation();
         ps.pushLeftParen();
 
@@ -256,10 +263,16 @@ fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 
         // check for ?: (non capturing group)
         let noncapturing = {
-          if (p.len() > 1) {
-            p.current() == '?' && p.peek() == ':'
-          } else {
-            false
+          match p.current() {
+            Some('?') => {
+              match p.peek() {
+                Some(':') => true,
+                None => break,
+                _ => false
+              }
+            }
+            None => break,
+            _ => false
           }
         };
         
@@ -272,14 +285,14 @@ fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
         ps.doLeftParen(noncapturing);
         p.next();
       }
-      ')' => {
+      Some(')') => {
         if (ps.hasUnmatchedParens() && !p.isEnd()) {
           break;
         }
         return ParseUnexpectedClosingParen;
       }
 
-      '|' => {
+      Some('|') => {
         ps.doConcatenation();
         ps.pushAlternation();
 
@@ -292,55 +305,56 @@ fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
         }
       }
 
-      '*' => {
+      Some('*') => {
         p.next();
         ps.doKleine();
       }
-      '?' => {
+      Some('?') => {
         p.next();
         ps.doZeroOrOne();
       }
-      '+' => {
+      Some('+') => {
         p.next();
         ps.doOneOrMore();
       }
 
-      '{' => {
+      Some('{') => {
         p.next();
 
         match parse_repetition(p, ps) {
           ParseOk => { },
-          ParseNotRepetition => ps.pushLiteral("{"),
+          ParseNotRepetition => ps.pushLiteral(~"{"),
           e => return e
         }
       }
 
-      '.' => {
+      Some('.') => {
         p.next();
         ps.pushDotAll();
       }
 
-      '^' => {
+      Some('^') => {
         p.next();
         ps.pushAssertStart();
       }
-      '$' => {
+      Some('$') => {
         p.next();
         ps.pushAssertEnd();
       }
 
-      '[' => {
+      Some('[') => {
         p.next();
         check_ok!(parse_charclass(p, ps));
       }
-      '\\' => {
+      Some('\\') => {
         p.next();
         check_ok!(parse_escape(p, ps));
       }
-      c => {
+      Some(c) => {
         p.next();
         ps.pushLiteral(c.to_str());
       }
+      None => break // end of string
     }
 
     //ps.trace();
