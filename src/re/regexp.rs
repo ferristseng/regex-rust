@@ -1,6 +1,6 @@
 use exec::Prog;
 use result::Match;
-use parse::parse_recursive;
+use parse::parse;
 use state::{ParseState, Regexp};
 use compile::{Instruction, compile_recursive};
 use error::ParseError::*;
@@ -58,7 +58,7 @@ pub struct UncompiledRegexp {
 
 impl UncompiledRegexp {
   pub fn new(s: &str) -> UncompiledRegexp {
-    UncompiledRegexp { input: s.clone().to_owned() }
+    UncompiledRegexp { input: s.to_owned() }
   }
 }
 
@@ -67,8 +67,7 @@ impl UncompiledRegexp {
   // from the user
   fn parse(&mut self) -> Result<Regexp, ParseCode> {
     let mut ps = ParseState::new(self.input);
-    let mut input = self.input.clone();
-    match parse_recursive(&mut input, &mut ps) {
+    match parse(self.input, &mut ps) {
       ParseOk => {
         ps.pop()
       }

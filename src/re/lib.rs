@@ -68,8 +68,8 @@ fn main() {
     Err(e) => println(e.to_str())
   }
 
-  let mut re = UncompiledRegexp::new("abc");
-  let ma = re.search("xabcy");
+  let mut re = UncompiledRegexp::new("a[]b");
+  let ma = re.search("-");
 
   match ma {
     Ok(result) => {

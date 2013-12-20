@@ -62,6 +62,21 @@ TESTS = [
   ("abc$", "abcc", "", NOMATCH),
   ("^", "abc", "", MATCH),
   ("$", "abc", "", MATCH),
+  ("a.c", "abc", "abc", MATCH),
+  ("a.c", "axc", "axc", MATCH),
+  ("a.*c", "axyzc", "axyzc", MATCH),
+  ("a.*c", "axyzd", "", NOMATCH),
+  ("a[bc]d", "abc", "", NOMATCH),
+  ("a[bc]d", "abd", "abd", MATCH),
+  ("a[b-d]e", "abd", "", NOMATCH),
+  ("a[b-d]e", "ace", "ace", MATCH),
+  ("a[b-d]", "aac", "ac", MATCH),
+  ("a[-b]", "a-", "a-", MATCH),
+  ("a[\\-b]", "a-", "a-", MATCH),
+  ("a[]b", "-", "", PARSEERR),
+  ("a[", "-", "", PARSEERR),
+  ("a\\", "-", "", PARSEERR),
+  ("abc)", "-", "", PARSEERR),
   #--
   # Custom Tests
   #--

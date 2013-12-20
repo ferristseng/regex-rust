@@ -2,6 +2,30 @@ use state::ParseState;
 use charclass::CharClass;
 use error::ParseError::*;
 
+struct Parsable<'a> {
+  input: &'a str,
+  cursor: uint
+}
+
+impl<'a> Parsable<'a> {
+  #[inline]
+  fn new(input: &'a str) -> Parsable<'a> {
+    Parsable {
+      input: input,
+      cursor: 0
+    }
+  }
+  fn next(&'a self) {
+
+  }
+  fn current(&'a self) {
+
+  }
+  fn isEnd(&'a self) {
+
+  }
+}
+
 // check for an err
 macro_rules! check_ok(
   ($f: expr) => (
@@ -12,13 +36,19 @@ macro_rules! check_ok(
   );
 )
 
+pub fn parse(t: &str, ps: &mut ParseState) -> ParseCode {
+  let p = Parsable::new(t);
+
+  _parse_recursive(t, ps, p)
+}
+
 // parse functions
 //
 // these take in a pointer to a ParseState and an input string,
 // and finish / modify the ParseState
 
 #[inline]
-fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+fn parse_escape(t: &str, ps: &mut ParseState) -> ParseCode {
 
   let mut cc = CharClass::new();
 
@@ -61,7 +91,7 @@ fn parse_escape(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 }
 
 #[inline]
-fn parse_escape_char(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+fn parse_escape_char(t: &str, ps: &mut ParseState) -> ParseCode {
 
   match t.char_at(ps.ptr()) {
     c => {
@@ -75,7 +105,7 @@ fn parse_escape_char(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 }
 
 #[inline]
-fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+fn parse_charclass(t: &str, ps: &mut ParseState) -> ParseCode {
  
   let mut cc = CharClass::new();
 
@@ -86,13 +116,12 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
-  // class
-  let negate = match t.char_at(ps.ptr()) {
-    '^' => {
-      ps.incr(1);
-      true
-    },
-    _ => false
+  // class 
+  let negate = if (ps.remainder() > 0 && t.char_at(ps.ptr()) == '^') {
+    ps.incr(1);
+    true
+  } else {
+    false 
   };
 
   while (ps.remainder() > 0) {
@@ -110,8 +139,19 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
           if (negate) {
             check_ok!(cc.negate());
           }
+          if (cc.empty()) {
+            return ParseEmptyCharClassRange
+          }
           ps.pushCharClass(cc);
           return ParseOk;
+        }
+      }
+      '\\' => {
+        ps.incr(1);
+        if (ps.remainder() > 0) {
+          let c = t.char_at(ps.ptr());
+          cc.addRange(c, c);
+          ps.incr(c.len_utf8_bytes()); 
         }
       }
       c => {
@@ -156,7 +196,7 @@ fn parse_charclass(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 // {a}:   exactly a
 
 #[inline]
-fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
 
   let mut buf = ~"";
   let mut len = 0;
@@ -236,7 +276,7 @@ fn parse_repetition(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
 // because rust does not optimize tail end
 // recursive calls, but...
 // this way is pretty
-pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
+fn _parse_recursive(t: &str, ps: &mut ParseState, p: Parsable) -> ParseCode {
   
   // cases for
   // parsing different characters
@@ -264,7 +304,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
           ps.incr(2);
         }
 
-        check_ok!(parse_recursive(t, ps));
+        check_ok!(_parse_recursive(t, ps, p));
         ps.doLeftParen(noncapturing);
         ps.incr(1);
       }
@@ -280,7 +320,7 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         ps.pushAlternation();
 
         ps.incr(1);
-        check_ok!(parse_recursive(t, ps));
+        check_ok!(_parse_recursive(t, ps, p));
         ps.doAlternation();
         
         if (ps.hasUnmatchedParens()) {
@@ -334,8 +374,8 @@ pub fn parse_recursive(t: &mut ~str, ps: &mut ParseState) -> ParseCode {
         check_ok!(parse_escape(t, ps));
       }
       c => {
-        ps.pushLiteral(c.to_str());
         ps.incr(c.len_utf8_bytes());
+        ps.pushLiteral(c.to_str());
       }
     }
 
@@ -362,7 +402,7 @@ mod parse_tests {
     ($input: expr, $expect: pat) => (
       {
         let mut ps = ParseState::new($input); 
-        let ok = match parse_recursive(&mut ~$input, &mut ps) {
+        let ok = match parse($input, &mut ps) {
           $expect => true,
           _ => false
         };

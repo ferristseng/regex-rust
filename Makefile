@@ -28,6 +28,9 @@ test_all: $(BUILD)/libtest
 test_correctness: $(BUILD)/libtest
 	./build/libtest python_tests
 
+check: $(LIBSOURCES)
+	rustc $(FLAGS) --no-trans $(SRC)/$(RE)/lib.rs
+
 $(BUILD)/$(DYLIB): $(LIBSOURCES)
 	test -d $(BUILD) || mkdir $(BUILD)
 	rustc $(FLAGS) --lib --out-dir $(BUILD) $(SRC)/$(RE)/lib.rs

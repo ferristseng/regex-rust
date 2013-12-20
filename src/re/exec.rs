@@ -151,7 +151,6 @@ impl PikeVM {
 
 impl ExecStrategy for PikeVM {
   fn run(&self, input: &str, start_index: uint) -> Option<Thread> {
-    println(input.slice_from(start_index));
     // \x03 is an end of string indicator. it resolves issues
     // the program reaches the end of the string, and still
     // needs to perform instructions

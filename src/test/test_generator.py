@@ -1,7 +1,7 @@
 # Test generator
 
 import re
-from cases import TESTS
+from cases import * 
 from datetime import datetime
 
 FILE = open('src/re/test.rs', 'w')
@@ -61,7 +61,12 @@ def generate_test_num(num, digits):
 
 def generate_test_case(ident, regexp, input_str, 
     matched_str, expected):
-  match = "Ok(Some(_))" if expected == 1 else "Ok(None)"
+  if expected == NOMATCH:
+    match = "Ok(None)"
+  elif expected == PARSEERR:
+    match = "Err(_)"
+  elif expected == MATCH:
+    match = "Ok(Some(_))"
   regexp = re.sub("\\\\", "\\\\\\\\", regexp)
   return TEST_FN % (ident, regexp, input_str, matched_str, match)
 

@@ -94,6 +94,9 @@ impl CharClass {
 
     ParseOk
   }
+  pub fn empty(&self) -> bool {
+    self.ranges.len() == 0
+  }
 }
 
 // tests
