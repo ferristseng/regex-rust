@@ -17,13 +17,14 @@ extern mod extra;
 
 pub use regexp::UncompiledRegexp;
 
+mod test;
+mod exec;
 mod error;
-mod compile;
 mod parse;
 mod state;
-mod test;
+mod compile;
 mod charclass;
-mod exec;
+mod parsable;
 
 pub mod result;
 pub mod regexp;

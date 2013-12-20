@@ -1,30 +1,7 @@
+use parsable::Parsable;
 use state::ParseState;
 use charclass::CharClass;
 use error::ParseError::*;
-
-struct Parsable<'a> {
-  input: &'a str,
-  cursor: uint
-}
-
-impl<'a> Parsable<'a> {
-  #[inline]
-  fn new(input: &'a str) -> Parsable<'a> {
-    Parsable {
-      input: input,
-      cursor: 0
-    }
-  }
-  fn next(&'a self) {
-
-  }
-  fn current(&'a self) {
-
-  }
-  fn isEnd(&'a self) {
-
-  }
-}
 
 // check for an err
 macro_rules! check_ok(
@@ -37,45 +14,39 @@ macro_rules! check_ok(
 )
 
 pub fn parse(t: &str, ps: &mut ParseState) -> ParseCode {
-  let p = Parsable::new(t);
+  let mut p = Parsable::new(t);
 
-  _parse_recursive(t, ps, p)
+  _parse_recursive(&mut p, ps)
 }
 
-// parse functions
-//
-// these take in a pointer to a ParseState and an input string,
-// and finish / modify the ParseState
-
 #[inline]
-fn parse_escape(t: &str, ps: &mut ParseState) -> ParseCode {
-
+fn parse_escape(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   let mut cc = CharClass::new();
 
-  if (ps.remainder() > 0) {
-    let esc = t.char_at(ps.ptr());
+  if (!p.isEnd()) {
+    let esc = p.current();
 
     match esc {
       'd' | 'D' => {
         check_ok!(cc.addRange('0', '9'));
 
-        ps.incr(esc.len_utf8_bytes());
+        p.next();
       }
       'w' | 'W' => {
         check_ok!(cc.addRange('a', 'z'));
         check_ok!(cc.addRange('A', 'Z'));
         check_ok!(cc.addRange('_', '_'));
 
-        ps.incr(esc.len_utf8_bytes());
+        p.next();
       }
       's' | 'S' => {
         check_ok!(cc.addRange('\n', '\n'));
         check_ok!(cc.addRange('\t', '\t'));
         check_ok!(cc.addRange('\r', '\r'));
 
-        ps.incr(esc.len_utf8_bytes());
+        p.next();
       }
-      _ => return parse_escape_char(t, ps) 
+      _ => return parse_escape_char(p, ps) 
     }
 
     if (esc.is_uppercase()) {
@@ -91,22 +62,19 @@ fn parse_escape(t: &str, ps: &mut ParseState) -> ParseCode {
 }
 
 #[inline]
-fn parse_escape_char(t: &str, ps: &mut ParseState) -> ParseCode {
-
-  match t.char_at(ps.ptr()) {
+fn parse_escape_char(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+  match p.current() {
     c => {
       ps.pushLiteral(c.to_str());
-      ps.incr(c.len_utf8_bytes());
+      p.next();
     }
   }
 
   ParseOk
-
 }
 
 #[inline]
-fn parse_charclass(t: &str, ps: &mut ParseState) -> ParseCode {
- 
+fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   let mut cc = CharClass::new();
 
   // we need to keep track of any [, ( in
@@ -117,22 +85,21 @@ fn parse_charclass(t: &str, ps: &mut ParseState) -> ParseCode {
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
   // class 
-  let negate = if (ps.remainder() > 0 && t.char_at(ps.ptr()) == '^') {
-    ps.incr(1);
+  let negate = if (!p.isEnd() && p.current() == '^') {
+    p.next();
     true
   } else {
     false 
   };
 
-  while (ps.remainder() > 0) {
-
-    match t.char_at(ps.ptr()) {
+  while (!p.isEnd()) {
+    match p.current() {
       '[' => {
         nbracket += 1;
-        ps.incr(1);
+        p.next();
       },
       ']' => {
-        ps.incr(1);
+        p.next();
         if (nbracket > 0) {
           nbracket -= 1;
         } else {
@@ -147,35 +114,28 @@ fn parse_charclass(t: &str, ps: &mut ParseState) -> ParseCode {
         }
       }
       '\\' => {
-        ps.incr(1);
-        if (ps.remainder() > 0) {
-          let c = t.char_at(ps.ptr());
-          cc.addRange(c, c);
-          ps.incr(c.len_utf8_bytes()); 
-        }
+        p.next();
       }
       c => {
-        ps.incr(c.len_utf8_bytes());
+        p.next();
         
         // check to see if its this is part of a 
         // range
-        if (ps.remainder() > 1) {
-          match t.char_at(ps.ptr()) {
+        if (p.len() > 1) {
+          match p.current() {
             '-' => {
-              if (t.char_at(ps.ptr() + 1) != ']') {
-                match cc.addRange(c, t.char_at(ps.ptr() + 1)) {
-                  ParseOk => { },
-                  e => return e,
-                }
-                ps.incr(c.len_utf8_bytes() + 1);
+              if (p.peek() != ']') {
+                check_ok!(cc.addRange(c, p.peek()));
+                p.consume(2);
               } else {
                 cc.addRange(c, c);
               }
             }
-            _ => { 
+            _ => {
               cc.addRange(c, c);
             }
           }
+        // single character case (no range)
         } else {
           cc.addRange(c, c); 
         }
@@ -196,8 +156,9 @@ fn parse_charclass(t: &str, ps: &mut ParseState) -> ParseCode {
 // {a}:   exactly a
 
 #[inline]
-fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
-
+fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+  // these help parse numbers with more than
+  // 1 digit
   let mut buf = ~"";
   let mut len = 0;
 
@@ -205,14 +166,14 @@ fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
   // characters in the string
   macro_rules! check_bounds(
     () => (
-      if (len == ps.remainder()) {
+      if (len == p.len()) {
         return ParseNotRepetition
       }
     )
   )
 
-  while (len < ps.remainder() && t.char_at(ps.ptr() + len).is_digit()) {
-    buf.push_char(t.char_at(ps.ptr() + len));
+  while (len < p.len() && p.peekn(len).is_digit()) {
+    buf.push_char(p.peekn(len));
     len += 1;
   }
 
@@ -229,12 +190,17 @@ fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
 
   check_bounds!();
 
-  match t.char_at(ps.ptr() + len) {
+  // check for a ',' or a '}'
+  // if there is a ',', then there either 
+  // is or isn't a bound
+  // if there is a '}', there is an
+  // exact repetition
+  match p.peekn(len) {
     ',' => { 
       len += 1;
     }
     '}' => {
-      ps.incr(len + 1);
+      p.consume(len + 1);
       return ps.doBoundedRepetition(start, start);
     }
     _ => return ParseNotRepetition
@@ -243,9 +209,9 @@ fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
   check_bounds!();
 
   // if the next character is a }, unbounded repetition
-  match t.char_at(ps.ptr() + len) {
+  match p.peekn(len) {
     '}' => {
-      ps.incr(len + 1);
+      p.consume(len + 1);
       return ps.doUnboundedRepetition(start);
     }
     x if x.is_digit() => { } // continue if x is a digit
@@ -253,8 +219,8 @@ fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
   }
 
   // this should be the ending digit
-  while (len < ps.remainder() && t.char_at(ps.ptr() + len).is_digit()) {
-    buf.push_char(t.char_at(ps.ptr() + len));
+  while (len < p.len()  && p.peekn(len).is_digit()) {
+    buf.push_char(p.peekn(len));
     len += 1;
   }
 
@@ -262,9 +228,9 @@ fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
 
   check_bounds!();
 
-  match t.char_at(ps.ptr() + len) {
+  match p.peekn(len) {
     '}' => {
-      ps.incr(len + 1);
+      p.consume(len + 1);
       return ps.doBoundedRepetition(start, end);
     }
     _ => return ParseNotRepetition
@@ -276,24 +242,22 @@ fn parse_repetition(t: &str, ps: &mut ParseState) -> ParseCode {
 // because rust does not optimize tail end
 // recursive calls, but...
 // this way is pretty
-fn _parse_recursive(t: &str, ps: &mut ParseState, p: Parsable) -> ParseCode {
-  
+fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   // cases for
   // parsing different characters
   // in the input string
-  while (ps.remainder() > 0) {
-
-    match t.char_at(ps.ptr()) {
+  while (!p.isEnd()) {
+    match p.current() {
       '(' => {
         ps.doConcatenation();
         ps.pushLeftParen();
 
-        ps.incr(1);
+        p.next();
 
         // check for ?: (non capturing group)
         let noncapturing = {
-          if (ps.remainder() > 1) {
-            t.char_at(ps.ptr()) == '?' && t.char_at(ps.ptr() + 1) == ':'
+          if (p.len() > 1) {
+            p.current() == '?' && p.peek() == ':'
           } else {
             false
           }
@@ -301,15 +265,15 @@ fn _parse_recursive(t: &str, ps: &mut ParseState, p: Parsable) -> ParseCode {
         
         // adjust
         if (noncapturing) {
-          ps.incr(2);
+          p.consume(2);
         }
 
-        check_ok!(_parse_recursive(t, ps, p));
+        check_ok!(_parse_recursive(p, ps));
         ps.doLeftParen(noncapturing);
-        ps.incr(1);
+        p.next();
       }
       ')' => {
-        if (ps.hasUnmatchedParens() && ps.remainder() > 0) {
+        if (ps.hasUnmatchedParens() && !p.isEnd()) {
           break;
         }
         return ParseUnexpectedClosingParen;
@@ -319,8 +283,8 @@ fn _parse_recursive(t: &str, ps: &mut ParseState, p: Parsable) -> ParseCode {
         ps.doConcatenation();
         ps.pushAlternation();
 
-        ps.incr(1);
-        check_ok!(_parse_recursive(t, ps, p));
+        p.next();
+        check_ok!(_parse_recursive(p, ps));
         ps.doAlternation();
         
         if (ps.hasUnmatchedParens()) {
@@ -329,22 +293,22 @@ fn _parse_recursive(t: &str, ps: &mut ParseState, p: Parsable) -> ParseCode {
       }
 
       '*' => {
-        ps.incr(1);
+        p.next();
         ps.doKleine();
       }
       '?' => {
-        ps.incr(1);
+        p.next();
         ps.doZeroOrOne();
       }
       '+' => {
-        ps.incr(1);
+        p.next();
         ps.doOneOrMore();
       }
 
       '{' => {
-        ps.incr(1);
+        p.next();
 
-        match parse_repetition(t, ps) {
+        match parse_repetition(p, ps) {
           ParseOk => { },
           ParseNotRepetition => ps.pushLiteral("{"),
           e => return e
@@ -352,40 +316,39 @@ fn _parse_recursive(t: &str, ps: &mut ParseState, p: Parsable) -> ParseCode {
       }
 
       '.' => {
-        ps.incr(1);
+        p.next();
         ps.pushDotAll();
       }
 
       '^' => {
-        ps.incr(1);
+        p.next();
         ps.pushAssertStart();
       }
       '$' => {
-        ps.incr(1);
+        p.next();
         ps.pushAssertEnd();
       }
 
       '[' => {
-        ps.incr(1);
-        check_ok!(parse_charclass(t, ps));
+        p.next();
+        check_ok!(parse_charclass(p, ps));
       }
       '\\' => {
-        ps.incr(1);
-        check_ok!(parse_escape(t, ps));
+        p.next();
+        check_ok!(parse_escape(p, ps));
       }
       c => {
-        ps.incr(c.len_utf8_bytes());
+        p.next();
         ps.pushLiteral(c.to_str());
       }
     }
 
     //ps.trace();
-
   }
 
   ps.doConcatenation();
 
-  if (ps.hasUnmatchedParens() && ps.remainder() == 0) {
+  if (ps.hasUnmatchedParens() && p.isEnd()) {
     ParseExpectedClosingParen
   } else {
     ParseOk
@@ -401,7 +364,7 @@ mod parse_tests {
   macro_rules! test_parse(
     ($input: expr, $expect: pat) => (
       {
-        let mut ps = ParseState::new($input); 
+        let mut ps = ParseState::new(); 
         let ok = match parse($input, &mut ps) {
           $expect => true,
           _ => false

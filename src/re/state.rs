@@ -96,19 +96,15 @@ pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
   priv nparen: uint,
   priv ncaps: uint,
-  priv ptr: uint,
-  priv len: uint,
   priv flags: u8 
 }
 
 impl ParseState {
-  pub fn new(regexp: &str) -> ParseState {
+  pub fn new() -> ParseState {
     ParseState { 
       stack: ~[], 
       nparen: 0, 
       ncaps: 0,
-      ptr: 0,
-      len: regexp.len(),
       flags: ParseFlags::NoParseFlags 
     } 
   }
@@ -120,20 +116,6 @@ impl ParseState {
   }
   pub fn hasFlag(&self, flag: u8) -> bool {
     (self.flags & flag) > 0
-  }
-}
-
-impl ParseState {
-  pub fn incr(&mut self, num: uint) -> uint {
-    let ptr = self.ptr;
-    self.ptr += num;
-    ptr
-  }
-  pub fn ptr(&mut self) -> uint {
-    self.ptr
-  }
-  pub fn remainder(&mut self) -> uint {
-    self.len - self.ptr
   }
 }
 

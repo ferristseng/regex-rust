@@ -66,7 +66,7 @@ impl UncompiledRegexp {
   // we should hide the underlying parsing algorithm
   // from the user
   fn parse(&mut self) -> Result<Regexp, ParseCode> {
-    let mut ps = ParseState::new(self.input);
+    let mut ps = ParseState::new();
     match parse(self.input, &mut ps) {
       ParseOk => {
         ps.pop()
