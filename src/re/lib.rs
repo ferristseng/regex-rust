@@ -1,3 +1,4 @@
+#[crate_id = "rustre#0.1.1"];
 #[link(
   name = "re",
   package_id = "re",

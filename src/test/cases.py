@@ -86,8 +86,18 @@ TESTS = [
   ("a[^-b]c", "adc", "adc", MATCH),
   ("a[^-b]c", "a-c", "", NOMATCH),
   ("a[^]b]c", "a]c", "", NOMATCH),
-  ("a[^]b]c", "adc", "", MATCH),
-
+  ("a[^]b]c", "adc", "adc", MATCH),
+  #("\\ba\\b", "a-", "a", MATCH),
+  #("\\ba\\b", "-a", "a", MATCH),
+  #("\\ba\\b", "-a-", "a", MATCH),
+  #("\\by\\b", "xy", "", NOMATCH),
+  #("\\by\\b", "yz", "", NOMATCH),
+  #("\\by\\b", "xyz", "", NOMATCH),
+  #("x\\b", "xyz", "", NOMATCH),
+  #("x\\B", "xyz", "x", MATCH),
+  #(\\Ba\\B", "a-", "", NOMATCH),
+  #(\\Ba\\B", "-a", "", NOMATCH),
+  #(\\Ba\\B", "-a-", "", NOMATCH),
   #--
   # Custom Tests
   #--

@@ -1,17 +1,32 @@
 use error::ParseError::*;
 use charclass::CharClass;
 
+/**
+ * Flags that can be applied to Regexps
+ */
 pub mod ParseFlags {
   pub static NoParseFlags:  u8 = 0b00000000;
   pub static NoCapture:     u8 = 0b00000010;
   pub static NonGreedy:     u8 = 0b00000100;
 }
 
+/**
+ * Holds the representations available for an Entry on
+ * the stack maintained by the `ParseState`.
+ *
+ * # Options
+ *
+ * *  `Op(OpCode)` - An OpCode marker. These are removed before 
+ *    the final concatenation.
+ * *  `Literal(Literal)` - A character that will be matched in 
+ *    the input.
+ * *  `Expression(Regexp)` - An Expression with up to two states
+ *    with an operation applied to them.
+ * *  `CharClass(CharClass)` - A class of characters (i.e [a-z])
+ */
 pub mod ParseStack {
   use super::{OpCode, Literal, Regexp};
   use charclass::CharClass;
-  // different representations of expressions on
-  // the stack
   pub enum Entry {
     Op(OpCode),
     Literal(Literal),
@@ -20,7 +35,35 @@ pub mod ParseStack {
   }
 }
 
-// A Regex Operation
+/** 
+ * Operations that can be applied to Expressions on the 
+ * parse stack.
+ *
+ * # Markers
+ *
+ * Some of these op codes are markers for portions of the input
+ * that are not competely parsed. `ParseState` expects that 
+ * these markers are completely removed by the end of parsing.
+ *
+ * * `OpLeftParen`
+ *  
+ * # Operations
+ *
+ * The rest of these are operations applied to a up to two states.
+ * For example, an alternation (a|b), can be represented as following:
+ *
+ *   Regexp { 
+ *     op: OpAlternation, 
+ *     state1: Some(~ParseStack::Literal(a)),
+ *     state2: Some(~ParseStack::Literal(b))
+ *     flags: ...
+ *   }
+ *
+ * # Special Case
+ *
+ * * If the input string is empty, an Expression with an `OpNoop` is 
+ *   applied to it.
+ */
 pub enum OpCode {
   OpConcatenation,
   OpAlternation,
@@ -29,6 +72,8 @@ pub enum OpCode {
   OpOneOrMore,
   OpAssertStart,
   OpAssertEnd,
+  OpWordBoundary,
+  OpNonWordBoundary,
   OpLeftParen,
   OpCapture(uint, Option<~str>),
   OpRepeatOp(uint, Option<uint>),
@@ -36,8 +81,14 @@ pub enum OpCode {
   OpNoop
 }
 
-// Regexp Literal
-// a literal character in a regex string (i.e 'abcd')
+/** 
+ * A Literal character to be matched in the input.
+ *
+ * Instead of representating a concatenation of 
+ * multiple characters as a Regexp of two Literals, and 
+ * an `OpConcatenation`, we just push new Literals onto 
+ * any existing ones on the stack.
+ */
 pub struct Literal {
   value: ~str 
 }
@@ -48,9 +99,37 @@ impl Literal {
   }
 }
 
-// Regexp
-// represents a variable number of states with an
-// operator applied to them. 
+/**
+ * A variable number of out states, with an operation applied 
+ * to them.
+ *
+ * Only the first state is use, if the Operation only requires
+ * one state (the second state is `None`).
+ *
+ * # Opcodes and Corresponding Number of States
+ * 
+ * 0 states:
+ *
+ * *  OpAssertStart
+ * *  OpAssertEnd
+ * *  OpWordBoundary
+ * *  OpNonWordBoundary
+ * *  OpDotAll
+ * *  OpNoop  
+ * 
+ * 1 state:
+ *
+ * *  OpKleine
+ * *  OpZeroOrOne
+ * *  OpOneOrMore
+ * *  OpCapture
+ * *  OpRepeatOp
+ *
+ * 2 states:
+ *
+ * *  OpConcatenation
+ * *  OpAlternation
+ */
 pub struct Regexp { 
   op: OpCode, 
   state0: Option<~ParseStack::Entry>, 
@@ -79,19 +158,17 @@ impl Regexp {
   }
 }
 
-// current state of parsing
-//
-// | - nparen:
-// |   number of parenthases not resolved
-// | - ncaps:
-// |   number of parenthases seen
-// | - ptr:
-// |   reference to a position in the regexp input str
-// | - len:
-// |   length of the regexp input str
-// | - flags:
-// |   global flags
-
+/**
+ * Keeps track of the state of parsing using a stack of expressions.
+ *
+ * # Fields
+ *
+ * *  stack - The stack or expressions (represented by `ParseStack::Entry`)
+ * *  nparen - The number of parenthases not resolved (a right parenthases 
+ *    has not been seen.
+ * *  ncaps - The number of parenthases in total seen.
+ * *  flags - Flags applied to all expressions in each entry on the stack.
+ */
 pub struct ParseState {
   priv stack: ~[ParseStack::Entry],
   priv nparen: uint,
@@ -108,18 +185,12 @@ impl ParseState {
       flags: ParseFlags::NoParseFlags 
     } 
   }
-}
-
-impl ParseState {
-  pub fn addFlag(&mut self, flag: u8) {
-    self.flags = self.flags | flag;
-  }
-  pub fn hasFlag(&self, flag: u8) -> bool {
-    (self.flags & flag) > 0
-  }
-}
-
-impl ParseState {
+  /**
+   * Get the completed Regexp item from the stack.
+   *
+   * Call this after parsing has completed to retrieve the final 
+   * Regexp tree. 
+   */
   pub fn pop(&mut self) -> Result<Regexp, ParseCode> {
     match self.stack.pop_opt() {
       Some(ParseStack::Expression(r)) => Ok(r),
@@ -136,6 +207,15 @@ impl ParseState {
 }
 
 impl ParseState {
+  pub fn addFlag(&mut self, flag: u8) {
+    self.flags = self.flags | flag;
+  }
+  pub fn hasFlag(&self, flag: u8) -> bool {
+    (self.flags & flag) > 0
+  }
+}
+
+impl ParseState {
   pub fn hasUnmatchedParens(&mut self) -> bool {
     self.nparen > 0
   }
@@ -144,6 +224,10 @@ impl ParseState {
   }
 }
 
+/**
+ * These are general commands for pushing representations of 
+ * an Expression on the stack.
+ */
 impl ParseState {
   pub fn pushLiteral(&mut self, s: ~str) {
     self.stack.push(ParseStack::Literal(Literal::new(s)));
@@ -159,61 +243,69 @@ impl ParseState {
   }
 }
 
+/**
+ * These methods wrap some of the general push commands. These are 
+ * simple operations that only add to the stack, and do not modify
+ * other elements on the stack.
+ */
 impl ParseState {
+  /// Push an Alternation marker onto the stack. 
   pub fn pushAlternation(&mut self) {
     self.pushOperation(OpAlternation);
   }
+  /// Push a Left Parenthases marker on the stack.
   pub fn pushLeftParen(&mut self) {
     self.nparen += 1;
     self.pushOperation(OpLeftParen);
   }
+  /// Push a DotAll expression on the stack. Because a '.' can   
+  /// be repeated, this should be a Regexp (Expression) as opposed 
+  /// to simply a marker.
   pub fn pushDotAll(&mut self) {
     let r = Regexp::new(OpDotAll, None, None);
     self.pushExpression(r);
   }
+  /// Push an AssertStart expression on the stack ('^').
   pub fn pushAssertStart(&mut self) {
     let r = Regexp::new(OpAssertStart, None, None);
     self.pushExpression(r);
   }
+  /// Push an AssertEnd expression on the stack ('$').
   pub fn pushAssertEnd(&mut self) {
     let r = Regexp::new(OpAssertEnd, None, None);
     self.pushExpression(r);
   }
+  /// Push a WordBoundary expression on the stack ('\B')
+  pub fn pushWordBoundary(&mut self) {
+    let r = Regexp::new(OpWordBoundary, None, None);
+    self.pushExpression(r);
+  }
+  /// Push a NonWordBoundary expression on the stack ('\b').
+  pub fn pushNonWordBoundary(&mut self) {
+    let r = Regexp::new(OpNonWordBoundary, None, None);
+    self.pushExpression(r);
+  }
 }
 
+/**
+ * These methods modify preexisting items on the stack, 
+ * and push new items on the stack. Unlike the push operations 
+ * above, these can fail. They return an explicit `ParseCode` 
+ * that describes the type of failure.
+ */
 impl ParseState {
   pub fn doAlternation(&mut self) -> ParseCode { 
-    // try to pop off two items from the stack.
-    // these should be branches that you can take.
-    //     -> state0
-    // s |
-    //     -> state1
-    // 
-    // with alternation occuring sequentially, we can 
-    // make an equivalent model by having state0 or state1 
-    // also be a regexp with a alternation operand applied to it.
-    //     -> state0
-    // s |              -> 'state0
-    //     -> state1  |
-    //                  -> 'state1
-    //
-    // the operand should be pushed onto the stack before we start parsing 
-    // the right hand side of the alternation, so the stack should look something
-    // like this before doAlternation() is called:
-    //
-    // state0 (branch2)
-    // OpCode(OpAlternation)
-    // state1 (branch1)
+    //! Check the stack for a left branch (state0)
     let branch1 = match self.stack.pop_opt() {
       Some(s) => s,
       None => return ParseEmptyAlternate
     };
-    // make sure there is an alternation operand on the stack,
-    // otherwise, might have parsed incorrectly
+    //! Make sure there is an Alternation operand on the stack
     match self.stack.pop_opt() {
       Some(ParseStack::Op(OpAlternation)) => { },
       _ => return ParseUnexpectedOperand 
     };
+    //! Check the stack for a right branch (state1)
     let branch2 = match self.stack.pop_opt() {
       Some(s) => s,
       None => return ParseEmptyAlternate
@@ -226,14 +318,12 @@ impl ParseState {
   }
   pub fn doConcatenation(&mut self) -> ParseCode {
     while (self.stack.len() > 1) {
-      // try to take two items off the stack to
-      // concatenate.
-      // if either of them are opcodes, just 
-      // push them back no the stack, and return 
-      // (this means there is a singular item on the stack,
-      // and can't be concatenated with anything)
-      //
-      // state0 -> state1
+      //! Try to take two items off the stack to
+      //! concatenate.
+      //! If either of them are Opcodes, just 
+      //! push them back no the stack, and return 
+      //! (this implies there is a singular item on the stack,
+      //! and can't be concatenated with anything)
       let branch1 = match self.stack.pop_opt() {
         Some(ParseStack::Op(op)) => {
           self.pushOperation(op); 
@@ -242,13 +332,14 @@ impl ParseState {
         Some(s) => s,
         None => return ParseEmptyConcatenate
       };
-
       match self.stack.pop_opt() {
         Some(ParseStack::Op(op)) => {
           self.pushOperation(op); 
           self.stack.push(branch1);
           return ParseOk;
         },
+        //! If a more than one Literal are on the stack, 
+        //! just combine them into one Literal
         Some(ParseStack::Literal(s)) => {
           match branch1 {
             ParseStack::Literal(l) => self.pushLiteral(s.value + l.value),
@@ -260,6 +351,8 @@ impl ParseState {
             }
           }
         }
+        //! Otherwise, make a new Regexp with the out states being the 
+        //! branches that were popped earlier
         Some(s) => { 
           let r = Regexp::new(OpConcatenation, Some(~s), Some(~branch1));
           self.pushExpression(r);
@@ -270,12 +363,14 @@ impl ParseState {
 
     ParseOk
   }
+  /// Completes a left parenthases operation started by 
+  /// putting a marker on the stack (by `pushLeftParen(&mut self)`)
   pub fn doLeftParen(&mut self, noncapturing: bool) -> ParseCode { 
     self.nparen -= 1;
     self.doConcatenation();
     let inner = self.stack.pop();
-    // after the left paren operand should be on the top 
-    // of the stack
+    //! Check for the marker. If it isn't there or something else is
+    //! on the stack, we have a bug!
     match self.stack.pop_opt() {
       Some(ParseStack::Op(OpLeftParen)) => { },
       _ => return ParseExpectedOperand 
@@ -283,6 +378,8 @@ impl ParseState {
     let mut r = Regexp::new(OpCapture(self.ncaps, None), 
                             Some(~inner), 
                             None);
+    //! Add a NoCapture flag if something prompted it in the
+    //! input string. Do not count it as a seen capture.
     if (noncapturing) {
       r.addFlag(ParseFlags::NoCapture);
     } else {
@@ -293,19 +390,21 @@ impl ParseState {
 
     ParseOk
   }
+  /// Applies an repeat operation to a state on the stack. 
+  /// If there is none, throw an error.
   pub fn doRepeatOp(&mut self, op: OpCode) -> ParseCode { 
     match self.stack.pop_opt() {
       Some(r) => {
         let mut r = r;
-        // check if we should have apply a 
-        // nongreedy flag
+        //! If `op` is a '?', then it might be a nongreedy 
+        //! quantifier.
         let nongreedy = match op {
           OpZeroOrOne => true,
           _ => false
         };
-        // check to see if the expr on the top
-        // of the stack has some repition 
-        // op applied to it.
+        //! Check the opcode on the item on top of the stack. 
+        //! If there already is a repeat opcode, and a nongreedy 
+        //! is true, then `op` is a nongreedy quantifier.
         let opcode = match &r {
           &ParseStack::Expression(ref e) => {
             match e.op {
@@ -320,12 +419,8 @@ impl ParseState {
             None
           }
         };
-        // if we found that the expr already had
-        // a repeat op, we might need to throw a 
-        // error
-        // 
-        // otherwise, we can make a new expression.
         match opcode {
+          //! Apply the nongreedy quantifier if `op` was a '?'
           Some(OpOneOrMore) | 
           Some(OpKleine) |
           Some(OpRepeatOp(_, _)) |
@@ -349,9 +444,8 @@ impl ParseState {
           _ => unreachable!() 
         }
       }
-      _ => {
-        return ParseEmptyRepetition;
-      }
+      //! Nothing was on the stack
+      _ => return ParseEmptyRepetition;
     }
 
     ParseOk
@@ -365,6 +459,8 @@ impl ParseState {
   pub fn doZeroOrOne(&mut self) -> ParseCode { 
     self.doRepeatOp(OpZeroOrOne)
   }
+  /// Apply a bounded repetition operator to an item on the stack if there is 
+  /// one, and validate it as well.
   pub fn doBoundedRepetition(&mut self, start: uint, end: uint) -> ParseCode {
     match self.stack.pop_opt() {
       Some(ParseStack::Op(_)) => return ParseUnexpectedOperand,
@@ -381,6 +477,8 @@ impl ParseState {
 
     ParseOk
   }
+  /// Apply a unbounded repetition operator to an item on the stack if there is 
+  /// one, and validate it as well.
   pub fn doUnboundedRepetition(&mut self, start: uint) -> ParseCode {
     match self.stack.pop_opt() {
       Some(ParseStack::Op(_)) => return ParseUnexpectedOperand,
@@ -395,8 +493,8 @@ impl ParseState {
   }
 }
 
-// debug
 impl ParseState {
+  /// Prints the stack
   pub fn trace(&mut self) {
     println("--STACK--");
     for e in self.stack.iter() {
