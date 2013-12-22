@@ -15,18 +15,18 @@ LIBSOURCES = $(addprefix $(SRC)/$(RE)/, $(SOURCES))
 TESTS = test_generator.py cases.py
 TESTSOURCES = $(addprefix $(SRC)/$(TEST)/, $(TESTS))
 
-all: $(BUILD)/$(DYLIB) $(BUILD)/librun $(BUILD)/libtest
+all: $(BUILD)/$(DYLIB) $(BUILD)/run $(BUILD)/test
 
 test: test_correctness
     
-run: $(BUILD)/librun
+run: $(BUILD)/run
 	./build/librun
 
-test_all: $(BUILD)/libtest
-	./build/libtest
+test_all: $(BUILD)/test
+	./build/test
 
-test_correctness: $(BUILD)/libtest
-	./build/libtest python_tests
+test_correctness: $(BUILD)/test
+	./build/test python_tests
 
 check: $(LIBSOURCES)
 	rustc $(FLAGS) --no-trans $(SRC)/$(RE)/lib.rs
@@ -35,14 +35,14 @@ $(BUILD)/$(DYLIB): $(LIBSOURCES)
 	test -d $(BUILD) || mkdir $(BUILD)
 	rustc $(FLAGS) --lib --out-dir $(BUILD) $(SRC)/$(RE)/lib.rs
 
-$(BUILD)/libtest: $(LIBSOURCES) $(TESTSOURCES) 
+$(BUILD)/test: $(LIBSOURCES) $(TESTSOURCES) 
 	test -d $(BUILD) || mkdir $(BUILD)
 	python $(SRC)/$(TEST)/test_generator.py
-	rustc $(FLAGS) --test -o $(BUILD)/libtest $(SRC)/$(RE)/lib.rs
+	rustc $(FLAGS) --test -o $(BUILD)/test $(SRC)/$(RE)/lib.rs
 
-$(BUILD)/librun: $(BUILD) $(LIBSOURCES)
+$(BUILD)/run: $(BUILD) $(LIBSOURCES)
 	test -d $(BUILD) || mkdir $(BUILD)
-	rustc $(FLAGS) -o $(BUILD)/librun  $(SRC)/$(RE)/lib.rs
+	rustc $(FLAGS) -o $(BUILD)/run  $(SRC)/$(RE)/lib.rs
 
 clean:
 	rm -r build/
