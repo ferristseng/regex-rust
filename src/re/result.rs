@@ -44,7 +44,7 @@ impl Match {
 
 impl ToStr for Match {
   fn to_str(&self) -> ~str {
-    format!("<Match str: {:s} groups: {:u}>", self.input.slice(self.start, self.end), 
+    format!("<Match str: {:s} groups: {:u}>", self.matched(),
             self.groups.len())
   }
 }

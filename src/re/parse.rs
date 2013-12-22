@@ -38,6 +38,18 @@ fn parse_escape(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
       check_ok!(cc.addRange('\t', '\t'));
       check_ok!(cc.addRange('\r', '\r'));
     }
+    Some('b') => {
+      ps.pushNonWordBoundary();
+      p.next();
+
+      return ParseOk
+    }
+    Some('B') => {
+      ps.pushWordBoundary();
+      p.next();
+
+      return ParseOk
+    }
     Some(_) => return parse_escape_char(p, ps),
     None => return ParseIncompleteEscapeSeq
   }

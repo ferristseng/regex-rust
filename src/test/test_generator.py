@@ -13,13 +13,18 @@ OUTPUT = """
 // Last Modified: %s
 
 macro_rules! run_tests(
-  ($re: expr, $input: expr, $matched: expr, $expect: pat) => (
+  ($re: expr, $input: expr, $matched: expr, $ident: expr, 
+   $expect: pat) => (
     {
       let mut re = UncompiledRegexp::new($re);
       let res = re.search($input);
       let expect_test = match res {
         $expect => true, 
-        _ => false
+        _ => {
+          println(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'>", 
+                  $ident, $re, $input));
+          false
+        }
       };
       if (!expect_test) {
         assert!(expect_test);
@@ -49,7 +54,7 @@ mod python_tests {
 TEST_FN = """
   #[test]
   fn test_case_ident_%s() {
-    run_tests!(\"%s\", \"%s\", ~\"%s\", %s)
+    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s)
   }
 """
 
@@ -68,7 +73,10 @@ def generate_test_case(ident, regexp, input_str,
   elif expected == MATCH:
     match = "Ok(Some(_))"
   regexp = re.sub("\\\\", "\\\\\\\\", regexp)
-  return TEST_FN % (ident, regexp, input_str, matched_str, match)
+  input_str = re.sub("\\\\", "\\\\\\\\", input_str)
+  matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
+  return TEST_FN % (ident, regexp, input_str, matched_str, ident, 
+      match)
 
 if __name__ == "__main__":
   date = datetime.today().strftime("%B %d %Y %I:%M%p")

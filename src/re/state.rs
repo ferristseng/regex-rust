@@ -25,11 +25,11 @@ pub mod ParseFlags {
  * *  `CharClass(CharClass)` - A class of characters (i.e [a-z])
  */
 pub mod ParseStack {
-  use super::{OpCode, Literal, Regexp};
+  use super::{OpCode, Regexp};
   use charclass::CharClass;
   pub enum Entry {
     Op(OpCode),
-    Literal(Literal),
+    Literal(~str),
     Expression(Regexp),
     CharClass(CharClass)
   }
@@ -79,24 +79,6 @@ pub enum OpCode {
   OpRepeatOp(uint, Option<uint>),
   OpDotAll,
   OpNoop
-}
-
-/** 
- * A Literal character to be matched in the input.
- *
- * Instead of representating a concatenation of 
- * multiple characters as a Regexp of two Literals, and 
- * an `OpConcatenation`, we just push new Literals onto 
- * any existing ones on the stack.
- */
-pub struct Literal {
-  value: ~str 
-}
-
-impl Literal {
-  pub fn new(s: ~str) -> Literal {
-    Literal { value: s }
-  }
 }
 
 /**
@@ -230,7 +212,7 @@ impl ParseState {
  */
 impl ParseState {
   pub fn pushLiteral(&mut self, s: ~str) {
-    self.stack.push(ParseStack::Literal(Literal::new(s)));
+    self.stack.push(ParseStack::Literal(s));
   }
   pub fn pushOperation(&mut self, op: OpCode) {
     self.stack.push(ParseStack::Op(op));
@@ -295,17 +277,17 @@ impl ParseState {
  */
 impl ParseState {
   pub fn doAlternation(&mut self) -> ParseCode { 
-    //! Check the stack for a left branch (state0)
+    // Check the stack for a left branch (state0)
     let branch1 = match self.stack.pop_opt() {
       Some(s) => s,
       None => return ParseEmptyAlternate
     };
-    //! Make sure there is an Alternation operand on the stack
+    // Make sure there is an Alternation operand on the stack
     match self.stack.pop_opt() {
       Some(ParseStack::Op(OpAlternation)) => { },
       _ => return ParseUnexpectedOperand 
     };
-    //! Check the stack for a right branch (state1)
+    // Check the stack for a right branch (state1)
     let branch2 = match self.stack.pop_opt() {
       Some(s) => s,
       None => return ParseEmptyAlternate
@@ -318,12 +300,12 @@ impl ParseState {
   }
   pub fn doConcatenation(&mut self) -> ParseCode {
     while (self.stack.len() > 1) {
-      //! Try to take two items off the stack to
-      //! concatenate.
-      //! If either of them are Opcodes, just 
-      //! push them back no the stack, and return 
-      //! (this implies there is a singular item on the stack,
-      //! and can't be concatenated with anything)
+      // Try to take two items off the stack to
+      // concatenate.
+      // If either of them are Opcodes, just 
+      // push them back no the stack, and return 
+      // (this implies there is a singular item on the stack,
+      // and can't be concatenated with anything)
       let branch1 = match self.stack.pop_opt() {
         Some(ParseStack::Op(op)) => {
           self.pushOperation(op); 
@@ -338,11 +320,11 @@ impl ParseState {
           self.stack.push(branch1);
           return ParseOk;
         },
-        //! If a more than one Literal are on the stack, 
-        //! just combine them into one Literal
+        // If a more than one Literal are on the stack, 
+        // just combine them into one Literal
         Some(ParseStack::Literal(s)) => {
           match branch1 {
-            ParseStack::Literal(l) => self.pushLiteral(s.value + l.value),
+            ParseStack::Literal(l) => self.pushLiteral(s+ l),
             _ => { 
               let r = Regexp::new(OpConcatenation, 
                                   Some(~ParseStack::Literal(s)), 
@@ -351,8 +333,8 @@ impl ParseState {
             }
           }
         }
-        //! Otherwise, make a new Regexp with the out states being the 
-        //! branches that were popped earlier
+        // Otherwise, make a new Regexp with the out states being the 
+        // branches that were popped earlier
         Some(s) => { 
           let r = Regexp::new(OpConcatenation, Some(~s), Some(~branch1));
           self.pushExpression(r);
@@ -369,8 +351,8 @@ impl ParseState {
     self.nparen -= 1;
     self.doConcatenation();
     let inner = self.stack.pop();
-    //! Check for the marker. If it isn't there or something else is
-    //! on the stack, we have a bug!
+    // Check for the marker. If it isn't there or something else is
+    // on the stack, we have a bug!
     match self.stack.pop_opt() {
       Some(ParseStack::Op(OpLeftParen)) => { },
       _ => return ParseExpectedOperand 
@@ -378,8 +360,8 @@ impl ParseState {
     let mut r = Regexp::new(OpCapture(self.ncaps, None), 
                             Some(~inner), 
                             None);
-    //! Add a NoCapture flag if something prompted it in the
-    //! input string. Do not count it as a seen capture.
+    // Add a NoCapture flag if something prompted it in the
+    // input string. Do not count it as a seen capture.
     if (noncapturing) {
       r.addFlag(ParseFlags::NoCapture);
     } else {
@@ -396,15 +378,15 @@ impl ParseState {
     match self.stack.pop_opt() {
       Some(r) => {
         let mut r = r;
-        //! If `op` is a '?', then it might be a nongreedy 
-        //! quantifier.
+        // If `op` is a '?', then it might be a nongreedy 
+        // quantifier.
         let nongreedy = match op {
           OpZeroOrOne => true,
           _ => false
         };
-        //! Check the opcode on the item on top of the stack. 
-        //! If there already is a repeat opcode, and a nongreedy 
-        //! is true, then `op` is a nongreedy quantifier.
+        // Check the opcode on the item on top of the stack. 
+        // If there already is a repeat opcode, and a nongreedy 
+        // is true, then `op` is a nongreedy quantifier.
         let opcode = match &r {
           &ParseStack::Expression(ref e) => {
             match e.op {
@@ -420,7 +402,7 @@ impl ParseState {
           }
         };
         match opcode {
-          //! Apply the nongreedy quantifier if `op` was a '?'
+          // Apply the nongreedy quantifier if `op` was a '?'
           Some(OpOneOrMore) | 
           Some(OpKleine) |
           Some(OpRepeatOp(_, _)) |
@@ -444,8 +426,8 @@ impl ParseState {
           _ => unreachable!() 
         }
       }
-      //! Nothing was on the stack
-      _ => return ParseEmptyRepetition;
+      // Nothing was on the stack
+      _ => return ParseEmptyRepetition
     }
 
     ParseOk

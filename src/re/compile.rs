@@ -1,23 +1,8 @@
 use state::*;
 use charclass::CharClass;
 
-// instruction opcodes
-//
-// more opcodes are probably required, but for now:
-//
-// Literal      = check if the input matches a literal
-// Range        = check if the input is within a range
-// Match        = the input matches!
-// Jump         = goto a point in the stack
-// CaptureStart = start capturing the input
-// CaptureEnd   = end capturing the input
-// Split        = start a new thread with one jumping to the
-//                first uint, and the next jumping to the
-//                second.
-// InstNoop     = placeholder in most cases
-
 #[deriving(Clone)]
-pub enum InstOpCode {
+pub enum Instruction {
   InstLiteral(char),
   InstRange(char, char),
   InstMatch,
@@ -28,23 +13,14 @@ pub enum InstOpCode {
   InstDotAll,
   InstAssertStart,
   InstAssertEnd,
+  InstWordBoundary,
+  InstNonWordBoundary,
   InstNoop
-}
-
-#[deriving(Clone)]
-pub struct Instruction {
-  op: InstOpCode 
-}
-
-impl Instruction {
-  pub fn new(op: InstOpCode) -> Instruction {
-    Instruction { op: op }
-  }
 }
 
 impl ToStr for Instruction {
   fn to_str(&self) -> ~str {
-    match self.op {
+    match *self {
       InstLiteral(c)            => format!("InstLiteral {:c}", c), 
       InstRange(s, e)           => format!("InstRange {:c}-{:c}", s, e),
       InstMatch                 => ~"InstMatch", 
@@ -55,15 +31,17 @@ impl ToStr for Instruction {
       InstDotAll                => ~"InstDotAll",
       InstAssertStart           => ~"InstLineStart",
       InstAssertEnd             => ~"InstLineEnd",
+      InstWordBoundary          => ~"InstWordBoundary",
+      InstNonWordBoundary       => ~"InstNonWordBoundary",
       InstNoop                  => ~"InstNoop"
     }
   }
 }
 
 #[inline]
-fn compile_literal(lit: &Literal, stack: &mut ~[Instruction]) {
-  for c in lit.value.chars() {
-    stack.push(Instruction::new(InstLiteral(c)));
+fn compile_literal(lit: &~str, stack: &mut ~[Instruction]) {
+  for c in lit.chars() {
+    stack.push(InstLiteral(c));
   }
 }
 
@@ -75,7 +53,7 @@ fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
 
   for &(start, end) in cc.ranges.iter() {
     if (rlen >= 2) {
-      let split = Instruction::new(InstSplit(ssize + 1, ssize + 3));
+      let split = InstSplit(ssize + 1, ssize + 3);
       stack.push(split);
 
       ssize += 3;
@@ -83,35 +61,61 @@ fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
     }
 
     if (start == end) {
-      stack.push(Instruction::new(InstLiteral(start)));
+      stack.push(InstLiteral(start));
     } else {
-      stack.push(Instruction::new(InstRange(start, end)));
+      stack.push(InstRange(start, end));
     }
 
-    stack.push(Instruction::new(InstJump(rsize - 1)));
+    stack.push(InstJump(rsize - 1));
   }
 }
 
-// generates a split instruction
+/**
+ * Generates a split insturction depending on the nongreedy quantifier
+ *
+ * # Arguments
+ *
+ * *  left - The preferred branch to take for nongreedy. If this branch matches first, 
+ *           the right hand side will not execute if nongreedy.
+ * *  right - The preferred branch to take for greedy.
+ * *  nongreedy - Specifies which branch to prefer (left or right).
+ */
 #[inline]
 fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instruction {
   if (nongreedy) {
-    Instruction::new(InstSplit(left, right))
+    InstSplit(left, right)
   } else {
-    Instruction::new(InstSplit(right, left))
+    InstSplit(right, left)
   }
 }
 
+/**
+ * Calls _compile_recursive, then pushes a `InstMatch` onto the 
+ * end of the Instruction stack
+ *
+ * # Arguments
+ *
+ * See `_compile_recursive(re: &Regexp, stack: &mut ~[Instruction])`
+ */
 pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
   _compile_recursive(re, stack);
-  stack.push(Instruction::new(InstMatch));
+  stack.push(InstMatch);
 
   //debug_stack(stack);
 }
 
+/** 
+ * Compiles a Regexp into a list of Instructions recursively
+ *
+ * # Arguments
+ *
+ * * re - The Regexp to compile
+ * * stack - The list of instructions to dump to
+ */
+#[inline]
 fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
-  // recurse on a sub expression if type is Expression,
-  // otherwise just compile
+  // Recurse on a subexpression if type is Expression,
+  // otherwise just call the appropriate compile funciton.
   macro_rules! recurse(
     ($re: expr) => (
       {
@@ -125,23 +129,23 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
           &Some(~ParseStack::CharClass(ref cc)) => {
             compile_charclass(cc, stack);
           }
-          _ => { } // unreachable
+          _ => unreachable!()
         }
       }
     );
   )
 
-  // insert a InstNoop...to be replaced later
+  // Inserts a InstNoop
   macro_rules! placeholder(
     () => (
-      stack.push(Instruction::new(InstNoop))
+      stack.push(InstNoop)
     );
   )
 
   match &re.op {
-    // this should correspond with the case 
-    // of the input being only a string (i.e 'abc')
-    // or a char class (i.e '[a-zA-Z]')
+    // If the opcode is an OpNoop, there is a bare 
+    // Literal, CharClass, or the input Regexp was 
+    // empty.
     &OpNoop => {
       match re.state0 {
         Some(~ParseStack::Literal(ref lit)) => {
@@ -154,7 +158,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
         _ => unreachable!() // unreachable
       };
     }
-    // compile to:
+    // Compile to:
     // ...
     //      Split(L1, L2)
     // L1:  (state0)
@@ -170,13 +174,13 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       placeholder!();
       recurse!(&re.state1);
       
-      let split = Instruction::new(InstSplit(ptr_split + 1, ptr_jmp + 1));
-      let jmp = Instruction::new(InstJump(stack.len()));
+      let split = InstSplit(ptr_split + 1, ptr_jmp + 1);
+      let jmp = InstJump(stack.len());
 
       stack[ptr_split] = split; 
       stack[ptr_jmp] = jmp; 
     }
-    // compile to:
+    // Compile to:
     // ...
     // (state0)
     // (state1)
@@ -185,7 +189,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       recurse!(&re.state0);
       recurse!(&re.state1);
     }
-    // compile to:
+    // Compile to:
     // ...
     // CaptureStart
     // (state0)
@@ -194,12 +198,12 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       if (re.hasFlag(ParseFlags::NoCapture)) {
         recurse!(&re.state0);
       } else {
-        stack.push(Instruction::new(InstCaptureStart(id, name.clone())));
+        stack.push(InstCaptureStart(id, name.clone()));
         recurse!(&re.state0);
-        stack.push(Instruction::new(InstCaptureEnd(id)));
+        stack.push(InstCaptureEnd(id));
       }
     }
-    // compile to:
+    // Compile to:
     // ...
     // L1: Split(L2, L3) | Split(L3, L2) (NonGreedy)
     // L2: (state0)
@@ -212,12 +216,12 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       placeholder!();
 
       recurse!(&re.state0);
-      let jmp = Instruction::new(InstJump(ptr_split));
+      let jmp = InstJump(ptr_split);
       stack.push(jmp);
 
       stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
     }
-    // compile to:
+    // Compile to:
     // ...
     // L1: (state0)
     //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
@@ -232,7 +236,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       let split = generate_repeat_split(stack.len() + 1, ptr_inst, nongreedy);
       stack.push(split);
     }
-    // compile to:
+    // Compile to:
     // ...
     //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
     // L1: (state0)
@@ -246,7 +250,7 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
 
       stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
     }
-    // there are 3 cases for a repeat op
+    // There are 3 cases for a repeat op
     // that depend on end:
     //
     //    1. end == start...exact repetition of start times
@@ -261,9 +265,9 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
       }
 
       match end {
-        // corresponds to the 2nd case
+        // Corresponds to the 2nd case
         Some(n) if n != start => {
-          // each iteration should compile something 
+          // Each iteration should compile something 
           // similar to the '?' operator
           for _ in range(0, n - start) {
             let ptr_split = stack.len();
@@ -274,13 +278,13 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
             stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
           }
         }
-        // this should look like a '*' operator
+        // This should look like a '*' operator
         None => {
           let ptr_split = stack.len();
           placeholder!();
 
           recurse!(&re.state0);
-          let jmp = Instruction::new(InstJump(ptr_split));
+          let jmp = InstJump(ptr_split);
           stack.push(jmp);
 
           stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
@@ -289,16 +293,12 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
         _ => { }
       }
     }
-    &OpDotAll => {
-      stack.push(Instruction::new(InstDotAll));
-    }
-    &OpAssertStart => {
-      stack.push(Instruction::new(InstAssertStart));
-    }
-    &OpAssertEnd => {
-      stack.push(Instruction::new(InstAssertEnd));
-    }
-    _ => { } // these are not covered cases...remove when all cases are completely covered
+    &OpDotAll => stack.push(InstDotAll),
+    &OpAssertStart => stack.push(InstAssertStart),
+    &OpAssertEnd => stack.push(InstAssertEnd),
+    &OpWordBoundary => stack.push(InstWordBoundary),
+    &OpNonWordBoundary => stack.push(InstNonWordBoundary),
+    _ => unreachable!() 
   }
 }
 

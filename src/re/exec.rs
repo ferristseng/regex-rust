@@ -3,7 +3,8 @@ use std::util::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, InstDotAll, 
-  InstAssertStart, InstAssertEnd, InstNoop};
+  InstAssertStart, InstAssertEnd, InstWordBoundary,
+  InstNonWordBoundary, InstNoop};
 use result::{Match, CapturingGroup};
 
 // object containing implementation
@@ -36,7 +37,7 @@ impl Prog {
   pub fn run(&self, input: &str, start: uint) -> Option<Match> {    
     match self.strat.run(input, start) {
       Some(t) => {
-        Some(Match::new(start, t.sp, input.to_owned(), t.captures.clone()))
+        Some(Match::new(start, t.end, input, t.captures))
       }
       None => None 
     } 
@@ -59,15 +60,15 @@ trait ExecStrategy {
 #[deriving(Clone)]
 struct Thread {
   pc: uint,
-  sp: uint,
+  end: uint,
   captures: ~[Option<CapturingGroup>]
 }
 
 impl Thread {
-  fn new(pc: uint, sp: uint) -> Thread {
+  fn new(pc: uint, end: uint) -> Thread {
     Thread { 
       pc: pc, 
-      sp: sp,
+      end: end,
       captures: ~[]
     }
   }
@@ -75,7 +76,7 @@ impl Thread {
 
 impl ToStr for Thread {
   fn to_str(&self) -> ~str {
-    format!("<Thread pc: {:u}, sp: {:u}>", self.pc, self.sp)
+    format!("<Thread pc: {:u}, end: {:u}>", self.pc, self.end)
   }
 }
 
@@ -97,7 +98,7 @@ impl PikeVM {
 impl PikeVM {
   #[inline]
   fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread]) {
-    match self.inst[t.pc].op {
+    match self.inst[t.pc] {
       InstJump(addr) => {
         t.pc = addr;
 
@@ -121,7 +122,7 @@ impl PikeVM {
           t.captures.push(None);
         }
 
-        t.captures[num] = Some(CapturingGroup::new(t.sp, t.sp, id, num));
+        t.captures[num] = Some(CapturingGroup::new(t.end, t.end, id, num));
 
         self.addThread(t, tlist);
       }
@@ -130,7 +131,7 @@ impl PikeVM {
 
         match t.captures[num] {
           Some(ref mut cap) => {
-            cap.end = t.sp;
+            cap.end = t.end;
           }
           None => unreachable!()
         }
@@ -154,37 +155,58 @@ impl ExecStrategy for PikeVM {
     // \x03 is an end of string indicator. it resolves issues
     // the program reaches the end of the string, and still
     // needs to perform instructions
+    // This needs to be accounted for when computing things like 
+    // the end of the input string
     let input = input.to_owned().append("\x03");
 
-    // setup
+    // `sp` is a reference to a byte position in the input string. 
+    // Anytime this is incremented, we have to be aware of the number of
+    // bytes the character is.
     let mut sp = 0; 
     let mut found = None;
 
     let mut clist: ~[Thread] = with_capacity(self.len);
     let mut nlist: ~[Thread] = with_capacity(self.len);
     
-    self.addThread(Thread::new(0, sp), &mut clist);
-
+    // To start from an index other than than the first character, 
+    // need to compute the number of bytes from the beginning to 
+    // wherever we want to start
     for i in range(0, input.char_len()) {
       let c = input.char_at(sp);
 
-      // some chars are different byte lengths, so 
+      // Wait until the start_index is hit
+      if (i == start_index) {
+        break;
+      }
+
+      // Some chars are different byte lengths, so 
       // we can't just inc by 1
       sp += c.len_utf8_bytes();
+    }
 
-      // wait until the start_index is hit
-      if (i < start_index) {
-        continue; 
-      }
+    self.addThread(Thread::new(0, sp), &mut clist);
+
+    // The main loop. 
+    // 
+    // For each character in the input, loop through threads (starting with 
+    // one dummy thread) that represent  different traversal 
+    // paths through the list of instructions. The only
+    // time new threads are created, are when `InstSplit` instructions occur.
+    for i in range(start_index, input.char_len()) {
+      let c = input.char_at(sp);
+
+      sp += c.len_utf8_bytes();
+
+      //println(format!("-- Execution ({:c}|{:u}) --", c, sp));
 
       while (clist.len() > 0) {
         let mut t = clist.shift();;
 
-        match self.inst[t.pc].op {
+        match self.inst[t.pc] {
           InstLiteral(m) => {
             if (c == m && i != input.char_len()) {
               t.pc = t.pc + 1;
-              t.sp = sp;
+              t.end = sp;
 
               self.addThread(t, &mut nlist);
             }
@@ -192,30 +214,65 @@ impl ExecStrategy for PikeVM {
           InstRange(start, end) => {
             if (c >= start && c <= end && i != input.char_len()) {
               t.pc = t.pc + 1;
-              t.sp = sp;
+              t.end = sp;
 
               self.addThread(t, &mut nlist);
             }
           }
           InstDotAll => {
             t.pc = t.pc + 1;
-            t.sp = sp;
+            t.end = sp;
 
             self.addThread(t, &mut nlist);
           }
           InstAssertStart => {
-            if (c == '\n' || i == 0) {
+            if (i == 0) {
               t.pc = t.pc + 1;
 
               self.addThread(t, &mut clist);
             }
           }
           InstAssertEnd => {
+            // Account for the extra character added onto each 
+            // input string
             if (i == input.char_len() - 1) {
               t.pc = t.pc + 1;
 
               self.addThread(t, &mut clist);
             }
+          }
+          InstWordBoundary => {
+            if (i == 0 ||
+                i == input.char_len()) {
+              continue;
+            } 
+            if (i == start_index &&
+                !input.char_at_reverse(t.end).is_alphanumeric()) {
+              continue;
+            }
+            if (!c.is_alphanumeric()) {
+              continue;
+            } 
+            t.pc = t.pc + 1;
+            
+            self.addThread(t, &mut clist);
+          }
+          InstNonWordBoundary => {
+            if (i == start_index &&
+                i != 0 &&
+                input.char_at_reverse(t.end).is_alphanumeric()) {
+              continue;
+            }
+            if (i != input.char_len() && 
+                i != 0 &&
+                i != start_index &&
+                c.is_alphanumeric()) { 
+              continue;
+            }
+            //println("Added Thread at " + c.to_str());
+            t.pc = t.pc + 1;
+
+            self.addThread(t, &mut clist);
           }
           InstMatch => {
             found = Some(t.clone()); 
