@@ -70,8 +70,8 @@ fn main() {
     Err(e) => println(e.to_str())
   }
 
-  let mut re = UncompiledRegexp::new("a[]b");
-  let ma = re.search("-");
+  let mut re = UncompiledRegexp::new("(a*)*");
+  let ma = re.search("aa");
 
   match ma {
     Ok(result) => {

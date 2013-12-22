@@ -34,6 +34,8 @@ TESTS = [
   #--
   # INSERT SKIPPED TESTS HERE
   #--
+  (")", "", "", PARSEERR),
+  ("", "", "", MATCH),
   ("abc", "abc", "abc", MATCH),
   ("abc", "xbc", "", NOMATCH),
   ("abc", "axc", "", NOMATCH),
@@ -143,10 +145,26 @@ TESTS = [
   ("(ab|a)b*c", "abc", "abc", MATCH),
   ("((a)(b)c)(d)", "abcd", "abcd", MATCH),
   ("[a-zA-Z_][a-zA-Z0-9_]*", "alpha", "alpha", MATCH),
+  ("^a(bc+|b[eh])g|.h$", "abh", "bh", MATCH),
+  ("(bc+d$|ef*g.|h?i(j|k))", "effgz", "effgz", MATCH),
+  ("(bc+d$|ef*g.|h?i(j|k))", "ij", "ij", MATCH),
+  ("(bc+d$|ef*g.|h?i(j|k))", "effg", "", NOMATCH),
+  ("(bc+d$|ef*g.|h?i(j|k))", "bcdd", "", NOMATCH),
+  ("(bc+d$|ef*g.|h?i(j|k))", "reffgz", "effgz", MATCH),
+  ("((((((((a))))))))", "a", "a", MATCH),
+  ("multiple words of text", "uh-uh", "", NOMATCH),
+  ("multiple words", "multiple words, yeah", "multiple words", MATCH),
+  ("(.*)c(.*)", "abcde", "abcde", MATCH),
+  ("\\((.*), (.*)\\)", "(a, b)", "(a, b)", MATCH),
+  ("[k]", "ab", "", NOMATCH),
+  ("a[-]?c", "ac", "ac", MATCH),
+  #("(abc)\\1", "abcabc", "abcabc", MATCH),
+  #("([a-c]*)\\1", "abcabc", "abcabc", MATCH),
+  ("^(.+)?B", "AB", "AB", MATCH),
+  #("(a+).\\1$", "aaaaa", "aaaaa", MATCH),
   #--
   # Custom Tests
   #--
-  ("", "", "", MATCH),
   ("a{5}", "aaaaa", "aaaaa", MATCH),
   ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
   ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),

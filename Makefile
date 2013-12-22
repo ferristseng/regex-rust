@@ -20,7 +20,7 @@ all: $(BUILD)/$(DYLIB) $(BUILD)/run $(BUILD)/test
 test: test_correctness
     
 run: $(BUILD)/run
-	./build/librun
+	./build/run
 
 test_all: $(BUILD)/test
 	./build/test

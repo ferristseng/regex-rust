@@ -98,55 +98,48 @@ impl PikeVM {
 impl PikeVM {
   #[inline]
   fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread]) {
-    match self.inst[t.pc] {
-      InstJump(addr) => {
-        t.pc = addr;
-
-        self.addThread(t, tlist);
-      }
-      InstSplit(laddr, raddr) => {
-        let mut split = t.clone();
-        split.pc = raddr;
-
-        t.pc = laddr;
-
-        self.addThread(t, tlist);
-        self.addThread(split, tlist);
-      }
-      InstCaptureStart(num, ref id) => {
-        t.pc = t.pc + 1;
-        
-        // fill in spaces with None, if there is no
-        // knowledge of a capture instruction
-        while (t.captures.len() < num + 1) {
-          t.captures.push(None);
+    loop {
+      match self.inst[t.pc] {
+        InstJump(addr) => {
+          t.pc = addr;
         }
+        InstSplit(laddr, raddr) => {
+          let mut split = t.clone();
+          split.pc = laddr;
 
-        t.captures[num] = Some(CapturingGroup::new(t.end, t.end, id, num));
+          t.pc = raddr;
 
-        self.addThread(t, tlist);
-      }
-      InstCaptureEnd(num) => {
-        t.pc = t.pc + 1;
-
-        match t.captures[num] {
-          Some(ref mut cap) => {
-            cap.end = t.end;
+          self.addThread(split, tlist);
+        }
+        InstCaptureStart(num, ref id) => {
+          t.pc = t.pc + 1;
+          
+          // Fill in spaces with None, if there is no
+          // knowledge of a capture instruction
+          while (t.captures.len() < num + 1) {
+            t.captures.push(None);
           }
-          None => unreachable!()
+
+          t.captures[num] = Some(CapturingGroup::new(t.end, t.end, id, num));
         }
+        InstCaptureEnd(num) => {
+          t.pc = t.pc + 1;
 
-        self.addThread(t, tlist);
-      }
-      InstNoop => { 
-        t.pc = t.pc + 1;
-
-        self.addThread(t, tlist);
-      }
-      _ => { 
-        tlist.push(t); 
+          match t.captures[num] {
+            Some(ref mut cap) => {
+              cap.end = t.end;
+            }
+            None => unreachable!()
+          }
+        }
+        InstNoop => { 
+          t.pc = t.pc + 1;
+        }
+        _ => break 
       }
     }
+
+    tlist.push(t); 
   }
 }
 
