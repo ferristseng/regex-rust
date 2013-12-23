@@ -14,7 +14,7 @@ OUTPUT = """
 
 macro_rules! run_tests(
   ($re: expr, $input: expr, $matched: expr, $ident: expr, 
-   $expect: pat) => (
+   $expect: pat, $groups: expr) => (
     {
       let mut re = UncompiledRegexp::new($re);
       let res = re.search($input);
@@ -34,6 +34,15 @@ macro_rules! run_tests(
         match res.unwrap() {
           Some(ma) => {
             assert_eq!(ma.matched(), $matched)
+            
+            let groups: &'static[&'static str] = $groups;
+            let mut i = 0;
+
+            for g in groups.iter() {
+              assert_eq!(ma.group(i), g.to_str());
+
+              i += 1;
+            }
           }
           _ => { }
         }
@@ -54,7 +63,7 @@ mod python_tests {
 TEST_FN = """
   #[test]
   fn test_case_ident_%s() {
-    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s)
+    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &'static [%s])
   }
 """
 
@@ -65,18 +74,25 @@ def generate_test_num(num, digits):
   return ret
 
 def generate_test_case(ident, regexp, input_str, 
-    matched_str, expected):
+    matched_str, expected, groups):
   if expected == NOMATCH:
     match = "Ok(None)"
   elif expected == PARSEERR:
     match = "Err(_)"
   elif expected == MATCH:
     match = "Ok(Some(_))"
+
   regexp = re.sub("\\\\", "\\\\\\\\", regexp)
   input_str = re.sub("\\\\", "\\\\\\\\", input_str)
   matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
+
+  if (len(groups) > 0):
+    groups_str  = "\"" + "\", \"".join(groups) + "\""
+  else:
+    groups_str = ""
+
   return TEST_FN % (ident, regexp, input_str, matched_str, ident, 
-      match)
+      match, groups_str)
 
 if __name__ == "__main__":
   date = datetime.today().strftime("%B %d %Y %I:%M%p")
@@ -84,8 +100,13 @@ if __name__ == "__main__":
 
   for (i, test) in enumerate(TESTS):
     ident = generate_test_num(i, len(str(len(TESTS))))
+    if (len(test) == 5):
+      groups = test[4]
+    else:
+      groups = []
     buf += \
-      generate_test_case(ident, test[0], test[1], test[2], test[3])
+      generate_test_case(ident, test[0], test[1], test[2], test[3], 
+                         groups)
 
   FILE.write(OUTPUT % (date, buf))
 

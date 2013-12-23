@@ -27,6 +27,7 @@ pub mod ParseFlags {
 pub mod ParseStack {
   use super::{OpCode, Regexp};
   use charclass::CharClass;
+
   pub enum Entry {
     Op(OpCode),
     Literal(~str),
@@ -74,7 +75,7 @@ pub enum OpCode {
   OpAssertEnd,
   OpWordBoundary,
   OpNonWordBoundary,
-  OpLeftParen,
+  OpLeftParen(uint),
   OpCapture(uint, Option<~str>),
   OpRepeatOp(uint, Option<uint>),
   OpDotAll,
@@ -122,7 +123,7 @@ pub struct Regexp {
 impl Regexp {
   pub fn new(op: OpCode, state0: Option<~ParseStack::Entry>, 
              state1: Option<~ParseStack::Entry>) -> Regexp {
-    Regexp { 
+    Regexp {
       op: op, 
       state0: state0, 
       state1: state1,
@@ -148,7 +149,7 @@ impl Regexp {
  * *  stack - The stack or expressions (represented by `ParseStack::Entry`)
  * *  nparen - The number of parenthases not resolved (a right parenthases 
  *    has not been seen.
- * *  ncaps - The number of parenthases in total seen.
+ * *  ncaps - The number of captures in total seen.
  * *  flags - Flags applied to all expressions in each entry on the stack.
  */
 pub struct ParseState {
@@ -204,6 +205,12 @@ impl ParseState {
   pub fn hasNoParens(&mut self) -> bool {
     self.nparen == 0
   }
+  pub fn getParenLen(&mut self) -> uint {
+    self.nparen
+  }
+  pub fn getCaptureLen(&mut self) -> uint {
+    self.ncaps
+  }
 }
 
 /**
@@ -238,7 +245,7 @@ impl ParseState {
   /// Push a Left Parenthases marker on the stack.
   pub fn pushLeftParen(&mut self) {
     self.nparen += 1;
-    self.pushOperation(OpLeftParen);
+    self.pushOperation(OpLeftParen(self.ncaps));
   }
   /// Push a DotAll expression on the stack. Because a '.' can   
   /// be repeated, this should be a Regexp (Expression) as opposed 
@@ -352,12 +359,18 @@ impl ParseState {
     self.doConcatenation();
     let inner = self.stack.pop();
     // Check for the marker. If it isn't there or something else is
-    // on the stack, we have a bug!
-    match self.stack.pop_opt() {
-      Some(ParseStack::Op(OpLeftParen)) => { },
+    // there's an error elsewhere in the code
+    let capn = match self.stack.pop_opt() {
+      Some(ParseStack::Op(OpLeftParen(n))) => { 
+        if (self.hasUnmatchedParens()) {
+          n + self.nparen
+        } else {
+          n
+        }
+      },
       _ => return ParseExpectedOperand 
-    }
-    let mut r = Regexp::new(OpCapture(self.ncaps, None), 
+    };
+    let mut r = Regexp::new(OpCapture(capn, None), 
                             Some(~inner), 
                             None);
     // Add a NoCapture flag if something prompted it in the

@@ -12,23 +12,26 @@ use result::{Match, CapturingGroup};
 // instructions
 
 pub struct Prog {
-  strat: ~ExecStrategy
+  priv strat: ~ExecStrategy,
+  priv ncaps: uint
 }
 
 impl Prog {
-  pub fn new(inst: ~[Instruction]) -> Prog {
-    Prog::new_with_pike_vm(inst)
+  pub fn new(inst: ~[Instruction], ncaps: uint) -> Prog {
+    Prog::new_with_pike_vm(inst, ncaps)
   }
-  pub fn new_with_pike_vm(inst: ~[Instruction]) -> Prog {
-    let strat = ~PikeVM::new(inst) as ~ExecStrategy;
+  pub fn new_with_pike_vm(inst: ~[Instruction], ncaps: uint) -> Prog {
+    let strat = ~PikeVM::new(inst, ncaps) as ~ExecStrategy;
     Prog {
-      strat: strat
+      strat: strat,
+      ncaps: ncaps
    }
   }
-  pub fn new_with_recursive(inst: ~[Instruction]) -> Prog {
-    let strat = ~RecursiveBacktracking::new(inst) as ~ExecStrategy;
+  pub fn new_with_recursive(inst: ~[Instruction], ncaps: uint) -> Prog {
+    let strat = ~RecursiveBacktracking::new(inst, ncaps) as ~ExecStrategy;
     Prog {
-      strat: strat
+      strat: strat,
+      ncaps: ncaps
     }
   }
 }
@@ -82,15 +85,17 @@ impl ToStr for Thread {
 
 struct PikeVM {
   priv inst: ~[Instruction],
-  priv len: uint
+  priv len: uint,
+  priv ncaps: uint
 }
 
 impl PikeVM {
-  fn new(inst: ~[Instruction]) -> PikeVM {
+  fn new(inst: ~[Instruction], ncaps: uint) -> PikeVM {
     let len = inst.len();
     PikeVM {
       inst: inst,
-      len: len
+      len: len,
+      ncaps: ncaps
     }
   }
 }
@@ -262,7 +267,6 @@ impl ExecStrategy for PikeVM {
                 c.is_alphanumeric()) { 
               continue;
             }
-            //println("Added Thread at " + c.to_str());
             t.pc = t.pc + 1;
 
             self.addThread(t, &mut clist);
@@ -279,7 +283,18 @@ impl ExecStrategy for PikeVM {
       nlist.clear();
     }
 
-    found 
+    match found {
+      Some(ref mut ma) => {
+        if (ma.captures.len() < self.ncaps) {
+          for _ in range(ma.captures.len(), self.ncaps) {
+            ma.captures.push(None);
+          }
+        }
+      }
+      _ => { }
+    }
+
+    found
   }
 }
 
@@ -291,15 +306,17 @@ impl ExecStrategy for PikeVM {
 
 struct RecursiveBacktracking {
   priv inst: ~[Instruction],
-  priv len: uint
+  priv len: uint,
+  priv ncaps: uint
 }
 
 impl RecursiveBacktracking {
-  fn new(inst: ~[Instruction]) -> RecursiveBacktracking {
+  fn new(inst: ~[Instruction], ncaps: uint) -> RecursiveBacktracking {
     let len = inst.len();
     RecursiveBacktracking {
       inst: inst,
-      len: len
+      len: len,
+      ncaps: ncaps
     }
   }
 }

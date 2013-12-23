@@ -51,14 +51,15 @@ fn main() {
     Err(e) => println(e.to_str())
   }
 
-  let mut re = UncompiledRegexp::new("a{5,8}");
-  let ma = re.exec("aaaa");
+  let mut re = UncompiledRegexp::new("(((((((((a)))))))))");
+  let ma = re.exec("a");
 
   match ma {
     Ok(result) => {
       match result {
         Some(matched) => {
           println("Found Match");
+          println(matched.to_str());
           println(format!("Matched: {:?}", matched.matched()));
           for i in range(0, matched.groups.len()) {
             println(matched.group(i));
@@ -70,14 +71,15 @@ fn main() {
     Err(e) => println(e.to_str())
   }
 
-  let mut re = UncompiledRegexp::new("(a*)*");
-  let ma = re.search("aa");
+  let mut re = UncompiledRegexp::new("(bc+d$|ef*g.|h?i(j|k))");
+  let ma = re.search("effgz");
 
   match ma {
     Ok(result) => {
       match result {
         Some(matched) => {
           println("Found Match");
+          println(matched.to_str());
           println(format!("Matched: {:?}", matched.matched()));
           for i in range(0, matched.groups.len()) {
             println(matched.group(i));
