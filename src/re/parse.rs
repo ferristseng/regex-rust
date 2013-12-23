@@ -78,6 +78,11 @@ fn parse_escape_char(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 }
 
 #[inline]
+fn parse_parens(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+
+}
+
+#[inline]
 fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   let mut cc = CharClass::new();
 

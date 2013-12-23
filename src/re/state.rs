@@ -16,7 +16,7 @@ pub mod ParseFlags {
  *
  * # Options
  *
- * *  `Op(OpCode)` - An OpCode marker. These are removed before 
+ * *  `Marker(OpCode)` - An OpCode marker. These are removed before 
  *    the final concatenation.
  * *  `Literal(Literal)` - A character that will be matched in 
  *    the input.
@@ -29,7 +29,7 @@ pub mod ParseStack {
   use charclass::CharClass;
 
   pub enum Entry {
-    Op(OpCode),
+    Marker(OpCode),
     Literal(~str),
     Expression(Regexp),
     CharClass(CharClass)
@@ -183,7 +183,7 @@ impl ParseState {
       Some(ParseStack::CharClass(r)) => {
         Ok(Regexp::new(OpNoop, Some(~ParseStack::CharClass(r)), None))
       },
-      Some(ParseStack::Op(_)) => Err(ParseInternalError), 
+      Some(ParseStack::Marker(_)) => Err(ParseInternalError), 
       None => Ok(Regexp::new(OpNoop, None, None)) 
     }
   }
@@ -222,7 +222,7 @@ impl ParseState {
     self.stack.push(ParseStack::Literal(s));
   }
   pub fn pushOperation(&mut self, op: OpCode) {
-    self.stack.push(ParseStack::Op(op));
+    self.stack.push(ParseStack::Marker(op));
   }
   pub fn pushExpression(&mut self, r: Regexp) {
     self.stack.push(ParseStack::Expression(r));
@@ -291,7 +291,7 @@ impl ParseState {
     };
     // Make sure there is an Alternation operand on the stack
     match self.stack.pop_opt() {
-      Some(ParseStack::Op(OpAlternation)) => { },
+      Some(ParseStack::Marker(OpAlternation)) => { },
       _ => return ParseUnexpectedOperand 
     };
     // Check the stack for a right branch (state1)
@@ -314,7 +314,7 @@ impl ParseState {
       // (this implies there is a singular item on the stack,
       // and can't be concatenated with anything)
       let branch1 = match self.stack.pop_opt() {
-        Some(ParseStack::Op(op)) => {
+        Some(ParseStack::Marker(op)) => {
           self.pushOperation(op); 
           return ParseOk;
         },
@@ -322,7 +322,7 @@ impl ParseState {
         None => return ParseEmptyConcatenate
       };
       match self.stack.pop_opt() {
-        Some(ParseStack::Op(op)) => {
+        Some(ParseStack::Marker(op)) => {
           self.pushOperation(op); 
           self.stack.push(branch1);
           return ParseOk;
@@ -361,7 +361,7 @@ impl ParseState {
     // Check for the marker. If it isn't there or something else is
     // there's an error elsewhere in the code
     let capn = match self.stack.pop_opt() {
-      Some(ParseStack::Op(OpLeftParen(n))) => { 
+      Some(ParseStack::Marker(OpLeftParen(n))) => { 
         if (self.hasUnmatchedParens()) {
           n + self.nparen
         } else {
@@ -458,7 +458,7 @@ impl ParseState {
   /// one, and validate it as well.
   pub fn doBoundedRepetition(&mut self, start: uint, end: uint) -> ParseCode {
     match self.stack.pop_opt() {
-      Some(ParseStack::Op(_)) => return ParseUnexpectedOperand,
+      Some(ParseStack::Marker(_)) => return ParseUnexpectedOperand,
       Some(s) => {
         if start <= end {
           let expr = Regexp::new(OpRepeatOp(start, Some(end)), Some(~s), None);
@@ -476,7 +476,7 @@ impl ParseState {
   /// one, and validate it as well.
   pub fn doUnboundedRepetition(&mut self, start: uint) -> ParseCode {
     match self.stack.pop_opt() {
-      Some(ParseStack::Op(_)) => return ParseUnexpectedOperand,
+      Some(ParseStack::Marker(_)) => return ParseUnexpectedOperand,
       Some(s) => {
         let expr = Regexp::new(OpRepeatOp(start, None), Some(~s), None);
         self.pushExpression(expr); 
