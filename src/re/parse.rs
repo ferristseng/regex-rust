@@ -7,7 +7,7 @@ use error::ParseError::*;
 macro_rules! check_ok(
   ($f: expr) => (
     match $f {
-      ParseOk => { }
+      ParseOk => (), 
       e => return e
     }
   );
@@ -21,23 +21,15 @@ pub fn parse(t: &str, ps: &mut ParseState) -> ParseCode {
 
 #[inline]
 fn parse_escape(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
-  let mut cc = CharClass::new();
   let current = p.current();
 
-  match current {
-    Some('d') | Some('D') => {
-      check_ok!(cc.addRange('0', '9'));
-    }
-    Some('w') | Some('W') => {
-      check_ok!(cc.addRange('a', 'z'));
-      check_ok!(cc.addRange('A', 'Z'));
-      check_ok!(cc.addRange('_', '_'));
-    }
-    Some('s') | Some('S') => {
-      check_ok!(cc.addRange('\n', '\n'));
-      check_ok!(cc.addRange('\t', '\t'));
-      check_ok!(cc.addRange('\r', '\r'));
-    }
+  let cc = match current {
+    Some('d') => CharClass::new([('0', '9')]),
+    Some('D') => CharClass::new_negated([('0', '9')]),
+    Some('w') => CharClass::new([('a', 'z'), ('A', 'Z'), ('_', '_')]),
+    Some('W') => CharClass::new_negated([('a', 'z'), ('A', 'Z'), ('_', '_')]),
+    Some('s') => CharClass::new([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
+    Some('S') => CharClass::new_negated([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
     Some('b') => {
       ps.pushNonWordBoundary();
       p.next();
@@ -52,11 +44,7 @@ fn parse_escape(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
     }
     Some(_) => return parse_escape_char(p, ps),
     None => return ParseIncompleteEscapeSeq
-  }
-
-  if (current.unwrap().is_uppercase()) {
-    cc.negate();
-  }
+  };
 
   p.next();
 
@@ -78,18 +66,67 @@ fn parse_escape_char(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 }
 
 #[inline]
-fn parse_parens(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+fn parse_group(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+  let mut noncapturing = false;
+  let mut name: Option<~str> = None;
 
+  ps.doConcatenation();
+  ps.pushLeftParen();
+
+  // Check for an extension denoted by a ?
+  // 
+  // Currently supporting:
+  //
+  //  * `?:` = No Capture
+  //  * `?#` = Comment
+  //  * `?P<name> = Named Capturing Group
+  match p.current() {
+    Some('?') => {
+      match p.peek() {
+        Some(':') => {
+          p.consume(2);
+
+          noncapturing = true;
+        }
+        // A Comment. Everything in the parenthases is 
+        // ignored
+        Some('#') => {
+          p.consume(2);
+          
+          loop {
+            match p.current() {
+              Some(')') => return ParseOk,
+              Some('\\') if p.len() == 0 => break,  
+              None => break,
+              _ => p.next()
+            }
+          }
+        }
+        Some('P') => {
+          
+
+          p.consume(2);
+        }
+        _ => () 
+      }
+    }
+    _ => ()
+  }
+
+  check_ok!(_parse_recursive(p, ps));
+  ps.doLeftParen(noncapturing);
+  p.next();
+
+  ParseOk
 }
 
 #[inline]
 fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
-  let mut cc = CharClass::new();
-
   // we need to keep track of any [, ( in
   // the input, because we can just ignore 
   // them
   let mut nbracket: uint = 0;
+  let mut ranges = ~[];
 
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char 
@@ -106,7 +143,7 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   // it is treated as a literal
   match p.current() {
     Some(']') => {
-      cc.addRange(']', ']');
+      ranges.push((']', ']'));
       p.next();
     }
     _ => { }
@@ -123,9 +160,11 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
         if (nbracket > 0) {
           nbracket -= 1;
         } else {
-          if (negate) {
-            check_ok!(cc.negate());
-          }
+          let cc = if (negate) {
+            CharClass::new_negated(ranges)
+          } else {
+            CharClass::new(ranges)
+          };
           if (cc.empty()) {
             return ParseEmptyCharClassRange
           }
@@ -137,7 +176,7 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
         p.next();
         match p.current() {
           Some(c) => {
-            cc.addRange(c, c);
+            ranges.push((c, c));
           }
           None => return ParseIncompleteEscapeSeq
         }
@@ -153,11 +192,11 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
             match p.peek() {
               // Not a range...something like [a-]
               Some(']') => {
-                cc.addRange(c, c);
+                ranges.push((c, c));
               }
               // A range...something like [a-b]
               Some(e) => {
-                check_ok!(cc.addRange(c, e));
+                ranges.push((c, e));
                 p.consume(2);
               }
               // End of string
@@ -166,7 +205,7 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
           }
           // A single character...something like [a]
           Some(_) | None => {
-            cc.addRange(c, c);
+            ranges.push((c, c));
           }
         }
       }
@@ -273,35 +312,9 @@ fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   loop {
     match p.current() {
       Some('(') => {
-        ps.doConcatenation();
-        ps.pushLeftParen();
-
         p.next();
-
-        // check for ?: (non capturing group)
-        let noncapturing = {
-          match p.current() {
-            Some('?') => {
-              match p.peek() {
-                Some(':') => true,
-                None => break,
-                _ => false
-              }
-            }
-            None => break,
-            _ => false
-          }
-        };
-        
-        // adjust
-        if (noncapturing) {
-          p.consume(2);
-        }
-
-        check_ok!(_parse_recursive(p, ps));
-        ps.doLeftParen(noncapturing);
-        p.next();
-      }
+        check_ok!(parse_group(p, ps));
+      } 
       Some(')') => {
         if (ps.hasUnmatchedParens() && !p.isEnd()) {
           break;
@@ -324,15 +337,15 @@ fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 
       Some('*') => {
         p.next();
-        ps.doKleine();
+        check_ok!(ps.doKleine());
       }
       Some('?') => {
         p.next();
-        ps.doZeroOrOne();
+        check_ok!(ps.doZeroOrOne());
       }
       Some('+') => {
         p.next();
-        ps.doOneOrMore();
+        check_ok!(ps.doOneOrMore());
       }
 
       Some('{') => {
