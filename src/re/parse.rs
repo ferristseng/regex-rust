@@ -453,6 +453,13 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
           Some(rep) => {
             let (start, end) = rep;
 
+            match end {
+              Some(e) if (start > e) => {
+                return Err(ParseEmptyRepetitionRange)
+              }
+              _ => ()
+            }
+
             // Look for a quantifier
             let quantifier = match p.peek() {
               Some('?') => NonGreedy,
@@ -507,7 +514,6 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
   do_concat(&mut stack);
 
   if (p.hasUnmatchedParens() && p.isEnd()) {
-    println("Here");
     Err(ParseExpectedClosingParen)
   } else {
     match stack.pop_opt() {
@@ -548,18 +554,15 @@ fn print_stack(stack: &mut ~[Expr]) {
   }
 }
 
-/*
 #[cfg(test)]
 mod parse_tests {
   use super::*;
-  use state::*;
   use error::ParseError::*;
 
   macro_rules! test_parse(
     ($input: expr, $expect: pat) => (
       {
-        let mut ps = ParseState::new(); 
-        let ok = match parse($input, &mut ps) {
+        let ok = match parse($input) {
           $expect => true,
           _ => false
         };
@@ -571,52 +574,51 @@ mod parse_tests {
 
   #[test]
   fn parse_bounded_repetition_ok() {
-    test_parse!("a{10}", ParseOk);
+    test_parse!("a{10}", Ok(_));
   }
 
   #[test]
   fn parse_unbounded_repetition_ok() {
-    test_parse!("b{10,}", ParseOk);
+    test_parse!("b{10,}", Ok(_));
   }
 
   #[test]
   fn parse_bounded_range_repetition_ok() {
-    test_parse!("c{10,12}", ParseOk);
+    test_parse!("c{10,12}", Ok(_));
   }
 
   #[test]
   fn parse_bad_range_repetition_ok() {
-    test_parse!("c{10,x}", ParseOk);
+    test_parse!("c{10,x}", Ok(_));
   }
 
   #[test]
   fn parse_empty_range_err() {
-    test_parse!("d{12,10}", ParseEmptyRepetitionRange);
+    test_parse!("d{12,10}", Err(ParseEmptyRepetitionRange));
   }
 
   #[test]
   fn parse_negative_range_ok() {
-    test_parse!("e{-11}", ParseOk);
+    test_parse!("e{-11}", Ok(_));
   }
 
   #[test]
   fn parse_no_comma_range_ok() {
-    test_parse!("f{10 11}", ParseOk);
+    test_parse!("f{10 11}", Ok(_));
   }
 
   #[test]
   fn parse_no_closing_curly_brace_ok() {
-    test_parse!("g{10", ParseOk);
+    test_parse!("g{10", Ok(_));
   }
 
   #[test]
   fn parse_no_repetition_target_specified_err() {
-    test_parse!("{10,}", ParseEmptyRepetition); 
+    test_parse!("{10,}", Err(ParseEmptyRepetition)); 
   }
 
   #[test]
   fn parse_backward_slash_err() {
-    test_parse!("\\", ParseIncompleteEscapeSeq);
+    test_parse!("\\", Err(ParseIncompleteEscapeSeq));
   }
 }
-*/
