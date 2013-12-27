@@ -1,8 +1,11 @@
 use extra::sort::merge_sort;
 use std::char::{from_u32, MAX};
 
-// try to get the previous unicode character 
-// in sequence
+
+/**
+ * Try to get the prev character in sequence from 
+ * the given one.
+ */
 fn prev_char(c: char) -> Option<char> {
   match from_u32(c as u32 - 1) {
     None => None,
@@ -10,8 +13,10 @@ fn prev_char(c: char) -> Option<char> {
   }
 }
 
-// try to get the next unicode character 
-// in sequence
+/**
+ * Try to get the next character in sequence from 
+ * the given one.
+ */
 fn next_char(c: char) -> Option<char> {
   match from_u32(c as u32 + 1) {
     None => None,
@@ -19,6 +24,12 @@ fn next_char(c: char) -> Option<char> {
   }
 }
 
+/**
+ * Order character ranges.
+ *
+ * Character ranges with a greater end are preferred when 
+ * equal.
+ */
 fn order_ranges(ranges: &[(char, char)]) -> ~[(char, char)] {
   merge_sort(ranges, |range1, range2| {
     let &(start1, end1) = range1;
@@ -34,13 +45,19 @@ fn order_ranges(ranges: &[(char, char)]) -> ~[(char, char)] {
   })
 }
 
-// RegexpCharClass
-// represents a character class (i.e '[a-z123]')
+/**
+ * Represents a series of character ranges ([A-Za-z]).
+ */
 pub struct CharClass {
   ranges: ~[(char, char)] 
 }
 
 impl CharClass {
+  /**
+   * Construct a CharClass with a set of ranges. Remove 
+   * overlapping ranges preferring larger ranges (ex. Given [A-DA-C], 
+   * collapse to [A-D]).
+   */
   pub fn new(ranges: &[(char, char)]) -> CharClass {
     let ordered = order_ranges(ranges);
 
@@ -58,6 +75,9 @@ impl CharClass {
       ranges: ranges 
     }
   }
+  /**
+   * Construct a CharClass with a set of ranges, and negate them.
+   */
   pub fn new_negated(ranges: &[(char, char)]) -> CharClass {
     let ordered = order_ranges(ranges);
 
@@ -92,8 +112,17 @@ impl CharClass {
       ranges: ranges
     }
   }
+  /**
+   * Check if length of ranges is 0.
+   */
   pub fn empty(&self) -> bool {
     self.ranges.len() == 0
+  }
+}
+
+impl ToStr for CharClass {
+  fn to_str(&self) -> ~str {
+    format!("<CharClass: {:s}>", self.ranges.to_str())
   }
 }
 

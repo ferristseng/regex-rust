@@ -9,7 +9,7 @@ FLAGS = --opt-level=$(OPT_LEVEL)
 DYLIB = libre-bdb08f4b4768859d-0.1.1.dylib
 
 SOURCES = lib.rs compile.rs error.rs exec.rs parse.rs regexp.rs \
-					state.rs parsable.rs charclass.rs result.rs
+					state.rs charclass.rs result.rs
 LIBSOURCES = $(addprefix $(SRC)/$(RE)/, $(SOURCES))
 
 TESTS = test_generator.py cases.py

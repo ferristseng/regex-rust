@@ -1,26 +1,51 @@
-use parsable::Parsable;
-use state::ParseState;
+use state::State;
 use charclass::CharClass;
 use error::ParseError::*;
 
+#[deriving(ToStr)]
+pub enum QuantifierPrefix {
+  Greedy,
+  NonGreedy
+}
+
+#[deriving(ToStr)]
+pub enum Expr {
+  Empty,
+  DotAll,
+  Literal(char),
+  CharacterClass(CharClass),
+  Alternation(~Expr, ~Expr),
+  Concatenation(~Expr, ~Expr),
+  Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
+  Capture(~Expr, uint, Option<~str>),
+  AssertWordBoundary,
+  AssertNonWordBoundary,
+  AssertStart,
+  AssertEnd
+}
+
 // check for an err
 macro_rules! check_ok(
-  ($f: expr) => (
+  ($f: expr) => ( 
     match $f {
-      ParseOk => (), 
-      e => return e
+      Ok(Empty) => continue,
+      Ok(re) => re, 
+      e => {
+        println(e.to_str());
+        return e
+      }
     }
   );
 )
 
-pub fn parse(t: &str, ps: &mut ParseState) -> ParseCode {
-  let mut p = Parsable::new(t);
+pub fn parse(t: &str) -> Result<Expr, ParseCode> {
+  let mut p = State::new(t);
 
-  _parse_recursive(&mut p, ps)
+  _parse_recursive(&mut p)
 }
 
 #[inline]
-fn parse_escape(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
   let current = p.current();
 
   let cc = match current {
@@ -31,47 +56,40 @@ fn parse_escape(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
     Some('s') => CharClass::new([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
     Some('S') => CharClass::new_negated([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
     Some('b') => {
-      ps.pushNonWordBoundary();
       p.next();
-
-      return ParseOk
+      
+      return Ok(AssertNonWordBoundary)
     }
     Some('B') => {
-      ps.pushWordBoundary();
       p.next();
 
-      return ParseOk
+      return Ok(AssertWordBoundary)
     }
-    Some(_) => return parse_escape_char(p, ps),
-    None => return ParseIncompleteEscapeSeq
+    Some(_) => return parse_escape_char(p),
+    None => return Err(ParseIncompleteEscapeSeq)
   };
 
   p.next();
 
-  ps.pushCharClass(cc);
-
-  ParseOk
+  Ok(CharacterClass(cc))
 }
 
 #[inline]
-fn parse_escape_char(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
   match p.current() {
     Some(c) => {
-      ps.pushLiteral(c.to_str());
       p.next();
-      ParseOk
+
+      Ok(Literal(c))
     }
-    None => ParseIncompleteEscapeSeq 
+    None => Err(ParseIncompleteEscapeSeq) 
   }
 }
 
 #[inline]
-fn parse_group(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
-  let mut noncapturing = false;
+fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
+  let mut capturing = true;
   let mut name: Option<~str> = None;
-
-  ps.doConcatenation();
-  ps.pushLeftParen();
 
   // Check for an extension denoted by a ?
   // 
@@ -86,7 +104,7 @@ fn parse_group(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
         Some(':') => {
           p.consume(2);
 
-          noncapturing = true;
+          capturing = false;
         }
         // A Comment. Everything in the parenthases is 
         // ignored
@@ -95,15 +113,21 @@ fn parse_group(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
           
           loop {
             match p.current() {
-              Some(')') => return ParseOk,
-              Some('\\') if p.len() == 0 => break,  
-              None => break,
+              Some(')') => {
+                return Ok(Empty)
+              }
+              Some('\\') if p.len() == 0 => {
+                return Err(ParseIncompleteEscapeSeq)
+              }
+              None => {
+                return Err(ParseExpectedClosingParen)
+              }
               _ => p.next()
             }
           }
         }
         Some('P') => {
-          
+
 
           p.consume(2);
         }
@@ -113,15 +137,32 @@ fn parse_group(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
     _ => ()
   }
 
-  check_ok!(_parse_recursive(p, ps));
-  ps.doLeftParen(noncapturing);
+  p.nparens += 1;
+
+  let ncap = p.ncaptures;
+  
+  if (capturing) {
+    p.ncaptures += 1;
+  }
+
+  let expr = match _parse_recursive(p) {
+    Ok(re) => re,
+    e => return e
+  };
+
   p.next();
 
-  ParseOk
+  p.nparens -= 1;
+
+  if (capturing) {
+    Ok(Capture(~expr, ncap, name)) 
+  } else {
+    Ok(expr)
+  }
 }
 
 #[inline]
-fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   // we need to keep track of any [, ( in
   // the input, because we can just ignore 
   // them
@@ -143,8 +184,8 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   // it is treated as a literal
   match p.current() {
     Some(']') => {
-      ranges.push((']', ']'));
       p.next();
+      ranges.push((']', ']'));
     }
     _ => { }
   }
@@ -152,8 +193,8 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   loop {
     match p.current() {
       Some('[') => {
-        nbracket += 1;
         p.next();
+        nbracket += 1;
       },
       Some(']') => {
         p.next();
@@ -166,10 +207,10 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
             CharClass::new(ranges)
           };
           if (cc.empty()) {
-            return ParseEmptyCharClassRange
+            return Err(ParseEmptyCharClassRange)
           }
-          ps.pushCharClass(cc);
-          return ParseOk;
+          println(cc.to_str());
+          return Ok(CharacterClass(cc))
         }
       }
       Some('\\') => {
@@ -178,7 +219,7 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
           Some(c) => {
             ranges.push((c, c));
           }
-          None => return ParseIncompleteEscapeSeq
+          None => return Err(ParseIncompleteEscapeSeq)
         }
         p.next();
       }
@@ -200,11 +241,15 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
                 p.consume(2);
               }
               // End of string
-              None => break
+              None => {
+                println("Here 1");
+                break
+              }
             }
           }
           // A single character...something like [a]
           Some(_) | None => {
+            println("Here 2");
             ranges.push((c, c));
           }
         }
@@ -214,10 +259,10 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 
   }
 
-  ParseExpectedClosingBracket
+  Err(ParseExpectedClosingBracket)
 }
 
-// tries to determine if there
+// Tries to determine if there
 // is a repetition operation
 // and parses it
 // multiple cases:
@@ -225,7 +270,7 @@ fn parse_charclass(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 // {a,}:  a unbounded
 // {a}:   exactly a
 #[inline]
-fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
+fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
   // these help parse numbers with more than
   // 1 digit
   let mut buf = ~"";
@@ -242,7 +287,7 @@ fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   }
 
   if (len == 0) {
-    return ParseNotRepetition // no digits or end of string
+    return None
   }
 
   // this is guaranteed to be a digit because 
@@ -252,33 +297,31 @@ fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
 
   buf.clear();
 
-  // check for a ',' or a '}'
-  // if there is a ',', then there either 
-  // is or isn't a bound
-  // if there is a '}', there is an
-  // exact repetition
+  // Check for a ',' or a '}'
+  // if there is a ',', then there either is or isn't a bound
+  // if there is a '}', there is an exact repetition
   match p.peekn(len) {
     Some(',') => { 
       len += 1;
     }
     Some('}') => {
       p.consume(len + 1);
-      return ps.doBoundedRepetition(start, start);
+      return Some((start, Some(start)))
     }
-    _ => return ParseNotRepetition
+    _ => return None 
   }
 
-  // if the next character is a }, unbounded repetition
+  // If the next character is a '}', unbounded repetition
   match p.peekn(len) {
     Some('}') => {
       p.consume(len + 1);
-      return ps.doUnboundedRepetition(start);
+      return Some((start, None))
     }
-    Some(x) if x.is_digit() => { } // continue if x is a digit
-    _ => return ParseNotRepetition
+    Some(x) if x.is_digit() => (), // Continue if x is a digit
+    _ => return None
   }
 
-  // this should be the ending digit
+  // This should be the ending digit
   loop {
     match p.peekn(len) {
       Some(d) if d.is_digit() => {
@@ -294,111 +337,167 @@ fn parse_repetition(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
   match p.peekn(len) {
     Some('}') => {
       p.consume(len + 1);
-      return ps.doBoundedRepetition(start, end);
+      return Some((start, Some(end)));
     }
-    _ => return ParseNotRepetition
+    _ => return None
   }
 }
 
-// parse an input string recursively
-// ideally, we wouldn't parse an input string recursively
-// because rust does not optimize tail end
-// recursive calls, but...
-// this way is pretty
-fn _parse_recursive(p: &mut Parsable, ps: &mut ParseState) -> ParseCode {
-  // cases for
-  // parsing different characters
-  // in the input string
+fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
+  let mut stack = ~[];
+
   loop {
     match p.current() {
       Some('(') => {
         p.next();
-        check_ok!(parse_group(p, ps));
+        do_concat(&mut stack);
+        let expr = check_ok!(parse_group(p));
+        stack.push(expr);
       } 
       Some(')') => {
-        if (ps.hasUnmatchedParens() && !p.isEnd()) {
+        if (p.hasUnmatchedParens()) {
           break;
         }
-        return ParseUnexpectedClosingParen;
+        return Err(ParseUnexpectedClosingParen);
       }
 
       Some('|') => {
-        ps.doConcatenation();
-        ps.pushAlternation();
+        do_concat(&mut stack);
 
         p.next();
-        check_ok!(_parse_recursive(p, ps));
-        ps.doAlternation();
-        
-        if (ps.hasUnmatchedParens()) {
+
+        match _parse_recursive(p) {
+          Ok(expr) => {
+            let alt = stack.pop();
+            stack.push(Alternation(~alt, ~expr));
+          }
+          e => return e
+        };
+
+        if (p.hasUnmatchedParens()) {
           break;
         }
       }
 
-      Some('*') => {
+      Some(c) if c == '*' || c == '?' || c == '+' => {
         p.next();
-        check_ok!(ps.doKleine());
-      }
-      Some('?') => {
-        p.next();
-        check_ok!(ps.doZeroOrOne());
-      }
-      Some('+') => {
-        p.next();
-        check_ok!(ps.doOneOrMore());
+
+        // Look for a quantifier
+        let quantifier = match p.current() {
+          Some('?') => {
+            p.next();
+            NonGreedy
+          }
+          _ => Greedy
+        };
+        
+        match stack.pop_opt() {
+          None |
+          Some(Repetition(..)) |
+          Some(AssertStart) | 
+          Some(AssertEnd) | 
+          Some(AssertWordBoundary) |
+          Some(AssertNonWordBoundary) => {
+            return Err(ParseEmptyRepetition)
+          }
+          Some(expr) => {
+            match c {
+              '?' => stack.push(Repetition(~expr, 0, Some(1), quantifier)),
+              '+' => stack.push(Repetition(~expr, 1, None, quantifier)),
+              '*' => stack.push(Repetition(~expr, 0, None, quantifier)),
+              _   => unreachable!()
+            }
+          }
+        }
       }
 
       Some('{') => {
         p.next();
+        match parse_repetition(p) {
+          Some(rep) => {
+            let (start, end) = rep;
 
-        match parse_repetition(p, ps) {
-          ParseOk => { },
-          ParseNotRepetition => ps.pushLiteral(~"{"),
-          e => return e
+            // Look for a quantifier
+            let quantifier = match p.peek() {
+              Some('?') => NonGreedy,
+              _         => Greedy
+            };
+
+            match stack.pop_opt() {
+              Some(expr) => {
+                stack.push(Repetition(~expr, start, end, quantifier));
+              }
+              None => {
+                return Err(ParseEmptyRepetition)
+              }
+            }
+          }
+          None => ()
         }
       }
 
       Some('.') => {
         p.next();
-        ps.pushDotAll();
+        stack.push(DotAll);
       }
 
       Some('^') => {
         p.next();
-        ps.pushAssertStart();
+        stack.push(AssertStart);
       }
       Some('$') => {
         p.next();
-        ps.pushAssertEnd();
+        stack.push(AssertEnd);
       }
 
       Some('[') => {
         p.next();
-        check_ok!(parse_charclass(p, ps));
+        stack.push(check_ok!(parse_charclass(p)));
       }
       Some('\\') => {
         p.next();
-        check_ok!(parse_escape(p, ps));
+        stack.push(check_ok!(parse_escape(p)));
       }
       Some(c) => {
         p.next();
-        ps.pushLiteral(c.to_str());
+        stack.push(Literal(c));
       }
       None => break // end of string
     }
 
-    //ps.trace();
+    //print_stack(&mut stack);
   }
 
-  ps.doConcatenation();
+  do_concat(&mut stack);
 
-  if (ps.hasUnmatchedParens() && p.isEnd()) {
-    ParseExpectedClosingParen
+  if (p.hasUnmatchedParens() && p.isEnd()) {
+    println("Here");
+    Err(ParseExpectedClosingParen)
   } else {
-    ParseOk
+    match stack.pop_opt() {
+      Some(expr)  => Ok(expr),
+      None        => Ok(Empty)
+    }
   }
 }
 
+fn do_concat(stack: &mut ~[Expr]) {
+  while (stack.len() > 1) {
+    let rgt = stack.pop();
+    let lft = stack.pop();
+
+    stack.push(Concatenation(~lft, ~rgt));
+  }
+}
+
+fn print_stack(stack: &mut ~[Expr]) {
+  println("--E-Stack--");
+  for e in stack.iter() {
+    println(e.to_str());
+  }
+}
+
+/*
 #[cfg(test)]
 mod parse_tests {
   use super::*;
@@ -469,3 +568,4 @@ mod parse_tests {
     test_parse!("\\", ParseIncompleteEscapeSeq);
   }
 }
+*/

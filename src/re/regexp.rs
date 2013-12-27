@@ -1,7 +1,6 @@
 use exec::Prog;
 use result::Match;
-use parse::parse;
-use state::{ParseState};
+use parse::{parse, Expr};
 use compile::{Instruction, compile_recursive};
 use error::ParseError::*;
 
@@ -63,38 +62,20 @@ impl UncompiledRegexp {
 }
 
 impl UncompiledRegexp { 
-  // we should hide the underlying parsing algorithm
-  // from the user
-  fn parse(&mut self) -> Result<ParseState, ParseCode> {
-    let mut ps = ParseState::new();
-    match parse(self.input, &mut ps) {
-      ParseOk => {
-        Ok(ps)
-      }
-      e => {
-        Err(e)
-      }
-    }
+  fn parse(&mut self) -> Result<Expr, ParseCode> {
+    parse(self.input)
   }
   pub fn compile(&mut self) -> Result<CompiledRegexp, ParseCode> {
     let mut stack: ~[Instruction] = ~[];
     match self.parse() {
-      Ok(ref mut ps) => {
-        match ps.pop() {
-          Ok(ref re) => {
-            compile_recursive(re, &mut stack);
-            let prog = Prog::new(stack, ps.getCaptureLen());
-            Ok(CompiledRegexp::new_with_prog(prog, self.input))
-          }
-          Err(e) => Err(e)
-        }
+      Ok(ref expr) => {
+        compile_recursive(expr, &mut stack);
+        let prog = Prog::new(stack, 0);
+        Ok(CompiledRegexp::new_with_prog(prog, self.input))
       }
       Err(e) => Err(e)
     }
   }
-  // for these, just call compile, and
-  // run the corresponding CompiledRegex
-  // functions
   pub fn exec(&mut self, input: &str) -> Result<Option<Match>, ParseCode> {
     match self.compile() {
       Ok(ref mut re) => Ok(re.exec(input)),

@@ -1,5 +1,9 @@
-use state::*;
 use charclass::CharClass;
+use parse::Expr;
+use parse::{Greedy, NonGreedy};
+use parse::{Empty, DotAll, Literal, CharacterClass, Alternation,
+            Concatenation, Repetition, Capture, AssertWordBoundary,
+            AssertNonWordBoundary, AssertStart, AssertEnd};
 
 #[deriving(Clone)]
 pub enum Instruction {
@@ -35,13 +39,6 @@ impl ToStr for Instruction {
       InstNonWordBoundary       => ~"InstNonWordBoundary",
       InstNoop                  => ~"InstNoop"
     }
-  }
-}
-
-#[inline]
-fn compile_literal(lit: &~str, stack: &mut ~[Instruction]) {
-  for c in lit.chars() {
-    stack.push(InstLiteral(c));
   }
 }
 
@@ -95,9 +92,9 @@ fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instructio
  *
  * # Arguments
  *
- * See `_compile_recursive(re: &Regexp, stack: &mut ~[Instruction])`
+ * See `_compile_recursive(re: &Expr, stack: &mut ~[Instruction])`
  */
-pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
+pub fn compile_recursive(re: &Expr, stack: &mut ~[Instruction]) {
   _compile_recursive(re, stack);
   stack.push(InstMatch);
 
@@ -113,28 +110,7 @@ pub fn compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
  * * stack - The list of instructions to dump to
  */
 #[inline]
-fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
-  // Recurse on a subexpression if type is Expression,
-  // otherwise just call the appropriate compile funciton.
-  macro_rules! recurse(
-    ($re: expr) => (
-      {
-        match $re {
-          &Some(~ParseStack::Expression(ref x)) => {
-            _compile_recursive(x, stack);
-          }
-          &Some(~ParseStack::Literal(ref lit)) => {
-            compile_literal(lit, stack);
-          }
-          &Some(~ParseStack::CharClass(ref cc)) => {
-            compile_charclass(cc, stack);
-          }
-          _ => unreachable!()
-        }
-      }
-    );
-  )
-
+fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) {
   // Inserts a InstNoop
   macro_rules! placeholder(
     () => (
@@ -142,163 +118,105 @@ fn _compile_recursive(re: &Regexp, stack: &mut ~[Instruction]) {
     );
   )
 
-  match &re.op {
-    // If the opcode is an OpNoop, there is a bare 
-    // Literal, CharClass, or the input Regexp was 
-    // empty.
-    &OpNoop => {
-      match re.state0 {
-        Some(~ParseStack::Literal(ref lit)) => {
-          compile_literal(lit, stack);
-        }
-        Some(~ParseStack::CharClass(ref cc)) => {
-          compile_charclass(cc, stack);
-        }
-        None => { }
-        _ => unreachable!() // unreachable
-      };
+  match *expr {
+    Literal(c) => {
+      stack.push(InstLiteral(c));
     }
-    // Compile to:
-    // ...
-    //      Split(L1, L2)
-    // L1:  (state0)
-    //      Jump(L3)
-    // L2:  (state1)
-    // L3:  ...
-    &OpAlternation => {
+    Alternation(ref lft, ref rgt) => {
+      // Compile to:
+      // ...
+      //      Split(L1, L2)
+      // L1:  (state0)
+      //      Jump(L3)
+      // L2:  (state1)
+      // L3:  ...
       let ptr_split = stack.len();
       placeholder!();
-      recurse!(&re.state0);
+      _compile_recursive(*lft, stack);
 
       let ptr_jmp = stack.len();
       placeholder!();
-      recurse!(&re.state1);
-      
+      _compile_recursive(*rgt, stack);
+
       let split = InstSplit(ptr_split + 1, ptr_jmp + 1);
       let jmp = InstJump(stack.len());
 
       stack[ptr_split] = split; 
       stack[ptr_jmp] = jmp; 
     }
-    // Compile to:
-    // ...
-    // (state0)
-    // (state1)
-    // ...
-    &OpConcatenation => {
-      recurse!(&re.state0);
-      recurse!(&re.state1);
+    Concatenation(ref lft, ref rgt) => {
+      // Compile to:
+      // ...
+      // (state0)
+      // (state1)
+      // ...
+      _compile_recursive(*lft, stack);
+      _compile_recursive(*rgt, stack);
     }
-    // Compile to:
-    // ...
-    // CaptureStart
-    // (state0)
-    // CaptureEnd
-    &OpCapture(id, ref name) => {
-      if (re.hasFlag(ParseFlags::NoCapture)) {
-        recurse!(&re.state0);
-      } else {
-        stack.push(InstCaptureStart(id, name.clone()));
-        recurse!(&re.state0);
-        stack.push(InstCaptureEnd(id));
-      }
+    CharacterClass(ref cc) => {
+      compile_charclass(cc, stack);
     }
-    // Compile to:
-    // ...
-    // L1: Split(L2, L3) | Split(L3, L2) (NonGreedy)
-    // L2: (state0)
-    //     Jump(L1)
-    // L3: ...
-    // ...
-    &OpKleine => {
-      let ptr_split = stack.len();
-      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
-      placeholder!();
-
-      recurse!(&re.state0);
-      let jmp = InstJump(ptr_split);
-      stack.push(jmp);
-
-      stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
+    Capture(ref expr, id, ref name) => {
+      // Compile to:
+      // ...
+      // CaptureStart
+      // (state0)
+      // CaptureEnd
+      stack.push(InstCaptureStart(id, (*name).clone()));
+      _compile_recursive(*expr, stack);
+      stack.push(InstCaptureEnd(id));
     }
-    // Compile to:
-    // ...
-    // L1: (state0)
-    //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
-    // L2: ...
-    // ...
-    &OpOneOrMore => {
-      let ptr_inst = stack.len();
-      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
-
-      recurse!(&re.state0);
-      
-      let split = generate_repeat_split(stack.len() + 1, ptr_inst, nongreedy);
-      stack.push(split);
-    }
-    // Compile to:
-    // ...
-    //     Split(L1, L2) | Split(L2, L1) (NonGreedy)
-    // L1: (state0)
-    // L2: ... 
-    &OpZeroOrOne => {
-      let ptr_split = stack.len();
-      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
-      placeholder!();
-
-      recurse!(&re.state0);
-
-      stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
-    }
-    // There are 3 cases for a repeat op
-    // that depend on end:
-    //
-    //    1. end == start...exact repetition of start times
-    //    2. end == Some(n)...bounded repetition 
-    //       from start to end
-    //    3. end == None...unbounded repetition
-    &OpRepeatOp(start, end) => {
-      let nongreedy = re.hasFlag(ParseFlags::NonGreedy);
+    Repetition(ref expr, start, end, quantifier) => {
+      let nongreedy = match quantifier {
+        Greedy    => false,
+        NonGreedy => true
+      };
 
       for _ in range(0, start) {
-        recurse!(&re.state0);
+        _compile_recursive(*expr, stack);
       }
 
       match end {
-        // Corresponds to the 2nd case
         Some(n) if n != start => {
-          // Each iteration should compile something 
-          // similar to the '?' operator
           for _ in range(0, n - start) {
             let ptr_split = stack.len();
             placeholder!();
 
-            recurse!(&re.state0);
+            _compile_recursive(*expr, stack);
 
             stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
           }
         }
-        // This should look like a '*' operator
         None => {
           let ptr_split = stack.len();
           placeholder!();
 
-          recurse!(&re.state0);
+          _compile_recursive(*expr, stack);
+
           let jmp = InstJump(ptr_split);
           stack.push(jmp);
 
           stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
         }
-        // this corresponds to the 1st case
-        _ => { }
+        _ => ()
       }
     }
-    &OpDotAll => stack.push(InstDotAll),
-    &OpAssertStart => stack.push(InstAssertStart),
-    &OpAssertEnd => stack.push(InstAssertEnd),
-    &OpWordBoundary => stack.push(InstWordBoundary),
-    &OpNonWordBoundary => stack.push(InstNonWordBoundary),
-    _ => unreachable!() 
+    DotAll => {
+      stack.push(InstDotAll);
+    }
+    AssertWordBoundary => {
+      stack.push(InstWordBoundary);
+    }
+    AssertNonWordBoundary => {
+      stack.push(InstNonWordBoundary);
+    }
+    AssertStart => {
+      stack.push(InstAssertStart);
+    }
+    AssertEnd => {
+      stack.push(InstAssertEnd);
+    }
+    Empty => ()
   }
 }
 
