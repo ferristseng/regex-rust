@@ -24,26 +24,37 @@ pub enum Expr {
   AssertEnd
 }
 
-// check for an err
 macro_rules! check_ok(
   ($f: expr) => ( 
     match $f {
       Ok(Empty) => continue,
       Ok(re) => re, 
-      e => {
-        println(e.to_str());
-        return e
-      }
+      e => return e
     }
   );
 )
 
+/**
+ * The public parse function. Builds the initial `State` from the 
+ * input string, and calls an underlying parse function.
+ *
+ * # Arguments
+ *
+ * * t - The regular expression string
+ */
 pub fn parse(t: &str) -> Result<Expr, ParseCode> {
   let mut p = State::new(t);
 
   _parse_recursive(&mut p)
 }
 
+/**
+ * Parses an escaped value at a given state.
+ *
+ * # Arguments
+ *
+ * * p - The current state of parsing
+ */
 #[inline]
 fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
   let current = p.current();
@@ -74,6 +85,13 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
   Ok(CharacterClass(cc))
 }
 
+/**
+ * Parses an escaped character at a given state.
+ *
+ * # Arguments
+ *
+ * * p - The current state of parsing
+ */
 #[inline]
 fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
   match p.current() {
@@ -86,6 +104,13 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
   }
 }
 
+/**
+ * Parses a capturing group.
+ *
+ * # Arguments
+ *
+ * * p - The current state of parsing
+ */
 #[inline]
 fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   let mut capturing = true;
@@ -95,15 +120,14 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   // 
   // Currently supporting:
   //
-  //  * `?:` = No Capture
-  //  * `?#` = Comment
-  //  * `?P<name> = Named Capturing Group
+  // * `?:` = No Capture
+  // * `?#` = Comment
+  // * `?P<name> = Named Capturing Group
   match p.current() {
     Some('?') => {
       match p.peek() {
         Some(':') => {
           p.consume(2);
-
           capturing = false;
         }
         // A Comment. Everything in the parenthases is 
@@ -127,8 +151,6 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
           }
         }
         Some('P') => {
-
-
           p.consume(2);
         }
         _ => () 
@@ -161,6 +183,13 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   }
 }
 
+/**
+ * Parses a character class at a given state.
+ *
+ * # Arguments
+ *
+ * * p - The current state of parsing
+ */
 #[inline]
 fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   // we need to keep track of any [, ( in
@@ -209,7 +238,6 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
           if (cc.empty()) {
             return Err(ParseEmptyCharClassRange)
           }
-          println(cc.to_str());
           return Ok(CharacterClass(cc))
         }
       }
@@ -241,17 +269,11 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
                 p.consume(2);
               }
               // End of string
-              None => {
-                println("Here 1");
-                break
-              }
+              None => break
             }
           }
           // A single character...something like [a]
-          Some(_) | None => {
-            println("Here 2");
-            ranges.push((c, c));
-          }
+          Some(_) | None => ranges.push((c, c))
         }
       }
       None => break
@@ -262,13 +284,20 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   Err(ParseExpectedClosingBracket)
 }
 
-// Tries to determine if there
-// is a repetition operation
-// and parses it
-// multiple cases:
-// {a,b}: from a to be inclusive
-// {a,}:  a unbounded
-// {a}:   exactly a
+/**
+ * Determines if there is a repetition operator at a given state and 
+ * tries to parse it.
+ *
+ * # Arguments
+ *
+ * * p - The current state of parsing
+ *
+ * # Syntax
+ *
+ * * {a,b} - Bounded repetition
+ * * {a} - Bounded repetition
+ * * {a,} - Unbounded repetition
+ */
 #[inline]
 fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
   // these help parse numbers with more than
@@ -343,6 +372,13 @@ fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
   }
 }
 
+/**
+ * Parses a regular expression recursively.
+ *
+ * # Arguments
+ *
+ * * p - The current state of parsing
+ */
 fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
   let mut stack = ~[];
 
@@ -481,6 +517,14 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
   }
 }
 
+/**
+ * Concatenates all itemes on the stack if there are more 
+ * than two.
+ *
+ * # Arguments
+ *
+ * * stack - The stack with items to concatenate
+ */
 fn do_concat(stack: &mut ~[Expr]) {
   while (stack.len() > 1) {
     let rgt = stack.pop();
@@ -490,6 +534,13 @@ fn do_concat(stack: &mut ~[Expr]) {
   }
 }
 
+/**
+ * Prints the items on the stack.
+ *
+ * # Arguments
+ *
+ * * stack - The stack to print
+ */
 fn print_stack(stack: &mut ~[Expr]) {
   println("--E-Stack--");
   for e in stack.iter() {

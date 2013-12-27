@@ -1,7 +1,7 @@
 use exec::Prog;
 use result::Match;
 use parse::{parse, Expr};
-use compile::{Instruction, compile_recursive};
+use compile::compile_recursive;
 use error::ParseError::*;
 
 // CompiledRegexp
@@ -66,11 +66,9 @@ impl UncompiledRegexp {
     parse(self.input)
   }
   pub fn compile(&mut self) -> Result<CompiledRegexp, ParseCode> {
-    let mut stack: ~[Instruction] = ~[];
     match self.parse() {
       Ok(ref expr) => {
-        compile_recursive(expr, &mut stack);
-        let prog = Prog::new(stack, 0);
+        let prog = compile_recursive(expr);
         Ok(CompiledRegexp::new_with_prog(prog, self.input))
       }
       Err(e) => Err(e)

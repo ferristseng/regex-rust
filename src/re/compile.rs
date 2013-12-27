@@ -1,3 +1,4 @@
+use exec::Prog;
 use charclass::CharClass;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
@@ -90,19 +91,26 @@ fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instructio
  * Calls _compile_recursive, then pushes a `InstMatch` onto the 
  * end of the Instruction stack
  *
+ * Returns the compiled Program 
+ *
  * # Arguments
  *
  * See `_compile_recursive(re: &Expr, stack: &mut ~[Instruction])`
  */
-pub fn compile_recursive(re: &Expr, stack: &mut ~[Instruction]) {
-  _compile_recursive(re, stack);
+pub fn compile_recursive(re: &Expr) -> Prog {
+  let mut stack = ~[];
+  let ncap = _compile_recursive(re, &mut stack);
   stack.push(InstMatch);
 
   //debug_stack(stack);
+  
+  Prog::new(stack, ncap)
 }
 
 /** 
  * Compiles a Regexp into a list of Instructions recursively
+ *
+ * Returns the number of captures instructions compiled.
  *
  * # Arguments
  *
@@ -110,7 +118,9 @@ pub fn compile_recursive(re: &Expr, stack: &mut ~[Instruction]) {
  * * stack - The list of instructions to dump to
  */
 #[inline]
-fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) {
+fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
+  let mut ncap = 0;
+
   // Inserts a InstNoop
   macro_rules! placeholder(
     () => (
@@ -132,11 +142,11 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) {
       // L3:  ...
       let ptr_split = stack.len();
       placeholder!();
-      _compile_recursive(*lft, stack);
+      ncap += _compile_recursive(*lft, stack);
 
       let ptr_jmp = stack.len();
       placeholder!();
-      _compile_recursive(*rgt, stack);
+      ncap += _compile_recursive(*rgt, stack);
 
       let split = InstSplit(ptr_split + 1, ptr_jmp + 1);
       let jmp = InstJump(stack.len());
@@ -150,20 +160,21 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) {
       // (state0)
       // (state1)
       // ...
-      _compile_recursive(*lft, stack);
-      _compile_recursive(*rgt, stack);
+      ncap += _compile_recursive(*lft, stack);
+      ncap += _compile_recursive(*rgt, stack);
     }
     CharacterClass(ref cc) => {
       compile_charclass(cc, stack);
     }
     Capture(ref expr, id, ref name) => {
+      ncap += 1;
       // Compile to:
       // ...
       // CaptureStart
       // (state0)
       // CaptureEnd
       stack.push(InstCaptureStart(id, (*name).clone()));
-      _compile_recursive(*expr, stack);
+      ncap += _compile_recursive(*expr, stack);
       stack.push(InstCaptureEnd(id));
     }
     Repetition(ref expr, start, end, quantifier) => {
@@ -181,17 +192,16 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) {
           for _ in range(0, n - start) {
             let ptr_split = stack.len();
             placeholder!();
-
-            _compile_recursive(*expr, stack);
+            ncap += _compile_recursive(*expr, stack);
 
             stack[ptr_split] = generate_repeat_split(stack.len(), ptr_split + 1, nongreedy);
           }
         }
         None => {
           let ptr_split = stack.len();
-          placeholder!();
 
-          _compile_recursive(*expr, stack);
+          placeholder!();
+          ncap += _compile_recursive(*expr, stack);
 
           let jmp = InstJump(ptr_split);
           stack.push(jmp);
@@ -218,6 +228,8 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) {
     }
     Empty => ()
   }
+
+  ncap
 }
 
 fn debug_stack(stack: &mut ~[Instruction]) {

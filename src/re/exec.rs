@@ -12,8 +12,7 @@ use result::{Match, CapturingGroup};
 // instructions
 
 pub struct Prog {
-  priv strat: ~ExecStrategy,
-  priv ncaps: uint
+  priv strat: ~ExecStrategy
 }
 
 impl Prog {
@@ -23,15 +22,13 @@ impl Prog {
   pub fn new_with_pike_vm(inst: ~[Instruction], ncaps: uint) -> Prog {
     let strat = ~PikeVM::new(inst, ncaps) as ~ExecStrategy;
     Prog {
-      strat: strat,
-      ncaps: ncaps
+      strat: strat
    }
   }
   pub fn new_with_recursive(inst: ~[Instruction], ncaps: uint) -> Prog {
     let strat = ~RecursiveBacktracking::new(inst, ncaps) as ~ExecStrategy;
     Prog {
-      strat: strat,
-      ncaps: ncaps
+      strat: strat
     }
   }
 }
@@ -95,7 +92,7 @@ impl PikeVM {
     PikeVM {
       inst: inst,
       len: len,
-      ncaps: ncaps
+      ncaps: ncaps 
     }
   }
 }
