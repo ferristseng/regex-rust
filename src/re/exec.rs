@@ -2,7 +2,7 @@ use std::vec::with_capacity;
 use std::util::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
-  InstCaptureStart, InstCaptureEnd, InstSplit, InstDotAll, 
+  InstCaptureStart, InstCaptureEnd, InstSplit, 
   InstAssertStart, InstAssertEnd, InstWordBoundary,
   InstNonWordBoundary, InstNoop};
 use result::{Match, CapturingGroup};
@@ -214,12 +214,6 @@ impl ExecStrategy for PikeVM {
               self.addThread(t, &mut nlist);
             }
           }
-          InstDotAll => {
-            t.pc = t.pc + 1;
-            t.end = sp;
-
-            self.addThread(t, &mut nlist);
-          }
           InstAssertStart => {
             if (i == 0) {
               t.pc = t.pc + 1;
@@ -280,6 +274,9 @@ impl ExecStrategy for PikeVM {
       nlist.clear();
     }
 
+    // Adjust for captures that were 
+    // seen while parsing to get the proper 
+    // groups length in the `Match`.
     match found {
       Some(ref mut ma) => {
         if (ma.captures.len() < self.ncaps) {

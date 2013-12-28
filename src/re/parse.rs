@@ -1,6 +1,7 @@
 use state::State;
-use charclass::CharClass;
+use std::char::MAX;
 use error::ParseError::*;
+use charclass::{Range, new_charclass, new_negated_charclass};
 
 #[deriving(ToStr)]
 pub enum QuantifierPrefix {
@@ -11,9 +12,8 @@ pub enum QuantifierPrefix {
 #[deriving(ToStr)]
 pub enum Expr {
   Empty,
-  DotAll,
   Literal(char),
-  CharacterClass(CharClass),
+  CharClass(~[Range]),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -59,13 +59,14 @@ pub fn parse(t: &str) -> Result<Expr, ParseCode> {
 fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
   let current = p.current();
 
+  // Replace these with static vectors
   let cc = match current {
-    Some('d') => CharClass::new([('0', '9')]),
-    Some('D') => CharClass::new_negated([('0', '9')]),
-    Some('w') => CharClass::new([('a', 'z'), ('A', 'Z'), ('_', '_')]),
-    Some('W') => CharClass::new_negated([('a', 'z'), ('A', 'Z'), ('_', '_')]),
-    Some('s') => CharClass::new([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
-    Some('S') => CharClass::new_negated([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
+    Some('d') => new_charclass([('0', '9')]),
+    Some('D') => new_negated_charclass([('0', '9')]),
+    Some('w') => new_charclass([('a', 'z'), ('A', 'Z'), ('_', '_')]),
+    Some('W') => new_negated_charclass([('a', 'z'), ('A', 'Z'), ('_', '_')]),
+    Some('s') => new_charclass([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
+    Some('S') => new_negated_charclass([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
     Some('b') => {
       p.next();
       
@@ -82,7 +83,7 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   p.next();
 
-  Ok(CharacterClass(cc))
+  Ok(cc)
 }
 
 /**
@@ -231,14 +232,19 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
           nbracket -= 1;
         } else {
           let cc = if (negate) {
-            CharClass::new_negated(ranges)
+            new_negated_charclass(ranges)
           } else {
-            CharClass::new(ranges)
+            new_charclass(ranges)
           };
-          if (cc.empty()) {
+          // Check to see if the created char class is 
+          // empty
+          if (match cc {
+            CharClass(ref r) => r.len() == 0,
+            _ => unreachable!() 
+          }) {
             return Err(ParseEmptyCharClassRange)
           }
-          return Ok(CharacterClass(cc))
+          return Ok(cc)
         }
       }
       Some('\\') => {
@@ -461,9 +467,12 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
             }
 
             // Look for a quantifier
-            let quantifier = match p.peek() {
-              Some('?') => NonGreedy,
-              _         => Greedy
+            let quantifier = match p.current() {
+              Some('?') => {
+                p.next();
+                NonGreedy
+              },
+              _ => Greedy
             };
 
             match stack.pop_opt() {
@@ -481,7 +490,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
       Some('.') => {
         p.next();
-        stack.push(DotAll);
+        stack.push(new_charclass([('\0', MAX)]));
       }
 
       Some('^') => {

@@ -1,6 +1,8 @@
+use parse::{Expr, CharClass};
 use extra::sort::merge_sort;
 use std::char::{from_u32, MAX};
 
+pub type Range = (char, char);
 
 /**
  * Try to get the prev character in sequence from 
@@ -30,7 +32,7 @@ fn next_char(c: char) -> Option<char> {
  * Character ranges with a greater end are preferred when 
  * equal.
  */
-fn order_ranges(ranges: &[(char, char)]) -> ~[(char, char)] {
+fn order_ranges(ranges: &[Range]) -> ~[Range] {
   merge_sort(ranges, |range1, range2| {
     let &(start1, end1) = range1;
     let &(start2, end2) = range2;
@@ -46,125 +48,108 @@ fn order_ranges(ranges: &[(char, char)]) -> ~[(char, char)] {
 }
 
 /**
- * Represents a series of character ranges ([A-Za-z]).
+ * Construct a CharClass with a set of ranges. Remove 
+ * overlapping ranges preferring larger ranges (ex. Given [A-DA-C], 
+ * collapse to [A-D]).
  */
-pub struct CharClass {
-  ranges: ~[(char, char)] 
-}
+pub fn new_charclass(ranges: &[Range]) -> Expr {
+  let ordered = order_ranges(ranges);
 
-impl CharClass {
-  /**
-   * Construct a CharClass with a set of ranges. Remove 
-   * overlapping ranges preferring larger ranges (ex. Given [A-DA-C], 
-   * collapse to [A-D]).
-   */
-  pub fn new(ranges: &[(char, char)]) -> CharClass {
-    let ordered = order_ranges(ranges);
+  let mut last = '\U00000000';
+  let mut ranges = ~[];
 
-    let mut last = '\U00000000';
-    let mut ranges = ~[];
-
-    for &(start, end) in ordered.iter() {
-      if (start > last && end >= start) {
-        ranges.push((start, end));
-      }
-      last = end;
+  for &(start, end) in ordered.iter() {
+    if (start >= last && end >= start) {
+      ranges.push((start, end));
     }
-    
-    CharClass { 
-      ranges: ranges 
-    }
+    last = end;
   }
-  /**
-   * Construct a CharClass with a set of ranges, and negate them.
-   */
-  pub fn new_negated(ranges: &[(char, char)]) -> CharClass {
-    let ordered = order_ranges(ranges);
+  
+  CharClass(ranges)
+}
+/**
+ * Construct a CharClass with a set of ranges, and negate them.
+ */
+pub fn new_negated_charclass(ranges: &[Range]) -> Expr {
+  let ordered = order_ranges(ranges);
 
-    let mut min: char = '\U00000000'; 
-    let max: char = MAX;
+  let mut min: char = '\U00000000'; 
+  let max: char = MAX;
 
-    let mut ranges = ~[];
+  let mut ranges = ~[];
 
-    for &(start, end) in ordered.iter() {
-      match prev_char(start) {
-        Some(e) => {
-          if (min < e && end >= start) {
-            ranges.push((min, e));
-          }
-        },
-        None => () 
+  for &(start, end) in ordered.iter() {
+    match prev_char(start) {
+      Some(e) => {
+        if (min < e && end >= start) {
+          ranges.push((min, e));
+        }
+      },
+      None => () 
+    };
+    if (min < end) {
+      min = match next_char(end) {
+        Some(c) => c,
+        None => end
       };
-      if (min < end) {
-        min = match next_char(end) {
-          Some(c) => c,
-          None => end
-        };
-      }
     }
+  }
 
-    // Patch the end
-    if (min != max) {
-      ranges.push((min, max));
-    }
-    
-    CharClass {
-      ranges: ranges
-    }
+  // Patch the end
+  if (min != max) {
+    ranges.push((min, max));
   }
-  /**
-   * Check if length of ranges is 0.
-   */
-  pub fn empty(&self) -> bool {
-    self.ranges.len() == 0
-  }
-}
-
-impl ToStr for CharClass {
-  fn to_str(&self) -> ~str {
-    format!("<CharClass: {:s}>", self.ranges.to_str())
-  }
+  
+  CharClass(ranges)
 }
 
 #[cfg(test)]
 mod char_class_tests {
   use std::char::MAX;
   use charclass::*;
+  use parse::{Expr, CharClass};
+
+  fn unravel_cc(cc: Expr) -> ~[Range] {
+    match cc {
+      CharClass(ranges) => ranges,
+      _ => fail!()
+    }
+  }
 
   #[test]
   fn char_class_good() {
-    let cc = CharClass::new([('A', 'Z'), ('F', 'F'), ('A', 'あ')]);
-    assert_eq!(cc.ranges, ~[('A', 'あ')]); 
+    let cc = new_charclass([('A', 'Z'), ('F', 'F'), ('A', 'あ')]);
+    assert_eq!(unravel_cc(cc), ~[('A', 'あ')]); 
   }
 
   #[test]
   fn char_class_empty() {
-    let cc = CharClass::new([('Z', 'A')]);
-    assert!(cc.empty());
+    let cc = new_charclass([('Z', 'A')]);
+    assert_eq!(unravel_cc(cc), ~[]);
   }
 
   #[test]
   fn char_class_negate() {
-    let cc = CharClass::new_negated([('A', '\U0000FA08')]);
-    assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('\U0000FA09', MAX)]);
+    let cc = new_negated_charclass([('A', '\U0000FA08')]);
+    assert_eq!(unravel_cc(cc), ~[('\U00000000', '@'), ('\U0000FA09', MAX)]);
   }
 
   #[test]
   fn char_class_negate_multiple() {
-    let cc = CharClass::new_negated([('們', '我'), ('A', 'Z')]);
-    assert_eq!(cc.ranges, ~[('\U00000000', '@'), ('[', '\U00005010'), 
-               ('\U00006212', MAX)])
+    let cc = new_negated_charclass([('們', '我'), ('A', 'Z')]);
+    assert_eq!(unravel_cc(cc), ~[('\U00000000', '@'), ('[', '\U00005010'), 
+               ('\U00006212', MAX)]);
   }
 
   #[test]
   fn char_class_negate_overlap() {
-    let cc = CharClass::new_negated([('a', 'c'), ('c', 'c')]);
-    assert_eq!(cc.ranges, ~[('\U00000000', '`'), ('d', MAX)]);
+    let cc = new_negated_charclass([('a', 'c'), ('c', 'c')]);
+    assert_eq!(unravel_cc(cc), ~[('\U00000000', '`'), ('d', MAX)]);
   }
 
   #[test]
   fn char_class_negate_bounds() {
-    let cc = CharClass::new_negated([('\U00000000', MAX)]);
-    assert!(cc.empty());
+    let cc = new_negated_charclass([('\U00000000', MAX)]);
+    assert_eq!(unravel_cc(cc), ~[]);
   }
 }

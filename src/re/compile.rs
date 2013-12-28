@@ -1,10 +1,10 @@
 use exec::Prog;
-use charclass::CharClass;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, DotAll, Literal, CharacterClass, Alternation,
+use parse::{Empty, Literal, CharClass, Alternation,
             Concatenation, Repetition, Capture, AssertWordBoundary,
             AssertNonWordBoundary, AssertStart, AssertEnd};
+use charclass::Range;
 
 #[deriving(Clone)]
 pub enum Instruction {
@@ -15,7 +15,6 @@ pub enum Instruction {
   InstCaptureStart(uint, Option<~str>),
   InstCaptureEnd(uint),
   InstSplit(uint, uint),
-  InstDotAll,
   InstAssertStart,
   InstAssertEnd,
   InstWordBoundary,
@@ -33,7 +32,6 @@ impl ToStr for Instruction {
       InstCaptureStart(id, _)   => format!("InstCaptureStart {:u}", id),
       InstCaptureEnd(id)        => format!("InstCaptureEnd {:u}", id),
       InstSplit(l, r)           => format!("InstSplit {:u} | {:u}", l, r),
-      InstDotAll                => ~"InstDotAll",
       InstAssertStart           => ~"InstLineStart",
       InstAssertEnd             => ~"InstLineEnd",
       InstWordBoundary          => ~"InstWordBoundary",
@@ -44,12 +42,12 @@ impl ToStr for Instruction {
 }
 
 #[inline]
-fn compile_charclass(cc: &CharClass, stack: &mut ~[Instruction]) {
+fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
   let mut ssize = stack.len();
-  let mut rlen = cc.ranges.len();
+  let mut rlen = ranges.len();
   let rsize = ssize + rlen * 3;
 
-  for &(start, end) in cc.ranges.iter() {
+  for &(start, end) in ranges.iter() {
     if (rlen >= 2) {
       let split = InstSplit(ssize + 1, ssize + 3);
       stack.push(split);
@@ -163,8 +161,8 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
       ncap += _compile_recursive(*lft, stack);
       ncap += _compile_recursive(*rgt, stack);
     }
-    CharacterClass(ref cc) => {
-      compile_charclass(cc, stack);
+    CharClass(ref ranges) => {
+      compile_charclass(*ranges, stack);
     }
     Capture(ref expr, id, ref name) => {
       ncap += 1;
@@ -210,9 +208,6 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
         }
         _ => ()
       }
-    }
-    DotAll => {
-      stack.push(InstDotAll);
     }
     AssertWordBoundary => {
       stack.push(InstWordBoundary);

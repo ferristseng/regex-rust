@@ -16,7 +16,10 @@ macro_rules! run_tests(
   ($re: expr, $input: expr, $matched: expr, $ident: expr, 
    $expect: pat, $groups: expr) => (
     {
-      let mut re = UncompiledRegexp::new($re);
+      let re = match UncompiledRegexp::new($re) {
+        Ok(regex) => regex,
+        Err(e) => fail!(e)
+      };
       let res = re.search($input);
       let expect_test = match res {
         $expect => true, 
@@ -30,8 +33,8 @@ macro_rules! run_tests(
         assert!(expect_test);
         return
       }
-      if (res.is_ok()) {
-        match res.unwrap() {
+      if (res.is_some()) {
+        match res {
           Some(ma) => {
             assert_eq!(ma.matched(), $matched)
             
@@ -44,7 +47,7 @@ macro_rules! run_tests(
               i += 1;
             }
           }
-          _ => { }
+          _ => () 
         }
       }
     }
@@ -60,12 +63,22 @@ mod python_tests {
 }
 """
 
-TEST_FN = """
-  #[test]
+TEST_FN = \
+"""
   fn test_case_ident_%s() {
     run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &'static [%s])
-  }
+  }"""
+
+SUCCESS_FN = \
 """
+  #[test]%s
+""" % TEST_FN
+
+FAIL_FN = \
+"""
+  #[test]
+  #[should_fail]%s
+""" % TEST_FN
 
 def generate_test_num(num, digits):
   ret = str(num)
@@ -76,11 +89,11 @@ def generate_test_num(num, digits):
 def generate_test_case(ident, regexp, input_str, 
     matched_str, expected, groups):
   if expected == NOMATCH:
-    match = "Ok(None)"
+    match = "None"
   elif expected == PARSEERR:
-    match = "Err(_)"
+    match = "None"
   elif expected == MATCH:
-    match = "Ok(Some(_))"
+    match = "Some(_)"
 
   regexp = re.sub("\\\\", "\\\\\\\\", regexp)
   input_str = re.sub("\\\\", "\\\\\\\\", input_str)
@@ -91,7 +104,9 @@ def generate_test_case(ident, regexp, input_str,
   else:
     groups_str = ""
 
-  return TEST_FN % (ident, regexp, input_str, matched_str, ident, 
+  test = FAIL_FN if expected == PARSEERR else SUCCESS_FN
+
+  return test % (ident, regexp, input_str, matched_str, ident, 
       match, groups_str)
 
 if __name__ == "__main__":
