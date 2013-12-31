@@ -1,4 +1,3 @@
-use exec::Prog;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
 use parse::{Empty, Literal, CharClass, Alternation,
@@ -66,16 +65,14 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
   }
 }
 
-/**
- * Generates a split insturction depending on the nongreedy quantifier
- *
- * # Arguments
- *
- * *  left - The preferred branch to take for nongreedy. If this branch matches first, 
- *           the right hand side will not execute if nongreedy.
- * *  right - The preferred branch to take for greedy.
- * *  nongreedy - Specifies which branch to prefer (left or right).
- */
+/// Generates a split insturction depending on the nongreedy quantifier
+///
+/// # Arguments
+///
+/// *  left - The preferred branch to take for nongreedy. If this branch matches first, 
+///           the right hand side will not execute if nongreedy.
+/// *  right - The preferred branch to take for greedy.
+/// *  nongreedy - Specifies which branch to prefer (left or right).
 #[inline]
 fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instruction {
   if (nongreedy) {
@@ -85,36 +82,32 @@ fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instructio
   }
 }
 
-/**
- * Calls _compile_recursive, then pushes a `InstMatch` onto the 
- * end of the Instruction stack
- *
- * Returns the compiled Program 
- *
- * # Arguments
- *
- * See `_compile_recursive(re: &Expr, stack: &mut ~[Instruction])`
- */
-pub fn compile_recursive(re: &Expr) -> Prog {
+/// Calls _compile_recursive, then pushes a `InstMatch` onto the 
+/// end of the Instruction stack
+///
+/// Returns the compiled stack of Instructions 
+///
+/// # Arguments
+///
+/// See `_compile_recursive(re: &Expr, stack: &mut ~[Instruction])`
+pub fn compile_recursive(re: &Expr) -> ~[Instruction] {
   let mut stack = ~[];
-  let ncap = _compile_recursive(re, &mut stack);
+  _compile_recursive(re, &mut stack);
   stack.push(InstMatch);
 
   //debug_stack(stack);
   
-  Prog::new(stack, ncap)
+  stack
 }
 
-/** 
- * Compiles a Regexp into a list of Instructions recursively
- *
- * Returns the number of captures instructions compiled.
- *
- * # Arguments
- *
- * * re - The Regexp to compile
- * * stack - The list of instructions to dump to
- */
+/// Compiles a Regexp into a list of Instructions recursively
+///
+/// Returns the number of captures instructions compiled.
+///
+/// # Arguments
+///
+/// * re - The Regexp to compile
+/// * stack - The list of instructions to dump to
 #[inline]
 fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
   let mut ncap = 0;

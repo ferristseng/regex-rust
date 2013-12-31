@@ -49,26 +49,18 @@ impl ToStr for Match {
   }
 }
 
-// capturing group
-
 #[deriving(Clone)]
 pub struct CapturingGroup {
   start: uint,
   end: uint,
-  name: ~str,
   num: uint
 }
 
 impl CapturingGroup {
-  pub fn new(start: uint, end: uint, name: &Option<~str>, num: uint) -> CapturingGroup {
-    let name = match name {
-      &Some(ref s) => s.to_owned(),
-      &None => num.to_str()
-    };
+  pub fn new(start: uint, end: uint, num: uint) -> CapturingGroup {
     CapturingGroup {
       start: start,
       end: end,
-      name: name,
       num: num
     }
   }

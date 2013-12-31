@@ -4,10 +4,8 @@ use std::char::{from_u32, MAX};
 
 pub type Range = (char, char);
 
-/**
- * Try to get the prev character in sequence from 
- * the given one.
- */
+/// Try to get the prev character in sequence from 
+/// the given one.
 fn prev_char(c: char) -> Option<char> {
   match from_u32(c as u32 - 1) {
     None => None,
@@ -15,10 +13,8 @@ fn prev_char(c: char) -> Option<char> {
   }
 }
 
-/**
- * Try to get the next character in sequence from 
- * the given one.
- */
+/// Try to get the next character in sequence from 
+/// the given one.
 fn next_char(c: char) -> Option<char> {
   match from_u32(c as u32 + 1) {
     None => None,
@@ -26,12 +22,10 @@ fn next_char(c: char) -> Option<char> {
   }
 }
 
-/**
- * Order character ranges.
- *
- * Character ranges with a greater end are preferred when 
- * equal.
- */
+/// Order character ranges.
+///
+/// Character ranges with a greater end are preferred when 
+/// equal.
 fn order_ranges(ranges: &[Range]) -> ~[Range] {
   merge_sort(ranges, |range1, range2| {
     let &(start1, end1) = range1;
@@ -47,17 +41,16 @@ fn order_ranges(ranges: &[Range]) -> ~[Range] {
   })
 }
 
-/**
- * Construct a CharClass with a set of ranges. Remove 
- * overlapping ranges preferring larger ranges (ex. Given [A-DA-C], 
- * collapse to [A-D]).
- */
+/// Construct a CharClass with a set of ranges. Remove 
+/// overlapping ranges preferring larger ranges (ex. Given [A-DA-C], 
+/// collapse to [A-D]).
 pub fn new_charclass(ranges: &[Range]) -> Expr {
   let ordered = order_ranges(ranges);
 
   let mut last = '\U00000000';
   let mut ranges = ~[];
 
+  // FIXME: This algorithm is DEFINITELY incorrect
   for &(start, end) in ordered.iter() {
     if (start >= last && end >= start) {
       ranges.push((start, end));
@@ -67,9 +60,8 @@ pub fn new_charclass(ranges: &[Range]) -> Expr {
   
   CharClass(ranges)
 }
-/**
- * Construct a CharClass with a set of ranges, and negate them.
- */
+
+/// Construct a CharClass with a set of ranges, and negate them.
 pub fn new_negated_charclass(ranges: &[Range]) -> Expr {
   let ordered = order_ranges(ranges);
 

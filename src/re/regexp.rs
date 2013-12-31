@@ -1,19 +1,16 @@
-use exec::Prog;
+use exec::{ExecStrategy, PikeVM};
+use compile::Instruction;
 use result::Match;
 use parse::parse;
 use compile::compile_recursive;
 use error::ParseError::*;
 
-/**
- * Uncompiled regular expression. 
- */
+/// Uncompiled regular expression. 
 pub struct UncompiledRegexp {
-  prog: Prog
+  prog: ~[Instruction]
 }
 
-/**
- * Constructors
- */
+/// Constructors
 impl UncompiledRegexp {
   pub fn new(s: &str) -> Result<UncompiledRegexp, ParseCode> {
     match parse(s) {
@@ -26,24 +23,32 @@ impl UncompiledRegexp {
   }
 }
 
+/// TODO:
+/// The API needs some work.
+/// Allow for other implementations to be used?
 impl UncompiledRegexp { 
-  /**
-   * Checks if the beginning of the input string 
-   * contains a match, and returns it.
-   */
+  /// Checks if the beginning of the input string 
+  /// contains a match, and returns it.
   pub fn exec(&self, input: &str) -> Option<Match> {
-    self.prog.run(input, 0)
+    let strat = PikeVM::new(self.prog, 0);
+    match strat.run(input, 0) {
+      Some(t) => {
+        Some(Match::new(0, t.end, input, t.captures))
+      }
+      None => None
+    }
   }
-  /**
-   * Finds the first occurrence of the pattern in the 
-   * input string and returns it.
-   */
+  /// Finds the first occurrence of the pattern in the 
+  /// input string and returns it.
   pub fn search(&self, input: &str) -> Option<Match> {
     let len = input.len();
+    let strat = PikeVM::new(self.prog, 0); 
 
     for start in range(0, len + 1) {
-      match self.prog.run(input, start) {
-        Some(m) => return Some(m),
+      match strat.run(input, start) {
+        Some(t) => {
+          return Some(Match::new(start, t.end, input, t.captures))
+        }
         None => ()
       }
     }
