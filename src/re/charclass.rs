@@ -47,15 +47,31 @@ fn order_ranges(ranges: &[Range]) -> ~[Range] {
 pub fn new_charclass(ranges: &[Range]) -> Expr {
   let ordered = order_ranges(ranges);
 
-  let mut last = '\U00000000';
   let mut ranges = ~[];
 
-  // FIXME: This algorithm is DEFINITELY incorrect
   for &(start, end) in ordered.iter() {
-    if (start >= last && end >= start) {
-      ranges.push((start, end));
+    match ranges.pop_opt() {
+      Some(range) => {
+        let (s, e): (char, char) = range;
+        if (start > e) {
+          ranges.push((s, e));
+          if (start <= end) {
+            ranges.push((start, end))
+          }
+        } else if (start < e && end > e) {
+          ranges.push((s, end))
+        } else if (start < e && end < e) {
+          ranges.push((s, e))
+        } else {
+          ranges.push((s, e))
+        }
+      }
+      None => {
+        if (start <= end) {  
+          ranges.push((start, end))
+        }
+      }
     }
-    last = end;
   }
   
   CharClass(ranges)
@@ -143,5 +159,23 @@ mod char_class_tests {
   fn char_class_negate_bounds() {
     let cc = new_negated_charclass([('\U00000000', MAX)]);
     assert_eq!(unravel_cc(cc), ~[]);
+  }
+
+  #[test]
+  fn char_class_overlapping_ranges() {
+    let cc = new_charclass([('A', 'D'), ('B', 'C')]);
+    assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
+  }
+
+  #[test]
+  fn char_class_repeated_ranges() {
+    let cc = new_charclass([('A', 'D'), ('A', 'D')]);
+    assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
+  }
+
+  #[test]
+  fn char_class_overlapping_ranges2() {
+    let cc = new_charclass([('A', 'D'), ('B', 'E')]);
+    assert_eq!(unravel_cc(cc), ~[('A', 'E')]);
   }
 }
