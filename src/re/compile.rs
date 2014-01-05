@@ -1,6 +1,6 @@
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, Literal, CharClass, Alternation,
+use parse::{Empty, Literal, CharClass, CharClassStatic, Alternation,
             Concatenation, Repetition, Capture, AssertWordBoundary,
             AssertNonWordBoundary, AssertStart, AssertEnd};
 use charclass::Range;
@@ -154,8 +154,11 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
       ncap += _compile_recursive(*lft, stack);
       ncap += _compile_recursive(*rgt, stack);
     }
-    CharClass(ref ranges) => {
+    CharClass(ref ranges) => { 
       compile_charclass(*ranges, stack);
+    }
+    CharClassStatic(ranges) => {
+      compile_charclass(ranges, stack);
     }
     Capture(ref expr, id, ref name) => {
       ncap += 1;

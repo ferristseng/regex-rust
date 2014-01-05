@@ -1,7 +1,9 @@
 use state::State;
 use std::char::MAX;
 use error::ParseError::*;
-use charclass::{Range, new_charclass, new_negated_charclass};
+use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass, 
+  NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
+  NegatedWhitespaceClass};
 
 #[deriving(ToStr)]
 pub enum QuantifierPrefix {
@@ -14,6 +16,7 @@ pub enum Expr {
   Empty,
   Literal(char),
   CharClass(~[Range]),
+  CharClassStatic(&'static [Range]),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -57,12 +60,12 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   // Replace these with static vectors
   let cc = match current {
-    Some('d') => new_charclass([('0', '9')]),
-    Some('D') => new_negated_charclass([('0', '9')]),
-    Some('w') => new_charclass([('a', 'z'), ('A', 'Z'), ('_', '_')]),
-    Some('W') => new_negated_charclass([('a', 'z'), ('A', 'Z'), ('_', '_')]),
-    Some('s') => new_charclass([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
-    Some('S') => new_negated_charclass([('\n', '\n'), ('\t', '\t'), ('\r', '\r')]),
+    Some('d') => NumericClass, 
+    Some('D') => NegatedNumericClass, 
+    Some('w') => AlphaClass, 
+    Some('W') => NegatedAlphaClass, 
+    Some('s') => WhitespaceClass, 
+    Some('S') => NegatedWhitespaceClass, 
     Some('b') => {
       p.next();
       
@@ -78,6 +81,8 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
   };
 
   p.next();
+
+  println(cc.to_str());
 
   Ok(cc)
 }
@@ -177,6 +182,10 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 }
 
 /// Parses a character class at a given state.
+///
+/// # Issues
+///
+/// * Can't have nested char classes. Need a way to combine char classes.
 ///
 /// # Arguments
 ///
@@ -476,7 +485,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
       Some('.') => {
         p.next();
-        stack.push(new_charclass([('\0', MAX)]));
+        stack.push(CharClass(~[('\0', MAX)]));
       }
 
       Some('^') => {

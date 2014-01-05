@@ -1,11 +1,4 @@
 #[crate_id = "rustre#0.1.1"];
-#[link(
-  name = "re",
-  package_id = "re",
-  vers = "0.1.1",
-  url = "https://github.com/ferristseng/regex-rust/tree/master"
- )];
-
 #[feature(globs)];
 #[feature(macro_rules)];
 
