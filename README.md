@@ -25,7 +25,7 @@ In order for regular expressions to be used, they must first be parsed into expr
 let regexp = UncompiledRegexp::new("a+b+");
 ```
 
-*Note: The somewhat confusing use of ```UncompiledRegexp``` as a class name for a regular expression that has been compiled results from the manner in which the regular expression is compiled. Without regular expression compilation built into the Rust compiler, regular expressions can only be compiled at runtime. The ```UncompiledRegexp``` class represents a regular expression that has been compiled at runtime. In the future, compiler support for regular expression compilation can limit the use of ```UncompiledRegexp``` to only those regular expressions whose regular expression string is not known until runtime. See [this page](https://github.com/mozilla/rust/wiki/Lib-re#4-module-writing) for more information on this topic.
+*Note: The somewhat confusing use of ```UncompiledRegexp``` as a class name for a regular expression that has been compiled results from the manner in which the regular expression is compiled. Without regular expression compilation built into the Rust compiler, regular expressions can only be compiled at runtime. The ```UncompiledRegexp``` class represents a regular expression that has been compiled at runtime. In the future, compiler support for regular expression compilation can limit the use of ```UncompiledRegexp``` to only those regular expressions whose regular expression string is not known until runtime. See [this page](https://github.com/mozilla/rust/wiki/Lib-re#4-module-writing) for more information on this topic.*
 
 The compilation of regular expressions includes the following stages:
 
