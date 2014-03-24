@@ -5,7 +5,9 @@
 *~*
 *.dylib
 *.so
+*.pyc
 
+rustre
 compile
 regexp
 parse
