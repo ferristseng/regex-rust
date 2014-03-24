@@ -1,21 +1,21 @@
-A regular expression library implemented natively in Rust, that is inspired by this [series of articles](http://swtch.com/~rsc/regexp/).
+# regex-rust
 
-The library aims to cover a subset of the ones available for PCRE, namely:
+A regular expression library implemented natively in Rust, that is inspired by this [series of articles](http://swtch.com/~rsc/regexp/). Specifically this library employs the [Pike VM](http://swtch.com/~rsc/regexp/regexp2.html) algorithm to compile and process regular expressions.
 
-(currently, not all of these are fully implemented)
+The library aims to cover a subset of the ones available for the [Python variant of PCRE](http://docs.python.org/2/library/re.html#regular-expression-syntax), namely:
 
   * Consistent escaping rules
-  * Extended character classes 
+  * Extended character classes
   * Minimal matching (a.k.a. “ungreedy”)
-  * Unicode character properties 
-  * Multiline matching 
-  * Newline/linebreak options 
-  * Named subpatterns 
-  * Backreferences 
-  * Look-ahead and look-behind assertions 
-  * Comments 
+  * Unicode character properties
+  * Multiline matching
+  * Newline/linebreak options
+  * Named subpatterns
+  * Backreferences (currently not implemented)
+  * Look-ahead and look-behind assertions (currently not implemented)
+  * Comments
 
-The library provides an interface and suite of functions similar to the one available in the Python regular expression library. 
+The library aims to provide an interface and suite of functions similar to the one available in the [Python regular expression library](http://docs.python.org/2/library/re.html#module-contents).
 
 ## Compiling Regular Expressions
 
