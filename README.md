@@ -6,7 +6,7 @@ The library aims to cover a subset of the ones available for the [Python variant
 
   * Consistent escaping rules
   * Extended character classes
-  * Minimal matching (a.k.a. “ungreedy”)
+  * Minimal matching (a.k.a. "ungreedy")
   * Unicode character properties
   * Multiline matching
   * Newline/linebreak options
@@ -57,4 +57,14 @@ Under the hood, a new ```PikeVM``` object is created from the instruction list g
 
 ## Library Functions (API)
 
-The current API for the ```UncompiledRegexp``` class consists of two functions, ```exec()``` and ```search()```, which perform a single match searching from the start of the string and an arbitraryposition in the string, respectively. Ultimately, we would like to implment all of the functions that are a part of the [Python re library](http://docs.python.org/2/library/re.html). *More information on specific functions coming soon.*
+The current API for the ```UncompiledRegexp``` class consists of two functions, ```exec()``` and ```search()```, which perform a single match searching from the start of the string and an arbitrary position in the string, respectively. Ultimately, we would like to implment all of the functions that are a part of the [Python re library](http://docs.python.org/2/library/re.html#regular-expression-objects).
+
+Below is a listing of the functions we would like to implement and the progress on each:
+
+  * [```match()```](http://docs.python.org/2/library/re.html#re.RegexObject.match) - *implemented in ```exec()```*
+  * [```search()```](http://docs.python.org/2/library/re.html#re.RegexObject.search) - *implemented*
+  * [```split()```](http://docs.python.org/2/library/re.html#re.RegexObject.split) - *not implemented*
+  * [```find_all()```](http://docs.python.org/2/library/re.html#re.RegexObject.findall) - *not implemented*
+  * [```find_iter()```](http://docs.python.org/2/library/re.html#re.RegexObject.finditer) - *not implemented*
+  * [```replace()```](http://docs.python.org/2/library/re.html#re.RegexObject.sub) - *not implemented*
+  * [```replacen()```](http://docs.python.org/2/library/re.html#re.RegexObject.subn) - *not implemented*
