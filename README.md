@@ -21,7 +21,7 @@ The library provides an interface and suite of functions similar to the one avai
 
 In order for regular expressions to be used, they must first be parsed into expressions, then compiled into instructions that can be executed by the underlying ```PikeVM``` virtual machine. This is done by executing the following code (example using regexp ```a+b+```):
 
-```
+```rust
 let regexp = UncompiledRegexp::new("a+b+");
 ```
 
@@ -43,3 +43,14 @@ Parsing is an iterative function looping through the symbols in the input string
 Once the parse tree has been constructed for the regular expression, it can be turned into the [Pike VM](http://swtch.com/~rsc/regexp/regexp2.html) instructions to execute when running on an input string. This is accomplished by passing the ```Expr``` returned by ```parse()``` into ```compile_recursive()```, which returns an array of ```Instruction``` objects.
 
 The algorithm proceeds recursively, matching each ```Expr``` by its type and compiling any subexpressions recursively as necessary. Like ```Expr```, ```Instruction``` is an enumerated type that contains types for each of the possible instructions for the [Pike VM](http://swtch.com/~rsc/regexp/regexp2.html) that ultimately matches the regular expressions. Unlike expressions, instructions are not recursively defined.
+
+## Regular Expression Matching
+
+As mentioned earlier, the regular expression algorithm used in this implementation is the Pike VM algorithm, in which a regular expression string is compiled into a set of instructions that tell the VM how to process an arbitrary input string. The following code will create a regular expression and check it against the beginning of an input string:
+
+```rust
+let regexp = UncompiledRegexp::new("a+b+");
+regexp.exec("my test input"); // returns an Option<Match>
+```
+
+Under the hood, a new ```PikeVM``` object is created from the instruction list generated during regexp compilation. Next, ```run()``` is called on the resulting object and passed the input string. The Pike VM algorithm runs, generating new tasks for each split. As of right now, certain patterns that are not handled by the standard Pike VM algorithm are not handled properly (such as ```(a*)*```, which causes an infinite loop).
