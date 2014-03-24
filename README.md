@@ -54,3 +54,7 @@ regexp.exec("my test input"); // returns an Option<Match>
 ```
 
 Under the hood, a new ```PikeVM``` object is created from the instruction list generated during regexp compilation. Next, ```run()``` is called on the resulting object and passed the input string. The Pike VM algorithm runs, generating new tasks for each split. As of right now, certain patterns that are not handled by the standard Pike VM algorithm are not handled properly (such as ```(a*)*```, which causes an infinite loop).
+
+## Library Functions (API)
+
+The current API for the ```UncompiledRegexp``` class consists of two functions, ```exec()``` and ```search()```, which perform a single match searching from the start of the string and an arbitraryposition in the string, respectively. Ultimately, we would like to implment all of the functions that are a part of the [Python re library](http://docs.python.org/2/library/re.html). *More information on specific functions coming soon.*
