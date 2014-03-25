@@ -33,6 +33,25 @@ impl Match {
       ~""
     }
   }
+
+  pub fn group_by_name(&self, name: &str) -> Option<~str> {
+    let name = &name.to_owned();
+    for group_wrap in self.groups.iter() {
+      match *group_wrap {
+        Some(ref group) => {
+          match group.name {
+            Some(ref group_name) if group_name == name => {
+              return Some(self.input.slice(group.start, group.end).to_owned());
+            }
+            _ => {}
+          };
+        }
+        None => {}
+      };
+    }
+    None
+  }
+
   pub fn matched(&self) -> ~str {
     if (self.start < self.input.len()) {
       self.input.slice(self.start, self.end).to_owned()
