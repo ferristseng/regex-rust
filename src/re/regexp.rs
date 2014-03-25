@@ -106,4 +106,30 @@ mod tests {
   fn parse_capture_fail_test() {
     assert!(UncompiledRegexp::new("(hel(ABC)ok").is_err());
   }
+
+  #[test]
+  fn search_group_fetch() {
+    match UncompiledRegexp::new("(?P<hello>d)") {
+      Ok(regex) => {
+        match regex.search("dhfs") {
+          Some(m) => {
+            match m.group_by_name("hello") {
+              Some(result) => {
+                assert_eq!(result, ~"d");
+              }
+              None => {
+                fail!("Failed to find a group with a match");
+              }
+            }
+          }
+          None => {
+            fail!("Didn't match a group when expected");
+          }
+        }        
+      }
+      Err(error) => {
+        fail!(error.to_str());
+      }
+    }
+  }
 }
