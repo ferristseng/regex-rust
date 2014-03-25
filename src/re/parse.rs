@@ -1,5 +1,6 @@
 use state::State;
 use std::char::MAX;
+use std::str;
 use error::ParseError::*;
 use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass, 
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
@@ -112,7 +113,8 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
 #[inline]
 fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   let mut capturing = true;
-  let name: Option<~str> = None;
+  let mut name: Option<~str> = None;
+  let mut name_buf: ~[char] = ~[];
 
   // Check for an extension denoted by a ?
   // 
@@ -150,6 +152,34 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
         }
         Some('P') => {
           p.consume(2);
+          match p.current() {
+            Some('<') => {
+              p.next();
+              loop {
+                match p.current() {
+                  Some('>') if name_buf.len() == 0 => {
+                    return Err(ParseEmptyGroupName);
+                  }
+                  Some('>') => {
+                    name = Some(str::from_chars(name_buf));
+                    p.next();
+                    break;
+                  }
+                  // TODO: restrict this to [a-zA-Z0-9_]
+                  Some(c) => {
+                    name_buf.push(c);
+                    p.next();
+                  }
+                  None => {
+                    return Err(ParseExpectedClosingAngleBracket);
+                  }
+                }
+              }
+            }
+            _ => {
+              return Err(ParseExpectedOpeningAngleBracket);
+            }
+          }
         }
         _ => () 
       }
