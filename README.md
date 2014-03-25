@@ -22,7 +22,10 @@ The library aims to provide an interface and suite of functions similar to the o
 In order for regular expressions to be used, they must first be parsed into expressions, then compiled into instructions that can be executed by the underlying ```PikeVM``` virtual machine. This is done by executing the following code (example using regexp ```a+b+```):
 
 ```rust
-let regexp = UncompiledRegexp::new("a+b+");
+let regexp = match UncompiledRegexp::new("a+b+") {
+		Ok(regex) => regex,
+		Err(e) => fail!(e)
+	};
 ```
 
 *Note: The somewhat confusing use of ```UncompiledRegexp``` as a class name for a regular expression that has been compiled results from the manner in which the regular expression is compiled. Without regular expression compilation built into the Rust compiler, regular expressions can only be compiled at runtime. The ```UncompiledRegexp``` class represents a regular expression that has been compiled at runtime. In the future, compiler support for regular expression compilation can limit the use of ```UncompiledRegexp``` to only those regular expressions whose regular expression string is not known until runtime. See [this page](https://github.com/mozilla/rust/wiki/Lib-re#4-module-writing) for more information on this topic.*
@@ -49,7 +52,10 @@ The algorithm proceeds recursively, matching each ```Expr``` by its type and com
 As mentioned earlier, the regular expression algorithm used in this implementation is the Pike VM algorithm, in which a regular expression string is compiled into a set of instructions that tell the VM how to process an arbitrary input string. The following code will create a regular expression and check it against the beginning of an input string:
 
 ```rust
-let regexp = UncompiledRegexp::new("a+b+");
+let regexp = match UncompiledRegexp::new("a+b+") {
+		Ok(regex) => regex,
+		Err(e) => fail!(e)
+	};
 regexp.exec("my test input"); // returns an Option<Match>
 ```
 
