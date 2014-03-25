@@ -55,6 +55,27 @@ impl UncompiledRegexp {
 
     None
   }
+
+  // pub fn split(&self, input: &str) -> Option<Match> {
+  //
+  // }
+
+  // pub fn find_all(&self, input: &str) -> Option<Match> {
+  //
+  // }
+
+  // pub fn find_iter(&self, input: &str) -> Option<Match> {
+  // 
+  // }
+
+  // pub fn replace(&self, input: &str) -> Option<Match> {
+  // 
+  // }
+
+  // pub fn replacen(&self, input: &str) -> Option<Match> {
+  // 
+  // }
+
 }
 
 #[cfg(test)]
