@@ -41,7 +41,12 @@ macro_rules! run_tests(
             let mut i = 0;
 
             for g in groups.iter() {
-              assert_eq!(ma.group(i), g.to_str());
+              match ma.group(i) {
+                Some(match_group) => {
+                  assert_eq!(match_group, g.to_str());
+                }
+                None => (assert!(false))
+              }
 
               i += 1;
             }
