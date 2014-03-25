@@ -21,16 +21,16 @@ impl Match {
 }
 
 impl Match {
-  pub fn group(&self, index: uint) -> ~str {
+  pub fn group(&self, index: uint) -> Option<~str> {
     if (index < self.groups.len()) {
       match self.groups[index] {
         Some(ref group) => {
-          self.input.slice(group.start, group.end).to_owned()
+          Some(self.input.slice(group.start, group.end).to_owned())
         }
-        None => ~""
+        None => None
       }
     } else {
-      ~""
+      None
     }
   }
 
