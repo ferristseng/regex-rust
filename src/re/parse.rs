@@ -112,7 +112,7 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
 #[inline]
 fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   let mut capturing = true;
-  let mut name: Option<~str> = None;
+  let name: Option<~str> = None;
 
   // Check for an extension denoted by a ?
   // 

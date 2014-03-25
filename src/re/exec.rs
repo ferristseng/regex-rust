@@ -70,7 +70,7 @@ impl<'a> PikeVM<'a> {
 
           self.addThread(split, tlist);
         }
-        InstCaptureStart(num, ref id) => {
+        InstCaptureStart(num, ref name) => {
           t.pc = t.pc + 1;
           
           // Fill in spaces with None, if there is no
@@ -79,7 +79,7 @@ impl<'a> PikeVM<'a> {
             t.captures.push(None);
           }
 
-          t.captures[num] = Some(CapturingGroup::new(t.end, t.end, num));
+          t.captures[num] = Some(CapturingGroup::new(t.end, t.end, num, name));
         }
         InstCaptureEnd(num) => {
           t.pc = t.pc + 1;

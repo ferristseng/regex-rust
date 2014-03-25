@@ -53,15 +53,17 @@ impl ToStr for Match {
 pub struct CapturingGroup {
   start: uint,
   end: uint,
-  num: uint
+  num: uint,
+  name: Option<~str>
 }
 
 impl CapturingGroup {
-  pub fn new(start: uint, end: uint, num: uint) -> CapturingGroup {
+  pub fn new(start: uint, end: uint, num: uint, name: &Option<~str>) -> CapturingGroup {
     CapturingGroup {
       start: start,
       end: end,
-      num: num
+      num: num,
+      name: name.clone()
     }
   }
 }
