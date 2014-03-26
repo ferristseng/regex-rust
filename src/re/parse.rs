@@ -167,8 +167,14 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
                   }
                   // TODO: restrict this to [a-zA-Z0-9_]
                   Some(c) => {
-                    name_buf.push(c);
-                    p.next();
+                    if c.is_digit_radix(36) || c == '_' {
+                      name_buf.push(c);
+                      p.next();
+                    } else if c == ')' {
+                      return Err(ParseExpectedClosingAngleBracket);
+                    } else {
+                      return Err(ParseExpectedAlphaNumeric);
+                    }
                   }
                   None => {
                     return Err(ParseExpectedClosingAngleBracket);
@@ -650,5 +656,35 @@ mod parse_tests {
   #[test]
   fn parse_backward_slash_err() {
     test_parse!("\\", Err(ParseIncompleteEscapeSeq));
+  }
+
+  #[test]
+  fn parse_named_group_ok() {
+    test_parse!("(?P<My_nAm3>regex)", Ok(_));
+  }
+
+  #[test]
+  fn parse_named_group_no_opening_angle_bracket_err() {
+    test_parse!("(?Psdf)", Err(ParseExpectedOpeningAngleBracket));
+  }
+
+  #[test]
+  fn parse_named_group_no_closing_angle_bracket_err() {
+    test_parse!("(?P<sdf)", Err(ParseExpectedClosingAngleBracket));
+  }
+
+  #[test]
+  fn parse_named_group_no_closing_angle_bracket_2_err() {
+    test_parse!("(?P<sdf", Err(ParseExpectedClosingAngleBracket));
+  }
+
+  #[test]
+  fn parse_named_group_empty_name_err() {
+    test_parse!("(?P<>sdfkj)", Err(ParseEmptyGroupName));
+  }
+
+  #[test]
+  fn parse_named_group_invalid_name_character_err() {
+    test_parse!("(?P<sdd$f>)", Err(ParseExpectedAlphaNumeric));
   }
 }
