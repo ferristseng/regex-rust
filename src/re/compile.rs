@@ -18,6 +18,7 @@ pub enum Instruction {
   InstAssertEnd,
   InstWordBoundary,
   InstNonWordBoundary,
+  InstProgress,
   InstNoop
 }
 
@@ -35,6 +36,7 @@ impl ToStr for Instruction {
       InstAssertEnd             => ~"InstLineEnd",
       InstWordBoundary          => ~"InstWordBoundary",
       InstNonWordBoundary       => ~"InstNonWordBoundary",
+	  InstProgress              => ~"InstProgress",
       InstNoop                  => ~"InstNoop"
     }
   }
