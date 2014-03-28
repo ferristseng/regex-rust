@@ -97,7 +97,7 @@ pub fn compile_recursive(re: &Expr) -> ~[Instruction] {
   _compile_recursive(re, &mut stack);
   stack.push(InstMatch);
 
-  //debug_stack(stack);
+  //debug_stack(stack.clone());
   
   stack
 }
@@ -199,6 +199,9 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
           placeholder!();
           ncap += _compile_recursive(*expr, stack);
 
+          // Check for progress before looping back 
+          stack.push(InstProgress);
+          
           let jmp = InstJump(ptr_split);
           stack.push(jmp);
 
@@ -225,7 +228,7 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
   ncap
 }
 
-fn debug_stack(stack: &mut ~[Instruction]) {
+fn debug_stack(stack: ~[Instruction]) {
   let mut count: uint = 0;
 
   println("--COMPILE STACK--");

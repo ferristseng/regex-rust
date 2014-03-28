@@ -4,7 +4,7 @@ use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, 
   InstAssertStart, InstAssertEnd, InstWordBoundary,
-  InstNonWordBoundary, InstNoop};
+  InstNonWordBoundary, InstNoop, InstProgress};
 use result::{Match, CapturingGroup};
 
 /// This should be able to take compiled 
@@ -224,6 +224,10 @@ impl<'a> ExecStrategy for PikeVM<'a> {
           InstMatch => {
             found = Some(t.clone());
             break;
+          }
+          InstProgress => {
+              println("Reached Progess Instruction!");
+              continue;
           }
           _ => unreachable!()
         }
