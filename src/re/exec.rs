@@ -99,10 +99,9 @@ impl<'a> PikeVM<'a> {
         }
         InstProgress => {
             if(t.start_sp < sp) {
-                //println("Passed Progress Instruction");
                 t.pc = t.pc + 1;
             } else {
-                println!("Progess Instruction Failed {}", t.to_str());
+                //println!("Progess Instruction Failed {}", t.to_str());
                 return;
             }
         }
