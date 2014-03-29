@@ -71,7 +71,7 @@ impl<'a> PikeVM<'a> {
 
           t.pc = raddr;
 
-          self.addThread(split, tlist, 000);
+          self.addThread(split, tlist, sp);
         }
         InstCaptureStart(num, ref name) => {
           t.pc = t.pc + 1;
@@ -96,6 +96,15 @@ impl<'a> PikeVM<'a> {
         }
         InstNoop => {
           t.pc = t.pc + 1;
+        }
+        InstProgress => {
+            if(t.start_sp < sp) {
+                //println("Passed Progress Instruction");
+                t.pc = t.pc + 1;
+            } else {
+                println!("Progess Instruction Failed {}", t.to_str());
+                return;
+            }
         }
         _ => break
       }
@@ -155,7 +164,6 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
       while (clist.len() > 0) {
         let mut t = clist.shift();;
-
         match self.inst[t.pc] {
           InstLiteral(m) => {
             if (c == m && i != input.char_len()) {
@@ -224,10 +232,6 @@ impl<'a> ExecStrategy for PikeVM<'a> {
           InstMatch => {
             found = Some(t.clone());
             break;
-          }
-          InstProgress => {
-              println("Reached Progess Instruction!");
-              continue;
           }
           _ => unreachable!()
         }
