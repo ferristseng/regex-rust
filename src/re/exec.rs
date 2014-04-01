@@ -4,7 +4,7 @@ use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
   InstCaptureStart, InstCaptureEnd, InstSplit, 
   InstAssertStart, InstAssertEnd, InstWordBoundary,
-  InstNonWordBoundary, InstNoop};
+  InstNonWordBoundary, InstNoop, InstProgress};
 use result::{Match, CapturingGroup};
 
 /// This should be able to take compiled 
@@ -17,14 +17,16 @@ pub trait ExecStrategy {
 struct Thread {
   pc: uint,
   end: uint,
+  start_sp: uint,
   captures: ~[Option<CapturingGroup>]
 }
 
 impl Thread {
-  fn new(pc: uint, end: uint) -> Thread {
+  fn new(pc: uint, end: uint, start_sp: uint) -> Thread {
     Thread { 
       pc: pc, 
       end: end,
+      start_sp: start_sp,
       captures: ~[]
     }
   }
@@ -32,7 +34,7 @@ impl Thread {
 
 impl ToStr for Thread {
   fn to_str(&self) -> ~str {
-    format!("<Thread pc: {:u}, end: {:u}>", self.pc, self.end)
+    format!("<Thread pc: {:u}, end: {:u}, start_sp: {:u}>", self.pc, self.end, self.start_sp)
   }
 }
 
@@ -56,7 +58,7 @@ impl<'a> PikeVM<'a> {
 
 impl<'a> PikeVM<'a> {
   #[inline]
-  fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread]) {
+  fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread], sp: uint) {
     loop {
       match self.inst[t.pc] {
         InstJump(addr) => {
@@ -65,10 +67,11 @@ impl<'a> PikeVM<'a> {
         InstSplit(laddr, raddr) => {
           let mut split = t.clone();
           split.pc = laddr;
+          split.start_sp = sp;
 
           t.pc = raddr;
 
-          self.addThread(split, tlist);
+          self.addThread(split, tlist, sp);
         }
         InstCaptureStart(num, ref name) => {
           t.pc = t.pc + 1;
@@ -93,6 +96,14 @@ impl<'a> PikeVM<'a> {
         }
         InstNoop => {
           t.pc = t.pc + 1;
+        }
+        InstProgress => {
+            if(t.start_sp < sp) {
+                t.pc = t.pc + 1;
+            } else {
+                //println!("Progess Instruction Failed {}", t.to_str());
+                return;
+            }
         }
         _ => break
       }
@@ -135,8 +146,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
       // we can't just inc by 1
       sp += c.len_utf8_bytes();
     }
-
-    self.addThread(Thread::new(0, sp), &mut clist);
+    self.addThread(Thread::new(0, sp, sp), &mut clist, 0);
 
     // The main loop.
     //
@@ -153,14 +163,13 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
       while (clist.len() > 0) {
         let mut t = clist.shift();;
-
         match self.inst[t.pc] {
           InstLiteral(m) => {
             if (c == m && i != input.char_len()) {
               t.pc = t.pc + 1;
               t.end = sp;
 
-              self.addThread(t, &mut nlist);
+              self.addThread(t, &mut nlist, sp);
             }
           }
           InstRange(start, end) => {
@@ -168,14 +177,14 @@ impl<'a> ExecStrategy for PikeVM<'a> {
               t.pc = t.pc + 1;
               t.end = sp;
 
-              self.addThread(t, &mut nlist);
+              self.addThread(t, &mut nlist, sp);
             }
           }
           InstAssertStart => {
             if (i == 0) {
               t.pc = t.pc + 1;
 
-              self.addThread(t, &mut clist);
+              self.addThread(t, &mut clist, sp);
             }
           }
           InstAssertEnd => {
@@ -184,7 +193,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             if (i == input.char_len() - 1) {
               t.pc = t.pc + 1;
 
-              self.addThread(t, &mut clist);
+              self.addThread(t, &mut clist, sp);
             }
           }
           InstWordBoundary => {
@@ -201,7 +210,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
             t.pc = t.pc + 1;
             
-            self.addThread(t, &mut clist);
+            self.addThread(t, &mut clist, sp);
           }
           InstNonWordBoundary => {
             if (i == start_index &&
@@ -217,7 +226,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
             t.pc = t.pc + 1;
 
-            self.addThread(t, &mut clist);
+            self.addThread(t, &mut clist, sp);
           }
           InstMatch => {
             found = Some(t.clone());
