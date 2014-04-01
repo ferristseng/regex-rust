@@ -179,6 +179,8 @@ TESTS = [
   ("[a-e[g]]", "[]", "[]", MATCH),
   ("[a-e[g]]", "]]", "]]", NOMATCH),
   ("[[g-p][a-d]]", "[c]", "[c]", MATCH),
+  ("[(a-d)]", "c", "c", MATCH),
+  ("[(a-d)]", "(", "(", MATCH),
 
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.

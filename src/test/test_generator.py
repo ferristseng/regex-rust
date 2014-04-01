@@ -127,7 +127,7 @@ if __name__ == "__main__":
       generate_test_case(ident, test[0], test[1], test[2], test[3], 
                          groups)
   OUTPUT = OUTPUT[0:len(OUTPUT)-2] + """  #[test]
-  fn test_case_ident_148() {
+  fn test_case_ident_150() {
       let re = match UncompiledRegexp::new("a*ba*") {
         Ok(regex) => regex,
         Err(e) => fail!(e)
@@ -136,7 +136,7 @@ if __name__ == "__main__":
       println(res);
   }\n}"""
   OUTPUT = OUTPUT[0:len(OUTPUT)-2] + """  #[test]
-  fn test_case_ident_149() {
+  fn test_case_ident_151() {
       let re = match UncompiledRegexp::new("a*ba{1,}") {
         Ok(regex) => regex,
         Err(e) => fail!(e)
