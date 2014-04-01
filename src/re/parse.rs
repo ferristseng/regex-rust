@@ -217,10 +217,11 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   }
 }
 
-/// Parses a character class at a given state. NOTE: Open square
-/// brackets within a character class have no special meaning, they
-/// are treated as ordinary characters. There is no such thing as
-/// nested character classes
+/// Parses a character class at a given state. 
+/// 
+/// NOTE: Open square brackets within a character class have no
+/// special meaning, they are treated as ordinary characters. 
+/// There is no such thing as nested character classes.
 ///
 /// # Arguments
 ///

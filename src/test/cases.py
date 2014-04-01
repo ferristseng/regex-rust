@@ -171,6 +171,11 @@ TESTS = [
   ("a{5}", "aaaaa", "aaaaa", MATCH),
   ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
   ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),
-  ("a{5,}", "aaaa", "", NOMATCH)
+  ("a{5,}", "aaaa", "", NOMATCH),
+  ("[a-e[g]]", "d]", "d]", MATCH),
+  ("[a-e[g]]", "g]", "g]", MATCH),
+  ("[a-e[g]]", "[]", "[]", MATCH),
+  ("[a-e[g]]", "]]", "]]", NOMATCH),
+  ("[[g-p][a-d]]", "[c]", "[c]", MATCH),
 ]
 
