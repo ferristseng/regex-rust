@@ -664,6 +664,24 @@ pub mod script {
         super::bsearch_range_table(c, Gujarati_table)
     }
 
+    static Gurmukhi_table : &'static [(char,char)] = &[
+        ('\u0a01', '\u0a02'), ('\u0a03', '\u0a03'),
+        ('\u0a05', '\u0a0a'), ('\u0a0f', '\u0a10'),
+        ('\u0a13', '\u0a28'), ('\u0a2a', '\u0a30'),
+        ('\u0a32', '\u0a33'), ('\u0a35', '\u0a36'),
+        ('\u0a38', '\u0a39'), ('\u0a3c', '\u0a3c'),
+        ('\u0a3e', '\u0a40'), ('\u0a41', '\u0a42'),
+        ('\u0a47', '\u0a48'), ('\u0a4b', '\u0a4d'),
+        ('\u0a51', '\u0a51'), ('\u0a59', '\u0a5c'),
+        ('\u0a5e', '\u0a5e'), ('\u0a66', '\u0a6f'),
+        ('\u0a70', '\u0a71'), ('\u0a72', '\u0a74'),
+        ('\u0a75', '\u0a75')
+    ];
+
+    pub fn Gurmukhi(c: char) -> bool {
+        super::bsearch_range_table(c, Gurmukhi_table)
+    }
+
     static Han_table : &'static [(char,char)] = &[
         ('\u2e80', '\u2e99'), ('\u2e9b', '\u2ef3'),
         ('\u2f00', '\u2fd5'), ('\u3005', '\u3005'),
