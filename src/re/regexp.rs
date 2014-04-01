@@ -68,9 +68,23 @@ impl UncompiledRegexp {
   // 
   // }
 
-  // pub fn replace(&self, input: &str) -> Option<Match> {
-  // 
-  // }
+  pub fn replace(&self, input: &str) -> ~str {
+    let len = input.len();
+    let strat = PikeVM::new(self.prog, 0); 
+    let mut replaced = input.to_owned();
+
+    for start in range(0, len + 1) {
+      match strat.run(input, start) {
+        Some(t) => {
+          let mat = Match::new(start, t.end, input, t.captures);
+          replaced = replaced.replace(mat.matched(), ~"");
+        }
+        None => ()
+      }
+    }
+
+    replaced
+  }
 
   // pub fn replacen(&self, input: &str) -> Option<Match> {
   // 
