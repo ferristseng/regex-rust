@@ -18,6 +18,7 @@ mod parse;
 mod state;
 mod compile;
 mod charclass;
+mod unicode;
 
 pub mod result;
 pub mod regexp;
