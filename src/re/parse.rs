@@ -217,21 +217,16 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   }
 }
 
-/// Parses a character class at a given state.
-///
-/// # Issues
-///
-/// * Can't have nested char classes. Need a way to combine char classes.
+/// Parses a character class at a given state. NOTE: Open square
+/// brackets within a character class have no special meaning, they
+/// are treated as ordinary characters. There is no such thing as
+/// nested character classes
 ///
 /// # Arguments
 ///
 /// * p - The current state of parsing
 #[inline]
 fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
-  // we need to keep track of any [, ( in
-  // the input, because we can just ignore 
-  // them
-  let mut nbracket: uint = 0;
   let mut ranges = ~[];
 
   // check to see if the first char following
@@ -257,30 +252,22 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
 
   loop {
     match p.current() {
-      Some('[') => {
-        p.next();
-        nbracket += 1;
-      },
       Some(']') => {
         p.next();
-        if (nbracket > 0) {
-          nbracket -= 1;
+        let cc = if (negate) {
+          new_negated_charclass(ranges)
         } else {
-          let cc = if (negate) {
-            new_negated_charclass(ranges)
-          } else {
-            new_charclass(ranges)
-          };
-          // Check to see if the created char class is 
-          // empty
-          if (match cc {
-            CharClass(ref r) => r.len() == 0,
-            _ => unreachable!() 
-          }) {
-            return Err(ParseEmptyCharClassRange)
-          }
-          return Ok(cc)
+          new_charclass(ranges)
+        };
+        // Check to see if the created char class is 
+        // empty
+        if (match cc {
+          CharClass(ref r) => r.len() == 0,
+          _ => unreachable!() 
+        }) {
+          return Err(ParseEmptyCharClassRange)
         }
+        return Ok(cc)
       }
       Some('\\') => {
         p.next();
