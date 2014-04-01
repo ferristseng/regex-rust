@@ -31,6 +31,63 @@ def fetch(f):
         sys.stderr.write("cannot load %s" % f)
         exit(1)
 
+def load_unicode_data(f):
+    fetch(f)
+    gencats = {}
+    upperlower = {}
+    lowerupper = {}
+    combines = []
+    canon_decomp = {}
+    compat_decomp = {}
+    curr_cat = ""
+    curr_combine = ""
+    c_lo = 0
+    c_hi = 0
+    com_lo = 0
+    com_hi = 0
+
+    for line in fileinput.input(f):
+        fields = line.split(";")
+        if len(fields) != 15:
+            continue
+        [code, name, gencat, combine, bidi,
+         decomp, deci, digit, num, mirror,
+         old, iso, upcase, lowcase, titlecase] = fields
+
+        code = int(code, 16)
+
+        if curr_cat == "":
+            curr_cat = gencat
+            c_lo = code
+            c_hi = code
+
+        if curr_cat == gencat:
+            c_hi = code
+        else:
+            if curr_cat not in gencats:
+                gencats[curr_cat] = []
+
+            gencats[curr_cat].append((c_lo, c_hi))
+            curr_cat = gencat
+            c_lo = code
+            c_hi = code
+
+        if curr_combine == "":
+            curr_combine = combine
+            com_lo = code
+            com_hi = code
+
+        if curr_combine == combine:
+            com_hi = code
+        else:
+            if curr_combine != "0":
+                combines.append((com_lo, com_hi, curr_combine))
+            curr_combine = combine
+            com_lo = code
+            com_hi = code
+
+    return gencats
+
 def load_properties(f, interestingprops):
     fetch(f)
     props = {}
@@ -136,6 +193,9 @@ rf.write('''// Copyright 2012-2013 The Rust Project Developers. See the COPYRIGH
 ''')
 
 emit_bsearch_range_table(rf)
+
+gencats = load_unicode_data("UnicodeData.txt")
+emit_property_module(rf, "general_category", gencats)
 
 script = load_properties("Scripts.txt",
     ["Arabic", "Armenian", "Balinese", "Bengali", "Bopomofo", "Braille", "Buginese",
