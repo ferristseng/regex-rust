@@ -126,7 +126,26 @@ if __name__ == "__main__":
     buf += \
       generate_test_case(ident, test[0], test[1], test[2], test[3], 
                          groups)
+  OUTPUT = OUTPUT[0:len(OUTPUT)-2] + """  #[test]
+  fn test_case_ident_141() {
+      let re = match UncompiledRegexp::new("a*ba*") {
+        Ok(regex) => regex,
+        Err(e) => fail!(e)
+      };
+      let res = re.replace("abaaacaabaaaccdab", "");
+      println(res);
+  }\n}"""
+  OUTPUT = OUTPUT[0:len(OUTPUT)-2] + """  #[test]
+  fn test_case_ident_142() {
+      let re = match UncompiledRegexp::new("a*ba{1,}") {
+        Ok(regex) => regex,
+        Err(e) => fail!(e)
+      };
+      let res = re.replace("abaaacaabaaacca", "");
+      println(res);
+  }\n}"""
 
   FILE.write(OUTPUT % (date, buf))
+  
 
   print("Successfully generated test file: src/re/test.rs")
