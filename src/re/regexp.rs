@@ -42,7 +42,24 @@ impl UncompiledRegexp {
   /// input string and returns it.
   pub fn search(&self, input: &str) -> Option<Match> {
     let len = input.len();
-    let strat = PikeVM::new(self.prog, 0); 
+    let strat = PikeVM::new(self.prog, 0);
+
+
+    // IGNORE THIS BELOW. It's very dumb fake testing for 
+    // find_all until we actually implement a better test suite.
+
+    // let blah = self.find_all(input);
+    // match blah {
+    //   Some(x) => { 
+    //     print!("Matched {:u} elements: ", x.len());
+    //     for elem in x.iter() {
+    //       print!("{:s}, ", elem.to_str());
+    //     }
+    //     println!("");
+    //   }
+    //   None => { println!("Matched 0 elements"); }
+    // }
+
 
     for start in range(0, len + 1) {
       match strat.run(input, start) {
@@ -60,9 +77,28 @@ impl UncompiledRegexp {
   //
   // }
 
-  // pub fn find_all(&self, input: &str) -> Option<Match> {
-  //
-  // }
+  pub fn find_all(&self, input: &str) -> Option<~[Match]> {
+    let mut matches : ~[Match] = ~[];
+
+    let len = input.len();
+    let strat = PikeVM::new(self.prog, 0); 
+
+    for start in range(0, len + 1) {
+      match strat.run(input, start) {
+        Some(t) => {
+          matches.push(Match::new(start, t.end, input, t.captures))
+        }
+        None => ()
+      }
+    }
+
+    if (matches.len() != 0) {
+      return Some(matches);
+    }
+    else {
+      return None;
+    }
+  }
 
   // pub fn find_iter(&self, input: &str) -> Option<Match> {
   // 

@@ -171,6 +171,10 @@ TESTS = [
   ("a{5}", "aaaaa", "aaaaa", MATCH),
   ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
   ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),
-  ("a{5,}", "aaaa", "", NOMATCH)
+  ("a{5,}", "aaaa", "", NOMATCH),
+
+  # These tests are mostly for find_all
+  ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
+  ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.
 ]
 
