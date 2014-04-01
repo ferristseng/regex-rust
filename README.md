@@ -2,17 +2,16 @@
 
 A regular expression library implemented natively in Rust, that is inspired by this [series of articles](http://swtch.com/~rsc/regexp/). Specifically this library employs the [Pike VM](http://swtch.com/~rsc/regexp/regexp2.html) algorithm to compile and process regular expressions.
 
-The library aims to cover a subset of the ones available for the [Python variant of PCRE](http://docs.python.org/2/library/re.html#regular-expression-syntax), namely:
+The library aims to cover a subset of the ones available for the subset of PCRE implemented in the [C++ RE2 library](https://re2.googlecode.com/hg/doc/syntax.html), namely:
 
   * Consistent escaping rules
   * Extended character classes
   * Minimal matching (a.k.a. "ungreedy")
   * Unicode character properties
+  * Full character folding
   * Multiline matching
   * Newline/linebreak options
   * Named subpatterns
-  * Backreferences (currently not implemented)
-  * Look-ahead and look-behind assertions (currently not implemented)
   * Comments
 
 The library aims to provide an interface and suite of functions similar to the one available in the [Python regular expression library](http://docs.python.org/2/library/re.html#module-contents).
@@ -96,3 +95,15 @@ In order to run all of the project tests, simply enter
 ```bash
 rustc --test src/re/lib.rs
 ```
+
+## Other Repositories
+
+We are not the only game in town. In particular, take a look at the following repositories that are also working to implement regular expressions in Rust:
+
+  * [rose](https://github.com/lfairy/rose)
+  * [rust-re](https://github.com/glennsl/rust-re)
+
+There are also a couple of bindings to regular expression libraries from other languages available. A couple that we have come across are listed below:
+
+  * [rust-re2](https://github.com/nickdesaulniers/rust-re2)
+  * [rust-pcre](https://github.com/uasi/rust-pcre)
