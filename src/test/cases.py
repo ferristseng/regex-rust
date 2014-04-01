@@ -172,10 +172,16 @@ TESTS = [
   ("a{5,}", "aaaaaaa", "aaaaaaa", MATCH),
   ("a{5,7}", "aaaaaa", "aaaaaa", MATCH),
   ("a{5,}", "aaaa", "", NOMATCH),
+
+  # Nested character class tests
   ("[a-e[g]]", "d]", "d]", MATCH),
   ("[a-e[g]]", "g]", "g]", MATCH),
   ("[a-e[g]]", "[]", "[]", MATCH),
   ("[a-e[g]]", "]]", "]]", NOMATCH),
   ("[[g-p][a-d]]", "[c]", "[c]", MATCH),
+
+  # These tests are mostly for find_all
+  ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
+  ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.
 ]
 
