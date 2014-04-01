@@ -68,16 +68,15 @@ impl UncompiledRegexp {
   // 
   // }
 
-  pub fn replace(&self, input: &str) -> ~str {
+  pub fn replace(&self, input: &str, replaceWith: &str) -> ~str {
     let len = input.len();
     let strat = PikeVM::new(self.prog, 0); 
     let mut replaced = input.to_owned();
 
     for start in range(0, len + 1) {
-      match strat.run(input, start) {
+      match strat.run(replaced, start) {
         Some(t) => {
-          let mat = Match::new(start, t.end, input, t.captures);
-          replaced = replaced.replace(mat.matched(), ~"");
+          replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replaceWith, replaced.slice_from(t.end));
         }
         None => ()
       }
