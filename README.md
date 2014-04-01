@@ -58,7 +58,7 @@ let regexp = match UncompiledRegexp::new("a+b+") {
 regexp.exec("my test input"); // returns an Option<Match>
 ```
 
-Under the hood, a new ```PikeVM``` object is created from the instruction list generated during regexp compilation. Next, ```run()``` is called on the resulting object and passed the input string. The Pike VM algorithm runs, generating new tasks for each split. As of right now, certain patterns that are not handled by the standard Pike VM algorithm are not handled properly (such as ```(a*)*```, which causes an infinite loop).
+Under the hood, a new ```PikeVM``` object is created from the instruction list generated during regexp compilation. Next, ```run()``` is called on the resulting object and passed the input string. The Pike VM algorithm runs, generating new tasks for each split.
 
 ## Library Functions (API)
 
