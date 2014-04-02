@@ -15,9 +15,9 @@
 
 
 fn bsearch_range_table(c: char, r: &'static [(char,char)]) -> bool {
-    use cmp::{Equal, Less, Greater};
-    use slice::ImmutableVector;
-    use option::None;
+    use std::cmp::{Equal, Less, Greater};
+    use std::slice::ImmutableVector;
+    use std::option::None;
     r.bsearch(|&(lo,hi)| {
         if lo <= c && c <= hi { Equal }
         else if hi < c { Less }
@@ -2752,4 +2752,29 @@ pub mod script {
         super::bsearch_range_table(c, Yi_table)
     }
 
+}
+
+#[cfg(test)]
+mod unicode_tests {
+    use super::*;
+
+    #[test]
+    fn test_general_property_contains() {
+        assert!(general_category::Nd('\uabf8'));
+    }
+
+    #[test]
+    fn test_general_property_doesnt_contain() {
+        assert!(!general_category::Nd('\uabfa'));
+    }
+
+    #[test]
+    fn test_script_contains() {
+        assert!(script::Greek('\u1f39'));
+    }
+
+    #[test]
+    fn test_script_doesnt_contain() {
+        assert!(!script::Greek('\u1f58'));
+    }
 }
