@@ -54,6 +54,9 @@ def load_unicode_data(f):
          decomp, deci, digit, num, mirror,
          old, iso, upcase, lowcase, titlecase] = fields
 
+        if gencat == "Cs":
+            continue
+
         code = int(code, 16)
 
         if curr_cat == "":
