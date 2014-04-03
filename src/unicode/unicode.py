@@ -233,6 +233,11 @@ mod unicode_tests {
     }
 
     #[test]
+    fn test_general_property_doesnt_exist() {
+        assert_eq!(general_category::get_prop_table(&"A"), None);
+    }
+
+    #[test]
     fn test_script_contains() {
         assert!(bsearch_range_table('\u1f39', script::get_prop_table(&"Greek").unwrap()));
     }
@@ -240,6 +245,11 @@ mod unicode_tests {
     #[test]
     fn test_script_doesnt_contain() {
         assert!(!bsearch_range_table('\u1f58', script::get_prop_table(&"Greek").unwrap()));
+    }
+
+    #[test]
+    fn test_script_doesnt_exist() {
+      assert_eq!(general_category::get_prop_table(&"A"), None);
     }
 }
 ''')
