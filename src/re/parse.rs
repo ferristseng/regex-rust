@@ -5,7 +5,7 @@ use error::ParseError::*;
 use unicode::*;
 use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
-  NegatedWhitespaceClass};
+  NegatedWhitespaceClass, ascii};
 
 #[deriving(ToStr)]
 pub enum QuantifierPrefix {
@@ -19,8 +19,8 @@ pub enum Expr {
   Literal(char),
   CharClass(~[Range]),
   CharClassStatic(&'static [Range]),
-  UnicodeCharClass(&'static [(char,char)]),
-  NegatedUnicodeCharClass(&'static [(char,char)]),
+  CharClassTable(&'static [(char,char)]),
+  NegatedCharClassTable(&'static [(char,char)]),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -127,9 +127,9 @@ fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> 
                 }
               };
               if neg {
-                return Ok(NegatedUnicodeCharClass(prop_table))
+                return Ok(NegatedCharClassTable(prop_table))
               } else {
-                return Ok(UnicodeCharClass(prop_table))
+                return Ok(CharClassTable(prop_table))
               }
             }
           }
@@ -153,12 +153,53 @@ fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> 
         }
       };
       if neg {
-        return Ok(NegatedUnicodeCharClass(prop_table))
+        return Ok(NegatedCharClassTable(prop_table))
       } else {
-        return Ok(UnicodeCharClass(prop_table))
+        return Ok(CharClassTable(prop_table))
       }
     }
     None => return Err(ParseIncompleteEscapeSeq)
+  }
+}
+
+/// Parses a named ASCII character class
+///
+/// #Arguments
+///
+/// * p - The current state of parsing
+#[inline]
+fn parse_ascii_charclass(p: &mut State) -> Result<Expr, ParseCode> {
+  let neg = if p.current() == Some('^') {
+    p.next();
+    true
+  } else {
+    false
+  };
+
+  let mut prop_name_buf: ~[char] = ~[];
+  loop {
+    match p.current() {
+      Some(':') if p.peek() == Some(']') => {
+        p.consume(2);
+        return match ascii::get_prop_table(str::from_chars(prop_name_buf)) {
+          Some(t) => {
+            if neg {
+              Ok(NegatedCharClassTable(t))
+            } else {
+              Ok(CharClassTable(t))
+            }
+          }
+          None => Err(ParseInvalidAsciiCharClass)
+        }
+      }
+      Some(c) => {
+        p.next();
+        prop_name_buf.push(c);
+      }
+      None => {
+        return Err(ParseExpectedAsciiCharClassClose)
+      }
+    }
   }
 }
 
@@ -321,6 +362,10 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
     Some(']') => {
       p.next();
       ranges.push((']', ']'));
+    }
+    Some(':') => {
+      p.next();
+      return parse_ascii_charclass(p);
     }
     _ => { }
   }
@@ -790,22 +835,22 @@ mod parse_tests {
 
   // #[test]
   // fn parse_unicode_charclass_single_letter() {
-  //   test_parse!("\\pN", Ok(UnicodeCharClass(~"N")));
+  //   test_parse!("\\pN", Ok(CharClassTable(~"N")));
   // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter() {
-    test_parse!("\\p{Greek}", Ok(UnicodeCharClass(_)));
+    test_parse!("\\p{Greek}", Ok(CharClassTable(_)));
   }
 
   // #[test]
   // fn parse_unicode_charclass_single_letter_negated() {
-  //   test_parse!("\\PL", Ok(NegatedUnicodeCharClass(_)));
+  //   test_parse!("\\PL", Ok(NegatedCharClassTable(_)));
   // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter_negated() {
-    test_parse!("\\P{Latin}", Ok(NegatedUnicodeCharClass(_)));
+    test_parse!("\\P{Latin}", Ok(NegatedCharClassTable(_)));
   }
 
   #[test]
@@ -836,5 +881,20 @@ mod parse_tests {
   #[test]
   fn parse_unicode_charclass_single_nonexistent() {
     test_parse!("\\pA", Err(ParseInvalidUnicodeProperty));
+  }
+
+  #[test]
+  fn parse_ascii_charclass() {
+    test_parse!("[:alpha:]", Ok(CharClassTable(_)));
+  }
+
+  #[test]
+  fn parse_ascii_charclass_nonexistent() {
+    test_parse!("[:alpsd:]", Err(ParseInvalidAsciiCharClass));
+  }
+
+  #[test]
+  fn parse_ascii_charclass_unterminated() {
+    test_parse!("[:alpha", Err(ParseExpectedAsciiCharClassClose));
   }
 }

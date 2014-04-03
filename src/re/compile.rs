@@ -1,7 +1,7 @@
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, Literal, CharClass, CharClassStatic, UnicodeCharClass,
-            NegatedUnicodeCharClass, Alternation, Concatenation, Repetition,
+use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
+            NegatedCharClassTable, Alternation, Concatenation, Repetition,
             Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
             AssertEnd};
 use charclass::Range;
@@ -167,10 +167,10 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     CharClassStatic(ranges) => {
       compile_charclass(ranges, stack);
     }
-    UnicodeCharClass(table) => {
+    CharClassTable(table) => {
       stack.push(InstTableRange(table));
     }
-    NegatedUnicodeCharClass(table) => {
+    NegatedCharClassTable(table) => {
       stack.push(InstNegatedTableRange(table));
     }
     Capture(ref expr, id, ref name) => {

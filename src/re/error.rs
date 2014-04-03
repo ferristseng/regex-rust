@@ -29,11 +29,13 @@ pub mod ParseError {
     ParseExpectedNumeric,
     ParseExpectedAlphaNumeric,
     ParseExpectedOperand,
+    ParseExpectedAsciiCharClassClose,
     ParseUnexpectedClosingParen,
     ParseUnexpectedOperand,
     ParseUnexpectedCharacter,
 
     ParseInvalidUnicodeProperty,
+    ParseInvalidAsciiCharClass,
 
     ParseIncompleteEscapeSeq,
 
@@ -67,10 +69,12 @@ pub mod ParseError {
         ParseExpectedNumeric             => PARSE_ERR + "Expected number",
         ParseExpectedAlphaNumeric        => PARSE_ERR + "Expected alphanumeric character (or underscore)",
         ParseExpectedOperand             => PARSE_ERR + "Expected an operand on the stack",
+        ParseExpectedAsciiCharClassClose => PARSE_ERR + "Expected \":]\"",
         ParseUnexpectedClosingParen      => PARSE_ERR + "Unexpected closing parenthases in input",
         ParseUnexpectedOperand           => PARSE_ERR + "Unexpected operand was on the stack",
         ParseUnexpectedCharacter         => PARSE_ERR + "Unexpected character in input",
         ParseInvalidUnicodeProperty      => PARSE_ERR + "Invalid Unicode property provided",
+        ParseInvalidAsciiCharClass       => PARSE_ERR + "Invalid ASCII character class name provided",
         ParseIncompleteEscapeSeq         => PARSE_ERR + "Expected a character to escape",
         ParseEmptyCharClassRange         => PARSE_ERR + "Empty character class",
         ParseInternalError |
