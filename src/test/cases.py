@@ -4,7 +4,7 @@
 # These are used to generated a file of unit tests
 # in Rust
 #
-# As of writing this, there's no way of using the #[test] 
+# As of writing this, there's no way of using the #[test]
 # attribute in a macro (Rust 0.8), so I'm doing it this way.
 
 MATCH = 1
@@ -116,7 +116,7 @@ TESTS = [
   ("a\\(b", "a(b", "a(b", MATCH),
   ("a\\(*b", "ab", "ab", MATCH),
   ("a\\(*b", "a((b", "a((b", MATCH),
-  ("a\\\\b", "a\\b", "a\\b", MATCH),
+  ("a\\\\b", "a\\\\b", "a\\\\b", MATCH),
   ("((a))", "abc", "a", MATCH, ["a", "a"]),
   ("(a)b(c)", "abc", "abc", MATCH, ["a", "c"]),
   ("a+b+c", "aabbabc", "abc", MATCH),
@@ -182,8 +182,17 @@ TESTS = [
   ("[(a-d)]", "c", "c", MATCH),
   ("[(a-d)]", "(", "(", MATCH),
 
+  # Unicode character class tests
+  ("\\p{Nd}", '\u06f0', '\u06f0', MATCH),
+  ("\\p{Nd}", "\U000104af", "", NOMATCH),
+  ("\\P{Nd}", "\U000104af", "\U000104af", MATCH),
+  ("\\P{Nd}", "\u06f0", "", NOMATCH),
+  ("\\p{Greek}", "\U00010181", "\U00010181", MATCH),
+  ("\\p{Greek}", "\u0374", "", NOMATCH),
+  ("\\P{Greek}", "\U00010181", "", NOMATCH),
+  ("\\P{Greek}", "\u0374", "\u0374", MATCH),
+
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
   ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.
 ]
-

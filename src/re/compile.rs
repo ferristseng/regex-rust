@@ -1,14 +1,17 @@
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, Literal, CharClass, CharClassStatic, Alternation,
-            Concatenation, Repetition, Capture, AssertWordBoundary,
-            AssertNonWordBoundary, AssertStart, AssertEnd};
+use parse::{Empty, Literal, CharClass, CharClassStatic, UnicodeCharClass,
+            NegatedUnicodeCharClass, Alternation, Concatenation, Repetition,
+            Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
+            AssertEnd};
 use charclass::Range;
 
 #[deriving(Clone)]
 pub enum Instruction {
   InstLiteral(char),
   InstRange(char, char),
+  InstTableRange(&'static [(char,char)]),
+  InstNegatedTableRange(&'static [(char,char)]),
   InstMatch,
   InstJump(uint),
   InstCaptureStart(uint, Option<~str>),
@@ -25,9 +28,11 @@ pub enum Instruction {
 impl ToStr for Instruction {
   fn to_str(&self) -> ~str {
     match *self {
-      InstLiteral(c)            => format!("InstLiteral {:c}", c), 
+      InstLiteral(c)            => format!("InstLiteral {:c}", c),
       InstRange(s, e)           => format!("InstRange {:c}-{:c}", s, e),
-      InstMatch                 => ~"InstMatch", 
+      InstTableRange(t)         => format!("InstTableRange"),
+      InstNegatedTableRange(t)  => format!("InstNegatedTableRange"),
+      InstMatch                 => ~"InstMatch",
       InstJump(i)               => format!("InstJump {:u}", i),
       InstCaptureStart(id, _)   => format!("InstCaptureStart {:u}", id),
       InstCaptureEnd(id)        => format!("InstCaptureEnd {:u}", id),
@@ -36,7 +41,7 @@ impl ToStr for Instruction {
       InstAssertEnd             => ~"InstLineEnd",
       InstWordBoundary          => ~"InstWordBoundary",
       InstNonWordBoundary       => ~"InstNonWordBoundary",
-	  InstProgress              => ~"InstProgress",
+      InstProgress              => ~"InstProgress",
       InstNoop                  => ~"InstNoop"
     }
   }
@@ -71,7 +76,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
 ///
 /// # Arguments
 ///
-/// *  left - The preferred branch to take for nongreedy. If this branch matches first, 
+/// *  left - The preferred branch to take for nongreedy. If this branch matches first,
 ///           the right hand side will not execute if nongreedy.
 /// *  right - The preferred branch to take for greedy.
 /// *  nongreedy - Specifies which branch to prefer (left or right).
@@ -84,10 +89,10 @@ fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instructio
   }
 }
 
-/// Calls _compile_recursive, then pushes a `InstMatch` onto the 
+/// Calls _compile_recursive, then pushes a `InstMatch` onto the
 /// end of the Instruction stack
 ///
-/// Returns the compiled stack of Instructions 
+/// Returns the compiled stack of Instructions
 ///
 /// # Arguments
 ///
@@ -98,7 +103,7 @@ pub fn compile_recursive(re: &Expr) -> ~[Instruction] {
   stack.push(InstMatch);
 
   //debug_stack(stack.clone());
-  
+
   stack
 }
 
@@ -144,8 +149,8 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
       let split = InstSplit(ptr_split + 1, ptr_jmp + 1);
       let jmp = InstJump(stack.len());
 
-      stack[ptr_split] = split; 
-      stack[ptr_jmp] = jmp; 
+      stack[ptr_split] = split;
+      stack[ptr_jmp] = jmp;
     }
     Concatenation(ref lft, ref rgt) => {
       // Compile to:
@@ -156,11 +161,17 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
       ncap += _compile_recursive(*lft, stack);
       ncap += _compile_recursive(*rgt, stack);
     }
-    CharClass(ref ranges) => { 
+    CharClass(ref ranges) => {
       compile_charclass(*ranges, stack);
     }
     CharClassStatic(ranges) => {
       compile_charclass(ranges, stack);
+    }
+    UnicodeCharClass(table) => {
+      stack.push(InstTableRange(table));
+    }
+    NegatedUnicodeCharClass(table) => {
+      stack.push(InstNegatedTableRange(table));
     }
     Capture(ref expr, id, ref name) => {
       ncap += 1;
@@ -199,9 +210,9 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
           placeholder!();
           ncap += _compile_recursive(*expr, stack);
 
-          // Check for progress before looping back 
+          // Check for progress before looping back
           stack.push(InstProgress);
-          
+
           let jmp = InstJump(ptr_split);
           stack.push(jmp);
 

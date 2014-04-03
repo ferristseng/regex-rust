@@ -14,7 +14,7 @@
 #[allow(non_uppercase_statics)];
 
 
-fn bsearch_range_table(c: char, r: &'static [(char,char)]) -> bool {
+pub fn bsearch_range_table(c: char, r: &'static [(char,char)]) -> bool {
     use std::cmp::{Equal, Less, Greater};
     use std::vec::ImmutableVector; // Should be changed to std::slice::ImmutableVector for 0.10
     use std::option::None;
@@ -27,15 +27,45 @@ fn bsearch_range_table(c: char, r: &'static [(char,char)]) -> bool {
 
 
 pub mod general_category {
-    static Cc_table : &'static [(char,char)] = &[
+    pub fn get_prop_table(prop: &str) -> Option<&'static [(char,char)]> {
+        match prop {
+            &"Cc" => Some(Cc_table),
+            &"Cf" => Some(Cf_table),
+            &"Co" => Some(Co_table),
+            &"Ll" => Some(Ll_table),
+            &"Lm" => Some(Lm_table),
+            &"Lo" => Some(Lo_table),
+            &"Lt" => Some(Lt_table),
+            &"Lu" => Some(Lu_table),
+            &"Mc" => Some(Mc_table),
+            &"Me" => Some(Me_table),
+            &"Mn" => Some(Mn_table),
+            &"Nd" => Some(Nd_table),
+            &"Nl" => Some(Nl_table),
+            &"No" => Some(No_table),
+            &"Pc" => Some(Pc_table),
+            &"Pd" => Some(Pd_table),
+            &"Pe" => Some(Pe_table),
+            &"Pf" => Some(Pf_table),
+            &"Pi" => Some(Pi_table),
+            &"Po" => Some(Po_table),
+            &"Ps" => Some(Ps_table),
+            &"Sc" => Some(Sc_table),
+            &"Sk" => Some(Sk_table),
+            &"Sm" => Some(Sm_table),
+            &"So" => Some(So_table),
+            &"Zl" => Some(Zl_table),
+            &"Zp" => Some(Zp_table),
+            &"Zs" => Some(Zs_table),
+            _ => None
+        }
+    }
+
+    pub static Cc_table : &'static [(char,char)] = &[
         ('\x00', '\x1f'), ('\x7f', '\x9f')
     ];
 
-    pub fn Cc(c: char) -> bool {
-        super::bsearch_range_table(c, Cc_table)
-    }
-
-    static Cf_table : &'static [(char,char)] = &[
+    pub static Cf_table : &'static [(char,char)] = &[
         ('\xad', '\xad'), ('\u0600', '\u0604'),
         ('\u061c', '\u061c'), ('\u06dd', '\u06dd'),
         ('\u070f', '\u070f'), ('\u180e', '\u180e'),
@@ -45,19 +75,11 @@ pub mod general_category {
         ('\U0001d173', '\U0001d17a'), ('\U000e0001', '\U000e007f')
     ];
 
-    pub fn Cf(c: char) -> bool {
-        super::bsearch_range_table(c, Cf_table)
-    }
-
-    static Co_table : &'static [(char,char)] = &[
+    pub static Co_table : &'static [(char,char)] = &[
         ('\ue000', '\uf8ff')
     ];
 
-    pub fn Co(c: char) -> bool {
-        super::bsearch_range_table(c, Co_table)
-    }
-
-    static Ll_table : &'static [(char,char)] = &[
+    pub static Ll_table : &'static [(char,char)] = &[
         ('\x61', '\x7a'), ('\xb5', '\xb5'),
         ('\xdf', '\xf6'), ('\xf8', '\xff'),
         ('\u0101', '\u0101'), ('\u0103', '\u0103'),
@@ -360,11 +382,7 @@ pub mod general_category {
         ('\U0001d7cb', '\U0001d7cb')
     ];
 
-    pub fn Ll(c: char) -> bool {
-        super::bsearch_range_table(c, Ll_table)
-    }
-
-    static Lm_table : &'static [(char,char)] = &[
+    pub static Lm_table : &'static [(char,char)] = &[
         ('\u02b0', '\u02c1'), ('\u02c6', '\u02d1'),
         ('\u02e0', '\u02e4'), ('\u02ec', '\u02ec'),
         ('\u02ee', '\u02ee'), ('\u0374', '\u0374'),
@@ -393,11 +411,7 @@ pub mod general_category {
         ('\uff9e', '\uff9f'), ('\U00016f93', '\U00016f9f')
     ];
 
-    pub fn Lm(c: char) -> bool {
-        super::bsearch_range_table(c, Lm_table)
-    }
-
-    static Lo_table : &'static [(char,char)] = &[
+    pub static Lo_table : &'static [(char,char)] = &[
         ('\xaa', '\xaa'), ('\xba', '\xba'),
         ('\u01bb', '\u01bb'), ('\u01c0', '\u01c3'),
         ('\u0294', '\u0294'), ('\u05d0', '\u05f2'),
@@ -496,11 +510,7 @@ pub mod general_category {
         ('\U0001ee00', '\U0001eebb'), ('\U00020000', '\U0002fa1d')
     ];
 
-    pub fn Lo(c: char) -> bool {
-        super::bsearch_range_table(c, Lo_table)
-    }
-
-    static Lt_table : &'static [(char,char)] = &[
+    pub static Lt_table : &'static [(char,char)] = &[
         ('\u01c5', '\u01c5'), ('\u01c8', '\u01c8'),
         ('\u01cb', '\u01cb'), ('\u01f2', '\u01f2'),
         ('\u1f88', '\u1f8f'), ('\u1f98', '\u1f9f'),
@@ -508,11 +518,7 @@ pub mod general_category {
         ('\u1fcc', '\u1fcc'), ('\u1ffc', '\u1ffc')
     ];
 
-    pub fn Lt(c: char) -> bool {
-        super::bsearch_range_table(c, Lt_table)
-    }
-
-    static Lu_table : &'static [(char,char)] = &[
+    pub static Lu_table : &'static [(char,char)] = &[
         ('\x41', '\x5a'), ('\xc0', '\xd6'),
         ('\xd8', '\xde'), ('\u0100', '\u0100'),
         ('\u0102', '\u0102'), ('\u0104', '\u0104'),
@@ -809,11 +815,7 @@ pub mod general_category {
         ('\U0001d790', '\U0001d7a8'), ('\U0001d7ca', '\U0001d7ca')
     ];
 
-    pub fn Lu(c: char) -> bool {
-        super::bsearch_range_table(c, Lu_table)
-    }
-
-    static Mc_table : &'static [(char,char)] = &[
+    pub static Mc_table : &'static [(char,char)] = &[
         ('\u0903', '\u0903'), ('\u093b', '\u093b'),
         ('\u093e', '\u0940'), ('\u0949', '\u094c'),
         ('\u094e', '\u094f'), ('\u0982', '\u0983'),
@@ -875,20 +877,12 @@ pub mod general_category {
         ('\U0001d16d', '\U0001d172')
     ];
 
-    pub fn Mc(c: char) -> bool {
-        super::bsearch_range_table(c, Mc_table)
-    }
-
-    static Me_table : &'static [(char,char)] = &[
+    pub static Me_table : &'static [(char,char)] = &[
         ('\u0488', '\u0489'), ('\u20dd', '\u20e0'),
         ('\u20e2', '\u20e4'), ('\ua670', '\ua672')
     ];
 
-    pub fn Me(c: char) -> bool {
-        super::bsearch_range_table(c, Me_table)
-    }
-
-    static Mn_table : &'static [(char,char)] = &[
+    pub static Mn_table : &'static [(char,char)] = &[
         ('\u0300', '\u036f'), ('\u0483', '\u0487'),
         ('\u0591', '\u05bd'), ('\u05bf', '\u05bf'),
         ('\u05c1', '\u05c2'), ('\u05c4', '\u05c5'),
@@ -993,11 +987,7 @@ pub mod general_category {
         ('\U000e0100', '\U000e01ef')
     ];
 
-    pub fn Mn(c: char) -> bool {
-        super::bsearch_range_table(c, Mn_table)
-    }
-
-    static Nd_table : &'static [(char,char)] = &[
+    pub static Nd_table : &'static [(char,char)] = &[
         ('\x30', '\x39'), ('\u0660', '\u0669'),
         ('\u06f0', '\u06f9'), ('\u07c0', '\u07c9'),
         ('\u0966', '\u096f'), ('\u09e6', '\u09ef'),
@@ -1021,11 +1011,7 @@ pub mod general_category {
         ('\U0001d7ce', '\U0001d7ff')
     ];
 
-    pub fn Nd(c: char) -> bool {
-        super::bsearch_range_table(c, Nd_table)
-    }
-
-    static Nl_table : &'static [(char,char)] = &[
+    pub static Nl_table : &'static [(char,char)] = &[
         ('\u16ee', '\u16f0'), ('\u2160', '\u2182'),
         ('\u2185', '\u2188'), ('\u3007', '\u3007'),
         ('\u3021', '\u3029'), ('\u3038', '\u303a'),
@@ -1034,11 +1020,7 @@ pub mod general_category {
         ('\U000103d1', '\U000103d5'), ('\U00012400', '\U00012462')
     ];
 
-    pub fn Nl(c: char) -> bool {
-        super::bsearch_range_table(c, Nl_table)
-    }
-
-    static No_table : &'static [(char,char)] = &[
+    pub static No_table : &'static [(char,char)] = &[
         ('\xb2', '\xb3'), ('\xb9', '\xb9'),
         ('\xbc', '\xbe'), ('\u09f4', '\u09f9'),
         ('\u0b72', '\u0b77'), ('\u0bf0', '\u0bf2'),
@@ -1062,21 +1044,13 @@ pub mod general_category {
         ('\U0001d360', '\U0001d371'), ('\U0001f100', '\U0001f10a')
     ];
 
-    pub fn No(c: char) -> bool {
-        super::bsearch_range_table(c, No_table)
-    }
-
-    static Pc_table : &'static [(char,char)] = &[
+    pub static Pc_table : &'static [(char,char)] = &[
         ('\x5f', '\x5f'), ('\u203f', '\u2040'),
         ('\u2054', '\u2054'), ('\ufe33', '\ufe34'),
         ('\ufe4d', '\ufe4f'), ('\uff3f', '\uff3f')
     ];
 
-    pub fn Pc(c: char) -> bool {
-        super::bsearch_range_table(c, Pc_table)
-    }
-
-    static Pd_table : &'static [(char,char)] = &[
+    pub static Pd_table : &'static [(char,char)] = &[
         ('\x2d', '\x2d'), ('\u058a', '\u058a'),
         ('\u05be', '\u05be'), ('\u1400', '\u1400'),
         ('\u1806', '\u1806'), ('\u2010', '\u2015'),
@@ -1087,11 +1061,7 @@ pub mod general_category {
         ('\ufe63', '\ufe63'), ('\uff0d', '\uff0d')
     ];
 
-    pub fn Pd(c: char) -> bool {
-        super::bsearch_range_table(c, Pd_table)
-    }
-
-    static Pe_table : &'static [(char,char)] = &[
+    pub static Pe_table : &'static [(char,char)] = &[
         ('\x29', '\x29'), ('\x5d', '\x5d'),
         ('\x7d', '\x7d'), ('\u0f3b', '\u0f3b'),
         ('\u0f3d', '\u0f3d'), ('\u169c', '\u169c'),
@@ -1130,11 +1100,7 @@ pub mod general_category {
         ('\uff60', '\uff60'), ('\uff63', '\uff63')
     ];
 
-    pub fn Pe(c: char) -> bool {
-        super::bsearch_range_table(c, Pe_table)
-    }
-
-    static Pf_table : &'static [(char,char)] = &[
+    pub static Pf_table : &'static [(char,char)] = &[
         ('\xbb', '\xbb'), ('\u2019', '\u2019'),
         ('\u201d', '\u201d'), ('\u203a', '\u203a'),
         ('\u2e03', '\u2e03'), ('\u2e05', '\u2e05'),
@@ -1142,11 +1108,7 @@ pub mod general_category {
         ('\u2e1d', '\u2e1d'), ('\u2e21', '\u2e21')
     ];
 
-    pub fn Pf(c: char) -> bool {
-        super::bsearch_range_table(c, Pf_table)
-    }
-
-    static Pi_table : &'static [(char,char)] = &[
+    pub static Pi_table : &'static [(char,char)] = &[
         ('\xab', '\xab'), ('\u2018', '\u2018'),
         ('\u201b', '\u201c'), ('\u201f', '\u201f'),
         ('\u2039', '\u2039'), ('\u2e02', '\u2e02'),
@@ -1155,11 +1117,7 @@ pub mod general_category {
         ('\u2e20', '\u2e20')
     ];
 
-    pub fn Pi(c: char) -> bool {
-        super::bsearch_range_table(c, Pi_table)
-    }
-
-    static Po_table : &'static [(char,char)] = &[
+    pub static Po_table : &'static [(char,char)] = &[
         ('\x21', '\x23'), ('\x25', '\x27'),
         ('\x2a', '\x2a'), ('\x2c', '\x2c'),
         ('\x2e', '\x2f'), ('\x3a', '\x3b'),
@@ -1229,11 +1187,7 @@ pub mod general_category {
         ('\U00012470', '\U00012473')
     ];
 
-    pub fn Po(c: char) -> bool {
-        super::bsearch_range_table(c, Po_table)
-    }
-
-    static Ps_table : &'static [(char,char)] = &[
+    pub static Ps_table : &'static [(char,char)] = &[
         ('\x28', '\x28'), ('\x5b', '\x5b'),
         ('\x7b', '\x7b'), ('\u0f3a', '\u0f3a'),
         ('\u0f3c', '\u0f3c'), ('\u169b', '\u169b'),
@@ -1273,11 +1227,7 @@ pub mod general_category {
         ('\uff5f', '\uff5f'), ('\uff62', '\uff62')
     ];
 
-    pub fn Ps(c: char) -> bool {
-        super::bsearch_range_table(c, Ps_table)
-    }
-
-    static Sc_table : &'static [(char,char)] = &[
+    pub static Sc_table : &'static [(char,char)] = &[
         ('\x24', '\x24'), ('\xa2', '\xa5'),
         ('\u058f', '\u058f'), ('\u060b', '\u060b'),
         ('\u09f2', '\u09f3'), ('\u09fb', '\u09fb'),
@@ -1289,11 +1239,7 @@ pub mod general_category {
         ('\uffe5', '\uffe6')
     ];
 
-    pub fn Sc(c: char) -> bool {
-        super::bsearch_range_table(c, Sc_table)
-    }
-
-    static Sk_table : &'static [(char,char)] = &[
+    pub static Sk_table : &'static [(char,char)] = &[
         ('\x5e', '\x5e'), ('\x60', '\x60'),
         ('\xa8', '\xa8'), ('\xaf', '\xaf'),
         ('\xb4', '\xb4'), ('\xb8', '\xb8'),
@@ -1310,11 +1256,7 @@ pub mod general_category {
         ('\uffe3', '\uffe3')
     ];
 
-    pub fn Sk(c: char) -> bool {
-        super::bsearch_range_table(c, Sk_table)
-    }
-
-    static Sm_table : &'static [(char,char)] = &[
+    pub static Sm_table : &'static [(char,char)] = &[
         ('\x2b', '\x2b'), ('\x3c', '\x3e'),
         ('\x7c', '\x7c'), ('\x7e', '\x7e'),
         ('\xac', '\xac'), ('\xb1', '\xb1'),
@@ -1349,11 +1291,7 @@ pub mod general_category {
         ('\U0001d7c3', '\U0001d7c3'), ('\U0001eef0', '\U0001eef1')
     ];
 
-    pub fn Sm(c: char) -> bool {
-        super::bsearch_range_table(c, Sm_table)
-    }
-
-    static So_table : &'static [(char,char)] = &[
+    pub static So_table : &'static [(char,char)] = &[
         ('\xa6', '\xa6'), ('\xa9', '\xa9'),
         ('\xae', '\xae'), ('\xb0', '\xb0'),
         ('\u0482', '\u0482'), ('\u060e', '\u060f'),
@@ -1412,40 +1350,107 @@ pub mod general_category {
         ('\U0001f110', '\U0001f773')
     ];
 
-    pub fn So(c: char) -> bool {
-        super::bsearch_range_table(c, So_table)
-    }
-
-    static Zl_table : &'static [(char,char)] = &[
+    pub static Zl_table : &'static [(char,char)] = &[
         ('\u2028', '\u2028')
     ];
 
-    pub fn Zl(c: char) -> bool {
-        super::bsearch_range_table(c, Zl_table)
-    }
-
-    static Zp_table : &'static [(char,char)] = &[
+    pub static Zp_table : &'static [(char,char)] = &[
         ('\u2029', '\u2029')
     ];
 
-    pub fn Zp(c: char) -> bool {
-        super::bsearch_range_table(c, Zp_table)
-    }
-
-    static Zs_table : &'static [(char,char)] = &[
+    pub static Zs_table : &'static [(char,char)] = &[
         ('\x20', '\x20'), ('\xa0', '\xa0'),
         ('\u1680', '\u1680'), ('\u2000', '\u200a'),
         ('\u202f', '\u202f'), ('\u205f', '\u205f'),
         ('\u3000', '\u3000')
     ];
 
-    pub fn Zs(c: char) -> bool {
-        super::bsearch_range_table(c, Zs_table)
-    }
-
 }
 pub mod script {
-    static Arabic_table : &'static [(char,char)] = &[
+    pub fn get_prop_table(prop: &str) -> Option<&'static [(char,char)]> {
+        match prop {
+            &"Arabic" => Some(Arabic_table),
+            &"Armenian" => Some(Armenian_table),
+            &"Balinese" => Some(Balinese_table),
+            &"Bengali" => Some(Bengali_table),
+            &"Bopomofo" => Some(Bopomofo_table),
+            &"Braille" => Some(Braille_table),
+            &"Buginese" => Some(Buginese_table),
+            &"Buhid" => Some(Buhid_table),
+            &"Canadian_Aboriginal" => Some(Canadian_Aboriginal_table),
+            &"Carian" => Some(Carian_table),
+            &"Cham" => Some(Cham_table),
+            &"Cherokee" => Some(Cherokee_table),
+            &"Common" => Some(Common_table),
+            &"Coptic" => Some(Coptic_table),
+            &"Cuneiform" => Some(Cuneiform_table),
+            &"Cypriot" => Some(Cypriot_table),
+            &"Cyrillic" => Some(Cyrillic_table),
+            &"Deseret" => Some(Deseret_table),
+            &"Devanagari" => Some(Devanagari_table),
+            &"Ethiopic" => Some(Ethiopic_table),
+            &"Georgian" => Some(Georgian_table),
+            &"Glagolitic" => Some(Glagolitic_table),
+            &"Gothic" => Some(Gothic_table),
+            &"Greek" => Some(Greek_table),
+            &"Gujarati" => Some(Gujarati_table),
+            &"Gurmukhi" => Some(Gurmukhi_table),
+            &"Han" => Some(Han_table),
+            &"Hangul" => Some(Hangul_table),
+            &"Hanunoo" => Some(Hanunoo_table),
+            &"Hebrew" => Some(Hebrew_table),
+            &"Hiragana" => Some(Hiragana_table),
+            &"Inherited" => Some(Inherited_table),
+            &"Kannada" => Some(Kannada_table),
+            &"Katakana" => Some(Katakana_table),
+            &"Kayah_Li" => Some(Kayah_Li_table),
+            &"Kharoshthi" => Some(Kharoshthi_table),
+            &"Khmer" => Some(Khmer_table),
+            &"Lao" => Some(Lao_table),
+            &"Latin" => Some(Latin_table),
+            &"Lepcha" => Some(Lepcha_table),
+            &"Limbu" => Some(Limbu_table),
+            &"Linear_B" => Some(Linear_B_table),
+            &"Lycian" => Some(Lycian_table),
+            &"Lydian" => Some(Lydian_table),
+            &"Malayalam" => Some(Malayalam_table),
+            &"Mongolian" => Some(Mongolian_table),
+            &"Myanmar" => Some(Myanmar_table),
+            &"New_Tai_Lue" => Some(New_Tai_Lue_table),
+            &"Nko" => Some(Nko_table),
+            &"Ogham" => Some(Ogham_table),
+            &"Ol_Chiki" => Some(Ol_Chiki_table),
+            &"Old_Italic" => Some(Old_Italic_table),
+            &"Old_Persian" => Some(Old_Persian_table),
+            &"Oriya" => Some(Oriya_table),
+            &"Osmanya" => Some(Osmanya_table),
+            &"Phags_Pa" => Some(Phags_Pa_table),
+            &"Phoenician" => Some(Phoenician_table),
+            &"Rejang" => Some(Rejang_table),
+            &"Runic" => Some(Runic_table),
+            &"Saurashtra" => Some(Saurashtra_table),
+            &"Shavian" => Some(Shavian_table),
+            &"Sinhala" => Some(Sinhala_table),
+            &"Sundanese" => Some(Sundanese_table),
+            &"Syloti_Nagri" => Some(Syloti_Nagri_table),
+            &"Syriac" => Some(Syriac_table),
+            &"Tagalog" => Some(Tagalog_table),
+            &"Tagbanwa" => Some(Tagbanwa_table),
+            &"Tai_Le" => Some(Tai_Le_table),
+            &"Tamil" => Some(Tamil_table),
+            &"Telugu" => Some(Telugu_table),
+            &"Thaana" => Some(Thaana_table),
+            &"Thai" => Some(Thai_table),
+            &"Tibetan" => Some(Tibetan_table),
+            &"Tifinagh" => Some(Tifinagh_table),
+            &"Ugaritic" => Some(Ugaritic_table),
+            &"Vai" => Some(Vai_table),
+            &"Yi" => Some(Yi_table),
+            _ => None
+        }
+    }
+
+    pub static Arabic_table : &'static [(char,char)] = &[
         ('\u0600', '\u0604'), ('\u0606', '\u0608'),
         ('\u0609', '\u060a'), ('\u060b', '\u060b'),
         ('\u060d', '\u060d'), ('\u060e', '\u060f'),
@@ -1487,22 +1492,14 @@ pub mod script {
         ('\U0001eef0', '\U0001eef1')
     ];
 
-    pub fn Arabic(c: char) -> bool {
-        super::bsearch_range_table(c, Arabic_table)
-    }
-
-    static Armenian_table : &'static [(char,char)] = &[
+    pub static Armenian_table : &'static [(char,char)] = &[
         ('\u0531', '\u0556'), ('\u0559', '\u0559'),
         ('\u055a', '\u055f'), ('\u0561', '\u0587'),
         ('\u058a', '\u058a'), ('\u058f', '\u058f'),
         ('\ufb13', '\ufb17')
     ];
 
-    pub fn Armenian(c: char) -> bool {
-        super::bsearch_range_table(c, Armenian_table)
-    }
-
-    static Balinese_table : &'static [(char,char)] = &[
+    pub static Balinese_table : &'static [(char,char)] = &[
         ('\u1b00', '\u1b03'), ('\u1b04', '\u1b04'),
         ('\u1b05', '\u1b33'), ('\u1b34', '\u1b34'),
         ('\u1b35', '\u1b35'), ('\u1b36', '\u1b3a'),
@@ -1514,11 +1511,7 @@ pub mod script {
         ('\u1b74', '\u1b7c')
     ];
 
-    pub fn Balinese(c: char) -> bool {
-        super::bsearch_range_table(c, Balinese_table)
-    }
-
-    static Bengali_table : &'static [(char,char)] = &[
+    pub static Bengali_table : &'static [(char,char)] = &[
         ('\u0981', '\u0981'), ('\u0982', '\u0983'),
         ('\u0985', '\u098c'), ('\u098f', '\u0990'),
         ('\u0993', '\u09a8'), ('\u09aa', '\u09b0'),
@@ -1534,64 +1527,36 @@ pub mod script {
         ('\u09fa', '\u09fa'), ('\u09fb', '\u09fb')
     ];
 
-    pub fn Bengali(c: char) -> bool {
-        super::bsearch_range_table(c, Bengali_table)
-    }
-
-    static Bopomofo_table : &'static [(char,char)] = &[
+    pub static Bopomofo_table : &'static [(char,char)] = &[
         ('\u02ea', '\u02eb'), ('\u3105', '\u312d'),
         ('\u31a0', '\u31ba')
     ];
 
-    pub fn Bopomofo(c: char) -> bool {
-        super::bsearch_range_table(c, Bopomofo_table)
-    }
-
-    static Braille_table : &'static [(char,char)] = &[
+    pub static Braille_table : &'static [(char,char)] = &[
         ('\u2800', '\u28ff')
     ];
 
-    pub fn Braille(c: char) -> bool {
-        super::bsearch_range_table(c, Braille_table)
-    }
-
-    static Buginese_table : &'static [(char,char)] = &[
+    pub static Buginese_table : &'static [(char,char)] = &[
         ('\u1a00', '\u1a16'), ('\u1a17', '\u1a18'),
         ('\u1a19', '\u1a1a'), ('\u1a1b', '\u1a1b'),
         ('\u1a1e', '\u1a1f')
     ];
 
-    pub fn Buginese(c: char) -> bool {
-        super::bsearch_range_table(c, Buginese_table)
-    }
-
-    static Buhid_table : &'static [(char,char)] = &[
+    pub static Buhid_table : &'static [(char,char)] = &[
         ('\u1740', '\u1751'), ('\u1752', '\u1753')
     ];
 
-    pub fn Buhid(c: char) -> bool {
-        super::bsearch_range_table(c, Buhid_table)
-    }
-
-    static Canadian_Aboriginal_table : &'static [(char,char)] = &[
+    pub static Canadian_Aboriginal_table : &'static [(char,char)] = &[
         ('\u1400', '\u1400'), ('\u1401', '\u166c'),
         ('\u166d', '\u166e'), ('\u166f', '\u167f'),
         ('\u18b0', '\u18f5')
     ];
 
-    pub fn Canadian_Aboriginal(c: char) -> bool {
-        super::bsearch_range_table(c, Canadian_Aboriginal_table)
-    }
-
-    static Carian_table : &'static [(char,char)] = &[
+    pub static Carian_table : &'static [(char,char)] = &[
         ('\U000102a0', '\U000102d0')
     ];
 
-    pub fn Carian(c: char) -> bool {
-        super::bsearch_range_table(c, Carian_table)
-    }
-
-    static Cham_table : &'static [(char,char)] = &[
+    pub static Cham_table : &'static [(char,char)] = &[
         ('\uaa00', '\uaa28'), ('\uaa29', '\uaa2e'),
         ('\uaa2f', '\uaa30'), ('\uaa31', '\uaa32'),
         ('\uaa33', '\uaa34'), ('\uaa35', '\uaa36'),
@@ -1601,19 +1566,11 @@ pub mod script {
         ('\uaa5c', '\uaa5f')
     ];
 
-    pub fn Cham(c: char) -> bool {
-        super::bsearch_range_table(c, Cham_table)
-    }
-
-    static Cherokee_table : &'static [(char,char)] = &[
+    pub static Cherokee_table : &'static [(char,char)] = &[
         ('\u13a0', '\u13f4')
     ];
 
-    pub fn Cherokee(c: char) -> bool {
-        super::bsearch_range_table(c, Cherokee_table)
-    }
-
-    static Common_table : &'static [(char,char)] = &[
+    pub static Common_table : &'static [(char,char)] = &[
         ('\x00', '\x1f'), ('\x20', '\x20'),
         ('\x21', '\x23'), ('\x24', '\x24'),
         ('\x25', '\x27'), ('\x28', '\x28'),
@@ -1897,11 +1854,7 @@ pub mod script {
         ('\U000e0001', '\U000e0001'), ('\U000e0020', '\U000e007f')
     ];
 
-    pub fn Common(c: char) -> bool {
-        super::bsearch_range_table(c, Common_table)
-    }
-
-    static Coptic_table : &'static [(char,char)] = &[
+    pub static Coptic_table : &'static [(char,char)] = &[
         ('\u03e2', '\u03ef'), ('\u2c80', '\u2ce4'),
         ('\u2ce5', '\u2cea'), ('\u2ceb', '\u2cee'),
         ('\u2cef', '\u2cf1'), ('\u2cf2', '\u2cf3'),
@@ -1909,30 +1862,18 @@ pub mod script {
         ('\u2cfe', '\u2cff')
     ];
 
-    pub fn Coptic(c: char) -> bool {
-        super::bsearch_range_table(c, Coptic_table)
-    }
-
-    static Cuneiform_table : &'static [(char,char)] = &[
+    pub static Cuneiform_table : &'static [(char,char)] = &[
         ('\U00012000', '\U0001236e'), ('\U00012400', '\U00012462'),
         ('\U00012470', '\U00012473')
     ];
 
-    pub fn Cuneiform(c: char) -> bool {
-        super::bsearch_range_table(c, Cuneiform_table)
-    }
-
-    static Cypriot_table : &'static [(char,char)] = &[
+    pub static Cypriot_table : &'static [(char,char)] = &[
         ('\U00010800', '\U00010805'), ('\U00010808', '\U00010808'),
         ('\U0001080a', '\U00010835'), ('\U00010837', '\U00010838'),
         ('\U0001083c', '\U0001083c'), ('\U0001083f', '\U0001083f')
     ];
 
-    pub fn Cypriot(c: char) -> bool {
-        super::bsearch_range_table(c, Cypriot_table)
-    }
-
-    static Cyrillic_table : &'static [(char,char)] = &[
+    pub static Cyrillic_table : &'static [(char,char)] = &[
         ('\u0400', '\u0481'), ('\u0482', '\u0482'),
         ('\u0483', '\u0484'), ('\u0487', '\u0487'),
         ('\u0488', '\u0489'), ('\u048a', '\u0527'),
@@ -1945,19 +1886,11 @@ pub mod script {
         ('\ua69f', '\ua69f')
     ];
 
-    pub fn Cyrillic(c: char) -> bool {
-        super::bsearch_range_table(c, Cyrillic_table)
-    }
-
-    static Deseret_table : &'static [(char,char)] = &[
+    pub static Deseret_table : &'static [(char,char)] = &[
         ('\U00010400', '\U0001044f')
     ];
 
-    pub fn Deseret(c: char) -> bool {
-        super::bsearch_range_table(c, Deseret_table)
-    }
-
-    static Devanagari_table : &'static [(char,char)] = &[
+    pub static Devanagari_table : &'static [(char,char)] = &[
         ('\u0900', '\u0902'), ('\u0903', '\u0903'),
         ('\u0904', '\u0939'), ('\u093a', '\u093a'),
         ('\u093b', '\u093b'), ('\u093c', '\u093c'),
@@ -1973,11 +1906,7 @@ pub mod script {
         ('\ua8fb', '\ua8fb')
     ];
 
-    pub fn Devanagari(c: char) -> bool {
-        super::bsearch_range_table(c, Devanagari_table)
-    }
-
-    static Ethiopic_table : &'static [(char,char)] = &[
+    pub static Ethiopic_table : &'static [(char,char)] = &[
         ('\u1200', '\u1248'), ('\u124a', '\u124d'),
         ('\u1250', '\u1256'), ('\u1258', '\u1258'),
         ('\u125a', '\u125d'), ('\u1260', '\u1288'),
@@ -1998,11 +1927,7 @@ pub mod script {
         ('\uab28', '\uab2e')
     ];
 
-    pub fn Ethiopic(c: char) -> bool {
-        super::bsearch_range_table(c, Ethiopic_table)
-    }
-
-    static Georgian_table : &'static [(char,char)] = &[
+    pub static Georgian_table : &'static [(char,char)] = &[
         ('\u10a0', '\u10c5'), ('\u10c7', '\u10c7'),
         ('\u10cd', '\u10cd'), ('\u10d0', '\u10fa'),
         ('\u10fc', '\u10fc'), ('\u10fd', '\u10ff'),
@@ -2010,28 +1935,16 @@ pub mod script {
         ('\u2d2d', '\u2d2d')
     ];
 
-    pub fn Georgian(c: char) -> bool {
-        super::bsearch_range_table(c, Georgian_table)
-    }
-
-    static Glagolitic_table : &'static [(char,char)] = &[
+    pub static Glagolitic_table : &'static [(char,char)] = &[
         ('\u2c00', '\u2c2e'), ('\u2c30', '\u2c5e')
     ];
 
-    pub fn Glagolitic(c: char) -> bool {
-        super::bsearch_range_table(c, Glagolitic_table)
-    }
-
-    static Gothic_table : &'static [(char,char)] = &[
+    pub static Gothic_table : &'static [(char,char)] = &[
         ('\U00010330', '\U00010340'), ('\U00010341', '\U00010341'),
         ('\U00010342', '\U00010349'), ('\U0001034a', '\U0001034a')
     ];
 
-    pub fn Gothic(c: char) -> bool {
-        super::bsearch_range_table(c, Gothic_table)
-    }
-
-    static Greek_table : &'static [(char,char)] = &[
+    pub static Greek_table : &'static [(char,char)] = &[
         ('\u0370', '\u0373'), ('\u0375', '\u0375'),
         ('\u0376', '\u0377'), ('\u037a', '\u037a'),
         ('\u037b', '\u037d'), ('\u0384', '\u0384'),
@@ -2060,11 +1973,7 @@ pub mod script {
         ('\U0001d245', '\U0001d245')
     ];
 
-    pub fn Greek(c: char) -> bool {
-        super::bsearch_range_table(c, Greek_table)
-    }
-
-    static Gujarati_table : &'static [(char,char)] = &[
+    pub static Gujarati_table : &'static [(char,char)] = &[
         ('\u0a81', '\u0a82'), ('\u0a83', '\u0a83'),
         ('\u0a85', '\u0a8d'), ('\u0a8f', '\u0a91'),
         ('\u0a93', '\u0aa8'), ('\u0aaa', '\u0ab0'),
@@ -2078,11 +1987,7 @@ pub mod script {
         ('\u0af0', '\u0af0'), ('\u0af1', '\u0af1')
     ];
 
-    pub fn Gujarati(c: char) -> bool {
-        super::bsearch_range_table(c, Gujarati_table)
-    }
-
-    static Gurmukhi_table : &'static [(char,char)] = &[
+    pub static Gurmukhi_table : &'static [(char,char)] = &[
         ('\u0a01', '\u0a02'), ('\u0a03', '\u0a03'),
         ('\u0a05', '\u0a0a'), ('\u0a0f', '\u0a10'),
         ('\u0a13', '\u0a28'), ('\u0a2a', '\u0a30'),
@@ -2096,11 +2001,7 @@ pub mod script {
         ('\u0a75', '\u0a75')
     ];
 
-    pub fn Gurmukhi(c: char) -> bool {
-        super::bsearch_range_table(c, Gurmukhi_table)
-    }
-
-    static Han_table : &'static [(char,char)] = &[
+    pub static Han_table : &'static [(char,char)] = &[
         ('\u2e80', '\u2e99'), ('\u2e9b', '\u2ef3'),
         ('\u2f00', '\u2fd5'), ('\u3005', '\u3005'),
         ('\u3007', '\u3007'), ('\u3021', '\u3029'),
@@ -2111,11 +2012,7 @@ pub mod script {
         ('\U0002b740', '\U0002b81d'), ('\U0002f800', '\U0002fa1d')
     ];
 
-    pub fn Han(c: char) -> bool {
-        super::bsearch_range_table(c, Han_table)
-    }
-
-    static Hangul_table : &'static [(char,char)] = &[
+    pub static Hangul_table : &'static [(char,char)] = &[
         ('\u1100', '\u11ff'), ('\u302e', '\u302f'),
         ('\u3131', '\u318e'), ('\u3200', '\u321e'),
         ('\u3260', '\u327e'), ('\ua960', '\ua97c'),
@@ -2125,19 +2022,11 @@ pub mod script {
         ('\uffd2', '\uffd7'), ('\uffda', '\uffdc')
     ];
 
-    pub fn Hangul(c: char) -> bool {
-        super::bsearch_range_table(c, Hangul_table)
-    }
-
-    static Hanunoo_table : &'static [(char,char)] = &[
+    pub static Hanunoo_table : &'static [(char,char)] = &[
         ('\u1720', '\u1731'), ('\u1732', '\u1734')
     ];
 
-    pub fn Hanunoo(c: char) -> bool {
-        super::bsearch_range_table(c, Hanunoo_table)
-    }
-
-    static Hebrew_table : &'static [(char,char)] = &[
+    pub static Hebrew_table : &'static [(char,char)] = &[
         ('\u0591', '\u05bd'), ('\u05be', '\u05be'),
         ('\u05bf', '\u05bf'), ('\u05c0', '\u05c0'),
         ('\u05c1', '\u05c2'), ('\u05c3', '\u05c3'),
@@ -2151,21 +2040,13 @@ pub mod script {
         ('\ufb43', '\ufb44'), ('\ufb46', '\ufb4f')
     ];
 
-    pub fn Hebrew(c: char) -> bool {
-        super::bsearch_range_table(c, Hebrew_table)
-    }
-
-    static Hiragana_table : &'static [(char,char)] = &[
+    pub static Hiragana_table : &'static [(char,char)] = &[
         ('\u3041', '\u3096'), ('\u309d', '\u309e'),
         ('\u309f', '\u309f'), ('\U0001b001', '\U0001b001'),
         ('\U0001f200', '\U0001f200')
     ];
 
-    pub fn Hiragana(c: char) -> bool {
-        super::bsearch_range_table(c, Hiragana_table)
-    }
-
-    static Inherited_table : &'static [(char,char)] = &[
+    pub static Inherited_table : &'static [(char,char)] = &[
         ('\u0300', '\u036f'), ('\u0485', '\u0486'),
         ('\u064b', '\u0655'), ('\u0670', '\u0670'),
         ('\u0951', '\u0952'), ('\u1cd0', '\u1cd2'),
@@ -2182,11 +2063,7 @@ pub mod script {
         ('\U0001d1aa', '\U0001d1ad'), ('\U000e0100', '\U000e01ef')
     ];
 
-    pub fn Inherited(c: char) -> bool {
-        super::bsearch_range_table(c, Inherited_table)
-    }
-
-    static Kannada_table : &'static [(char,char)] = &[
+    pub static Kannada_table : &'static [(char,char)] = &[
         ('\u0c82', '\u0c83'), ('\u0c85', '\u0c8c'),
         ('\u0c8e', '\u0c90'), ('\u0c92', '\u0ca8'),
         ('\u0caa', '\u0cb3'), ('\u0cb5', '\u0cb9'),
@@ -2200,11 +2077,7 @@ pub mod script {
         ('\u0cf1', '\u0cf2')
     ];
 
-    pub fn Kannada(c: char) -> bool {
-        super::bsearch_range_table(c, Kannada_table)
-    }
-
-    static Katakana_table : &'static [(char,char)] = &[
+    pub static Katakana_table : &'static [(char,char)] = &[
         ('\u30a1', '\u30fa'), ('\u30fd', '\u30fe'),
         ('\u30ff', '\u30ff'), ('\u31f0', '\u31ff'),
         ('\u32d0', '\u32fe'), ('\u3300', '\u3357'),
@@ -2212,20 +2085,12 @@ pub mod script {
         ('\U0001b000', '\U0001b000')
     ];
 
-    pub fn Katakana(c: char) -> bool {
-        super::bsearch_range_table(c, Katakana_table)
-    }
-
-    static Kayah_Li_table : &'static [(char,char)] = &[
+    pub static Kayah_Li_table : &'static [(char,char)] = &[
         ('\ua900', '\ua909'), ('\ua90a', '\ua925'),
         ('\ua926', '\ua92d'), ('\ua92e', '\ua92f')
     ];
 
-    pub fn Kayah_Li(c: char) -> bool {
-        super::bsearch_range_table(c, Kayah_Li_table)
-    }
-
-    static Kharoshthi_table : &'static [(char,char)] = &[
+    pub static Kharoshthi_table : &'static [(char,char)] = &[
         ('\U00010a00', '\U00010a00'), ('\U00010a01', '\U00010a03'),
         ('\U00010a05', '\U00010a06'), ('\U00010a0c', '\U00010a0f'),
         ('\U00010a10', '\U00010a13'), ('\U00010a15', '\U00010a17'),
@@ -2234,11 +2099,7 @@ pub mod script {
         ('\U00010a50', '\U00010a58')
     ];
 
-    pub fn Kharoshthi(c: char) -> bool {
-        super::bsearch_range_table(c, Kharoshthi_table)
-    }
-
-    static Khmer_table : &'static [(char,char)] = &[
+    pub static Khmer_table : &'static [(char,char)] = &[
         ('\u1780', '\u17b3'), ('\u17b4', '\u17b5'),
         ('\u17b6', '\u17b6'), ('\u17b7', '\u17bd'),
         ('\u17be', '\u17c5'), ('\u17c6', '\u17c6'),
@@ -2250,11 +2111,7 @@ pub mod script {
         ('\u19e0', '\u19ff')
     ];
 
-    pub fn Khmer(c: char) -> bool {
-        super::bsearch_range_table(c, Khmer_table)
-    }
-
-    static Lao_table : &'static [(char,char)] = &[
+    pub static Lao_table : &'static [(char,char)] = &[
         ('\u0e81', '\u0e82'), ('\u0e84', '\u0e84'),
         ('\u0e87', '\u0e88'), ('\u0e8a', '\u0e8a'),
         ('\u0e8d', '\u0e8d'), ('\u0e94', '\u0e97'),
@@ -2268,11 +2125,7 @@ pub mod script {
         ('\u0ed0', '\u0ed9'), ('\u0edc', '\u0edf')
     ];
 
-    pub fn Lao(c: char) -> bool {
-        super::bsearch_range_table(c, Lao_table)
-    }
-
-    static Latin_table : &'static [(char,char)] = &[
+    pub static Latin_table : &'static [(char,char)] = &[
         ('\x41', '\x5a'), ('\x61', '\x7a'),
         ('\xaa', '\xaa'), ('\xba', '\xba'),
         ('\xc0', '\xd6'), ('\xd8', '\xf6'),
@@ -2298,22 +2151,14 @@ pub mod script {
         ('\uff21', '\uff3a'), ('\uff41', '\uff5a')
     ];
 
-    pub fn Latin(c: char) -> bool {
-        super::bsearch_range_table(c, Latin_table)
-    }
-
-    static Lepcha_table : &'static [(char,char)] = &[
+    pub static Lepcha_table : &'static [(char,char)] = &[
         ('\u1c00', '\u1c23'), ('\u1c24', '\u1c2b'),
         ('\u1c2c', '\u1c33'), ('\u1c34', '\u1c35'),
         ('\u1c36', '\u1c37'), ('\u1c3b', '\u1c3f'),
         ('\u1c40', '\u1c49'), ('\u1c4d', '\u1c4f')
     ];
 
-    pub fn Lepcha(c: char) -> bool {
-        super::bsearch_range_table(c, Lepcha_table)
-    }
-
-    static Limbu_table : &'static [(char,char)] = &[
+    pub static Limbu_table : &'static [(char,char)] = &[
         ('\u1900', '\u191c'), ('\u1920', '\u1922'),
         ('\u1923', '\u1926'), ('\u1927', '\u1928'),
         ('\u1929', '\u192b'), ('\u1930', '\u1931'),
@@ -2322,38 +2167,22 @@ pub mod script {
         ('\u1944', '\u1945'), ('\u1946', '\u194f')
     ];
 
-    pub fn Limbu(c: char) -> bool {
-        super::bsearch_range_table(c, Limbu_table)
-    }
-
-    static Linear_B_table : &'static [(char,char)] = &[
+    pub static Linear_B_table : &'static [(char,char)] = &[
         ('\U00010000', '\U0001000b'), ('\U0001000d', '\U00010026'),
         ('\U00010028', '\U0001003a'), ('\U0001003c', '\U0001003d'),
         ('\U0001003f', '\U0001004d'), ('\U00010050', '\U0001005d'),
         ('\U00010080', '\U000100fa')
     ];
 
-    pub fn Linear_B(c: char) -> bool {
-        super::bsearch_range_table(c, Linear_B_table)
-    }
-
-    static Lycian_table : &'static [(char,char)] = &[
+    pub static Lycian_table : &'static [(char,char)] = &[
         ('\U00010280', '\U0001029c')
     ];
 
-    pub fn Lycian(c: char) -> bool {
-        super::bsearch_range_table(c, Lycian_table)
-    }
-
-    static Lydian_table : &'static [(char,char)] = &[
+    pub static Lydian_table : &'static [(char,char)] = &[
         ('\U00010920', '\U00010939'), ('\U0001093f', '\U0001093f')
     ];
 
-    pub fn Lydian(c: char) -> bool {
-        super::bsearch_range_table(c, Lydian_table)
-    }
-
-    static Malayalam_table : &'static [(char,char)] = &[
+    pub static Malayalam_table : &'static [(char,char)] = &[
         ('\u0d02', '\u0d03'), ('\u0d05', '\u0d0c'),
         ('\u0d0e', '\u0d10'), ('\u0d12', '\u0d3a'),
         ('\u0d3d', '\u0d3d'), ('\u0d3e', '\u0d40'),
@@ -2365,11 +2194,7 @@ pub mod script {
         ('\u0d79', '\u0d79'), ('\u0d7a', '\u0d7f')
     ];
 
-    pub fn Malayalam(c: char) -> bool {
-        super::bsearch_range_table(c, Malayalam_table)
-    }
-
-    static Mongolian_table : &'static [(char,char)] = &[
+    pub static Mongolian_table : &'static [(char,char)] = &[
         ('\u1800', '\u1801'), ('\u1804', '\u1804'),
         ('\u1806', '\u1806'), ('\u1807', '\u180a'),
         ('\u180b', '\u180d'), ('\u180e', '\u180e'),
@@ -2379,11 +2204,7 @@ pub mod script {
         ('\u18aa', '\u18aa')
     ];
 
-    pub fn Mongolian(c: char) -> bool {
-        super::bsearch_range_table(c, Mongolian_table)
-    }
-
-    static Myanmar_table : &'static [(char,char)] = &[
+    pub static Myanmar_table : &'static [(char,char)] = &[
         ('\u1000', '\u102a'), ('\u102b', '\u102c'),
         ('\u102d', '\u1030'), ('\u1031', '\u1031'),
         ('\u1032', '\u1037'), ('\u1038', '\u1038'),
@@ -2407,68 +2228,40 @@ pub mod script {
         ('\uaa7b', '\uaa7b')
     ];
 
-    pub fn Myanmar(c: char) -> bool {
-        super::bsearch_range_table(c, Myanmar_table)
-    }
-
-    static New_Tai_Lue_table : &'static [(char,char)] = &[
+    pub static New_Tai_Lue_table : &'static [(char,char)] = &[
         ('\u1980', '\u19ab'), ('\u19b0', '\u19c0'),
         ('\u19c1', '\u19c7'), ('\u19c8', '\u19c9'),
         ('\u19d0', '\u19d9'), ('\u19da', '\u19da'),
         ('\u19de', '\u19df')
     ];
 
-    pub fn New_Tai_Lue(c: char) -> bool {
-        super::bsearch_range_table(c, New_Tai_Lue_table)
-    }
-
-    static Nko_table : &'static [(char,char)] = &[
+    pub static Nko_table : &'static [(char,char)] = &[
         ('\u07c0', '\u07c9'), ('\u07ca', '\u07ea'),
         ('\u07eb', '\u07f3'), ('\u07f4', '\u07f5'),
         ('\u07f6', '\u07f6'), ('\u07f7', '\u07f9'),
         ('\u07fa', '\u07fa')
     ];
 
-    pub fn Nko(c: char) -> bool {
-        super::bsearch_range_table(c, Nko_table)
-    }
-
-    static Ogham_table : &'static [(char,char)] = &[
+    pub static Ogham_table : &'static [(char,char)] = &[
         ('\u1680', '\u1680'), ('\u1681', '\u169a'),
         ('\u169b', '\u169b'), ('\u169c', '\u169c')
     ];
 
-    pub fn Ogham(c: char) -> bool {
-        super::bsearch_range_table(c, Ogham_table)
-    }
-
-    static Ol_Chiki_table : &'static [(char,char)] = &[
+    pub static Ol_Chiki_table : &'static [(char,char)] = &[
         ('\u1c50', '\u1c59'), ('\u1c5a', '\u1c77'),
         ('\u1c78', '\u1c7d'), ('\u1c7e', '\u1c7f')
     ];
 
-    pub fn Ol_Chiki(c: char) -> bool {
-        super::bsearch_range_table(c, Ol_Chiki_table)
-    }
-
-    static Old_Italic_table : &'static [(char,char)] = &[
+    pub static Old_Italic_table : &'static [(char,char)] = &[
         ('\U00010300', '\U0001031e'), ('\U00010320', '\U00010323')
     ];
 
-    pub fn Old_Italic(c: char) -> bool {
-        super::bsearch_range_table(c, Old_Italic_table)
-    }
-
-    static Old_Persian_table : &'static [(char,char)] = &[
+    pub static Old_Persian_table : &'static [(char,char)] = &[
         ('\U000103a0', '\U000103c3'), ('\U000103c8', '\U000103cf'),
         ('\U000103d0', '\U000103d0'), ('\U000103d1', '\U000103d5')
     ];
 
-    pub fn Old_Persian(c: char) -> bool {
-        super::bsearch_range_table(c, Old_Persian_table)
-    }
-
-    static Oriya_table : &'static [(char,char)] = &[
+    pub static Oriya_table : &'static [(char,char)] = &[
         ('\u0b01', '\u0b01'), ('\u0b02', '\u0b03'),
         ('\u0b05', '\u0b0c'), ('\u0b0f', '\u0b10'),
         ('\u0b13', '\u0b28'), ('\u0b2a', '\u0b30'),
@@ -2484,71 +2277,39 @@ pub mod script {
         ('\u0b71', '\u0b71'), ('\u0b72', '\u0b77')
     ];
 
-    pub fn Oriya(c: char) -> bool {
-        super::bsearch_range_table(c, Oriya_table)
-    }
-
-    static Osmanya_table : &'static [(char,char)] = &[
+    pub static Osmanya_table : &'static [(char,char)] = &[
         ('\U00010480', '\U0001049d'), ('\U000104a0', '\U000104a9')
     ];
 
-    pub fn Osmanya(c: char) -> bool {
-        super::bsearch_range_table(c, Osmanya_table)
-    }
-
-    static Phags_Pa_table : &'static [(char,char)] = &[
+    pub static Phags_Pa_table : &'static [(char,char)] = &[
         ('\ua840', '\ua873'), ('\ua874', '\ua877')
     ];
 
-    pub fn Phags_Pa(c: char) -> bool {
-        super::bsearch_range_table(c, Phags_Pa_table)
-    }
-
-    static Phoenician_table : &'static [(char,char)] = &[
+    pub static Phoenician_table : &'static [(char,char)] = &[
         ('\U00010900', '\U00010915'), ('\U00010916', '\U0001091b'),
         ('\U0001091f', '\U0001091f')
     ];
 
-    pub fn Phoenician(c: char) -> bool {
-        super::bsearch_range_table(c, Phoenician_table)
-    }
-
-    static Rejang_table : &'static [(char,char)] = &[
+    pub static Rejang_table : &'static [(char,char)] = &[
         ('\ua930', '\ua946'), ('\ua947', '\ua951'),
         ('\ua952', '\ua953'), ('\ua95f', '\ua95f')
     ];
 
-    pub fn Rejang(c: char) -> bool {
-        super::bsearch_range_table(c, Rejang_table)
-    }
-
-    static Runic_table : &'static [(char,char)] = &[
+    pub static Runic_table : &'static [(char,char)] = &[
         ('\u16a0', '\u16ea'), ('\u16ee', '\u16f0')
     ];
 
-    pub fn Runic(c: char) -> bool {
-        super::bsearch_range_table(c, Runic_table)
-    }
-
-    static Saurashtra_table : &'static [(char,char)] = &[
+    pub static Saurashtra_table : &'static [(char,char)] = &[
         ('\ua880', '\ua881'), ('\ua882', '\ua8b3'),
         ('\ua8b4', '\ua8c3'), ('\ua8c4', '\ua8c4'),
         ('\ua8ce', '\ua8cf'), ('\ua8d0', '\ua8d9')
     ];
 
-    pub fn Saurashtra(c: char) -> bool {
-        super::bsearch_range_table(c, Saurashtra_table)
-    }
-
-    static Shavian_table : &'static [(char,char)] = &[
+    pub static Shavian_table : &'static [(char,char)] = &[
         ('\U00010450', '\U0001047f')
     ];
 
-    pub fn Shavian(c: char) -> bool {
-        super::bsearch_range_table(c, Shavian_table)
-    }
-
-    static Sinhala_table : &'static [(char,char)] = &[
+    pub static Sinhala_table : &'static [(char,char)] = &[
         ('\u0d82', '\u0d83'), ('\u0d85', '\u0d96'),
         ('\u0d9a', '\u0db1'), ('\u0db3', '\u0dbb'),
         ('\u0dbd', '\u0dbd'), ('\u0dc0', '\u0dc6'),
@@ -2558,11 +2319,7 @@ pub mod script {
         ('\u0df4', '\u0df4')
     ];
 
-    pub fn Sinhala(c: char) -> bool {
-        super::bsearch_range_table(c, Sinhala_table)
-    }
-
-    static Sundanese_table : &'static [(char,char)] = &[
+    pub static Sundanese_table : &'static [(char,char)] = &[
         ('\u1b80', '\u1b81'), ('\u1b82', '\u1b82'),
         ('\u1b83', '\u1ba0'), ('\u1ba1', '\u1ba1'),
         ('\u1ba2', '\u1ba5'), ('\u1ba6', '\u1ba7'),
@@ -2572,11 +2329,7 @@ pub mod script {
         ('\u1bba', '\u1bbf'), ('\u1cc0', '\u1cc7')
     ];
 
-    pub fn Sundanese(c: char) -> bool {
-        super::bsearch_range_table(c, Sundanese_table)
-    }
-
-    static Syloti_Nagri_table : &'static [(char,char)] = &[
+    pub static Syloti_Nagri_table : &'static [(char,char)] = &[
         ('\ua800', '\ua801'), ('\ua802', '\ua802'),
         ('\ua803', '\ua805'), ('\ua806', '\ua806'),
         ('\ua807', '\ua80a'), ('\ua80b', '\ua80b'),
@@ -2585,48 +2338,28 @@ pub mod script {
         ('\ua828', '\ua82b')
     ];
 
-    pub fn Syloti_Nagri(c: char) -> bool {
-        super::bsearch_range_table(c, Syloti_Nagri_table)
-    }
-
-    static Syriac_table : &'static [(char,char)] = &[
+    pub static Syriac_table : &'static [(char,char)] = &[
         ('\u0700', '\u070d'), ('\u070f', '\u070f'),
         ('\u0710', '\u0710'), ('\u0711', '\u0711'),
         ('\u0712', '\u072f'), ('\u0730', '\u074a'),
         ('\u074d', '\u074f')
     ];
 
-    pub fn Syriac(c: char) -> bool {
-        super::bsearch_range_table(c, Syriac_table)
-    }
-
-    static Tagalog_table : &'static [(char,char)] = &[
+    pub static Tagalog_table : &'static [(char,char)] = &[
         ('\u1700', '\u170c'), ('\u170e', '\u1711'),
         ('\u1712', '\u1714')
     ];
 
-    pub fn Tagalog(c: char) -> bool {
-        super::bsearch_range_table(c, Tagalog_table)
-    }
-
-    static Tagbanwa_table : &'static [(char,char)] = &[
+    pub static Tagbanwa_table : &'static [(char,char)] = &[
         ('\u1760', '\u176c'), ('\u176e', '\u1770'),
         ('\u1772', '\u1773')
     ];
 
-    pub fn Tagbanwa(c: char) -> bool {
-        super::bsearch_range_table(c, Tagbanwa_table)
-    }
-
-    static Tai_Le_table : &'static [(char,char)] = &[
+    pub static Tai_Le_table : &'static [(char,char)] = &[
         ('\u1950', '\u196d'), ('\u1970', '\u1974')
     ];
 
-    pub fn Tai_Le(c: char) -> bool {
-        super::bsearch_range_table(c, Tai_Le_table)
-    }
-
-    static Tamil_table : &'static [(char,char)] = &[
+    pub static Tamil_table : &'static [(char,char)] = &[
         ('\u0b82', '\u0b82'), ('\u0b83', '\u0b83'),
         ('\u0b85', '\u0b8a'), ('\u0b8e', '\u0b90'),
         ('\u0b92', '\u0b95'), ('\u0b99', '\u0b9a'),
@@ -2641,11 +2374,7 @@ pub mod script {
         ('\u0bf9', '\u0bf9'), ('\u0bfa', '\u0bfa')
     ];
 
-    pub fn Tamil(c: char) -> bool {
-        super::bsearch_range_table(c, Tamil_table)
-    }
-
-    static Telugu_table : &'static [(char,char)] = &[
+    pub static Telugu_table : &'static [(char,char)] = &[
         ('\u0c01', '\u0c03'), ('\u0c05', '\u0c0c'),
         ('\u0c0e', '\u0c10'), ('\u0c12', '\u0c28'),
         ('\u0c2a', '\u0c33'), ('\u0c35', '\u0c39'),
@@ -2657,20 +2386,12 @@ pub mod script {
         ('\u0c78', '\u0c7e'), ('\u0c7f', '\u0c7f')
     ];
 
-    pub fn Telugu(c: char) -> bool {
-        super::bsearch_range_table(c, Telugu_table)
-    }
-
-    static Thaana_table : &'static [(char,char)] = &[
+    pub static Thaana_table : &'static [(char,char)] = &[
         ('\u0780', '\u07a5'), ('\u07a6', '\u07b0'),
         ('\u07b1', '\u07b1')
     ];
 
-    pub fn Thaana(c: char) -> bool {
-        super::bsearch_range_table(c, Thaana_table)
-    }
-
-    static Thai_table : &'static [(char,char)] = &[
+    pub static Thai_table : &'static [(char,char)] = &[
         ('\u0e01', '\u0e30'), ('\u0e31', '\u0e31'),
         ('\u0e32', '\u0e33'), ('\u0e34', '\u0e3a'),
         ('\u0e40', '\u0e45'), ('\u0e46', '\u0e46'),
@@ -2678,11 +2399,7 @@ pub mod script {
         ('\u0e50', '\u0e59'), ('\u0e5a', '\u0e5b')
     ];
 
-    pub fn Thai(c: char) -> bool {
-        super::bsearch_range_table(c, Thai_table)
-    }
-
-    static Tibetan_table : &'static [(char,char)] = &[
+    pub static Tibetan_table : &'static [(char,char)] = &[
         ('\u0f00', '\u0f00'), ('\u0f01', '\u0f03'),
         ('\u0f04', '\u0f12'), ('\u0f13', '\u0f13'),
         ('\u0f14', '\u0f14'), ('\u0f15', '\u0f17'),
@@ -2704,45 +2421,25 @@ pub mod script {
         ('\u0fd9', '\u0fda')
     ];
 
-    pub fn Tibetan(c: char) -> bool {
-        super::bsearch_range_table(c, Tibetan_table)
-    }
-
-    static Tifinagh_table : &'static [(char,char)] = &[
+    pub static Tifinagh_table : &'static [(char,char)] = &[
         ('\u2d30', '\u2d67'), ('\u2d6f', '\u2d6f'),
         ('\u2d70', '\u2d70'), ('\u2d7f', '\u2d7f')
     ];
 
-    pub fn Tifinagh(c: char) -> bool {
-        super::bsearch_range_table(c, Tifinagh_table)
-    }
-
-    static Ugaritic_table : &'static [(char,char)] = &[
+    pub static Ugaritic_table : &'static [(char,char)] = &[
         ('\U00010380', '\U0001039d'), ('\U0001039f', '\U0001039f')
     ];
 
-    pub fn Ugaritic(c: char) -> bool {
-        super::bsearch_range_table(c, Ugaritic_table)
-    }
-
-    static Vai_table : &'static [(char,char)] = &[
+    pub static Vai_table : &'static [(char,char)] = &[
         ('\ua500', '\ua60b'), ('\ua60c', '\ua60c'),
         ('\ua60d', '\ua60f'), ('\ua610', '\ua61f'),
         ('\ua620', '\ua629'), ('\ua62a', '\ua62b')
     ];
 
-    pub fn Vai(c: char) -> bool {
-        super::bsearch_range_table(c, Vai_table)
-    }
-
-    static Yi_table : &'static [(char,char)] = &[
+    pub static Yi_table : &'static [(char,char)] = &[
         ('\ua000', '\ua014'), ('\ua015', '\ua015'),
         ('\ua016', '\ua48c'), ('\ua490', '\ua4c6')
     ];
-
-    pub fn Yi(c: char) -> bool {
-        super::bsearch_range_table(c, Yi_table)
-    }
 
 }
 
@@ -2752,21 +2449,31 @@ mod unicode_tests {
 
     #[test]
     fn test_general_property_contains() {
-        assert!(general_category::Nd('\uabf8'));
+        assert!(bsearch_range_table('\uabf8', general_category::get_prop_table(&"Nd").unwrap()));
     }
 
     #[test]
     fn test_general_property_doesnt_contain() {
-        assert!(!general_category::Nd('\uabfa'));
+        assert!(!bsearch_range_table('\uabfa', general_category::get_prop_table(&"Nd").unwrap()));
+    }
+
+    #[test]
+    fn test_general_property_doesnt_exist() {
+        assert_eq!(general_category::get_prop_table(&"A"), None);
     }
 
     #[test]
     fn test_script_contains() {
-        assert!(script::Greek('\u1f39'));
+        assert!(bsearch_range_table('\u1f39', script::get_prop_table(&"Greek").unwrap()));
     }
 
     #[test]
     fn test_script_doesnt_contain() {
-        assert!(!script::Greek('\u1f58'));
+        assert!(!bsearch_range_table('\u1f58', script::get_prop_table(&"Greek").unwrap()));
+    }
+
+    #[test]
+    fn test_script_doesnt_exist() {
+      assert_eq!(general_category::get_prop_table(&"A"), None);
     }
 }

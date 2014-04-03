@@ -1,19 +1,20 @@
-// define a bunch of possible errors 
+// define a bunch of possible errors
 // that we know can be generated
 
-// parsing codes 
+// parsing codes
 pub mod ParseError {
   static PARSE_ERR: &'static str = "Parse Error: ";
 
   pub enum ParseCode {
     ParseOk,
-    
+
     ParseEmptyAlternate,
     ParseEmptyConcatenate,
     ParseRepeatedRepetition,
     ParseEmptyRepetition,
     ParseEmptyRepetitionRange,
     ParseEmptyGroupName,
+    ParseEmptyPropertyName,
 
     // used internally
     ParseNotRepetition,
@@ -31,6 +32,8 @@ pub mod ParseError {
     ParseUnexpectedClosingParen,
     ParseUnexpectedOperand,
     ParseUnexpectedCharacter,
+
+    ParseInvalidUnicodeProperty,
 
     ParseIncompleteEscapeSeq,
 
@@ -53,6 +56,7 @@ pub mod ParseError {
         ParseEmptyRepetition             => PARSE_ERR + "Nothing to repeat",
         ParseEmptyRepetitionRange        => PARSE_ERR + "Repeat range is empty",
         ParseEmptyGroupName              => PARSE_ERR + "Group name is empty",
+        ParseEmptyPropertyName           => PARSE_ERR + "Property character class name is empty",
         ParseExpectedClosingParen        => PARSE_ERR + "Expected ')'",
         ParseExpectedClosingBracket      => PARSE_ERR + "Expected ']'",
         ParseExpectedClosingBrace        => PARSE_ERR + "Expected '}'",
@@ -66,6 +70,7 @@ pub mod ParseError {
         ParseUnexpectedClosingParen      => PARSE_ERR + "Unexpected closing parenthases in input",
         ParseUnexpectedOperand           => PARSE_ERR + "Unexpected operand was on the stack",
         ParseUnexpectedCharacter         => PARSE_ERR + "Unexpected character in input",
+        ParseInvalidUnicodeProperty      => PARSE_ERR + "Invalid Unicode property provided",
         ParseIncompleteEscapeSeq         => PARSE_ERR + "Expected a character to escape",
         ParseEmptyCharClassRange         => PARSE_ERR + "Empty character class",
         ParseInternalError |

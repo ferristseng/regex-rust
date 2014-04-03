@@ -1,6 +1,6 @@
-# Test generator 
+# Test generator
 import re
-from cases import * 
+from cases import *
 from datetime import datetime
 
 FILE = open('src/re/test.rs', 'w')
@@ -12,7 +12,7 @@ OUTPUT = """
 // Last Modified: %s
 
 macro_rules! run_tests(
-  ($re: expr, $input: expr, $matched: expr, $ident: expr, 
+  ($re: expr, $input: expr, $matched: expr, $ident: expr,
    $expect: pat, $groups: expr) => (
     {
       let re = match UncompiledRegexp::new($re) {
@@ -21,10 +21,10 @@ macro_rules! run_tests(
       };
       let res = re.search($input);
       let expect_test = match res {
-        $expect => true, 
+        $expect => true,
         _ => {
-          println(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'>", 
-                  $ident, $re, $input));
+          println(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: '{:s}'>",
+                  $ident, $re, $input, res.to_str()));
           false
         }
       };
@@ -36,7 +36,7 @@ macro_rules! run_tests(
         match res {
           Some(ma) => {
             assert_eq!(ma.matched(), $matched)
-            
+
             let groups: &'static[&'static str] = $groups;
             let mut i = 0;
 
@@ -51,7 +51,7 @@ macro_rules! run_tests(
               i += 1;
             }
           }
-          _ => () 
+          _ => ()
         }
       }
     }
@@ -90,7 +90,7 @@ def generate_test_num(num, digits):
     ret = "0" + ret
   return ret
 
-def generate_test_case(ident, regexp, input_str, 
+def generate_test_case(ident, regexp, input_str,
     matched_str, expected, groups):
   if expected == NOMATCH:
     match = "None"
@@ -100,8 +100,8 @@ def generate_test_case(ident, regexp, input_str,
     match = "Some(_)"
 
   regexp = re.sub("\\\\", "\\\\\\\\", regexp)
-  input_str = re.sub("\\\\", "\\\\\\\\", input_str)
-  matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
+  # input_str = re.sub("\\\\", "\\\\\\\\", input_str)
+  # matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
 
   if (len(groups) > 0):
     groups_str  = "\"" + "\", \"".join(groups) + "\""
@@ -110,7 +110,7 @@ def generate_test_case(ident, regexp, input_str,
 
   test = FAIL_FN if expected == PARSEERR else SUCCESS_FN
 
-  return test % (ident, regexp, input_str, matched_str, ident, 
+  return test % (ident, regexp, input_str, matched_str, ident,
       match, groups_str)
 
 if __name__ == "__main__":
@@ -124,10 +124,10 @@ if __name__ == "__main__":
     else:
       groups = []
     buf += \
-      generate_test_case(ident, test[0], test[1], test[2], test[3], 
+      generate_test_case(ident, test[0], test[1], test[2], test[3],
                          groups)
 
   FILE.write(OUTPUT % (date, buf))
-  
+
 
   print("Successfully generated test file: src/re/test.rs")
