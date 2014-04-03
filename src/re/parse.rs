@@ -2,7 +2,7 @@ use state::State;
 use std::char::MAX;
 use std::str;
 use error::ParseError::*;
-use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass, 
+use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
   NegatedWhitespaceClass};
 
@@ -18,6 +18,8 @@ pub enum Expr {
   Literal(char),
   CharClass(~[Range]),
   CharClassStatic(&'static [Range]),
+  UnicodeCharClass(~str),
+  NegatedUnicodeCharClass(~str),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -29,16 +31,16 @@ pub enum Expr {
 }
 
 macro_rules! check_ok(
-  ($f: expr) => ( 
+  ($f: expr) => (
     match $f {
       Ok(Empty) => continue,
-      Ok(re) => re, 
+      Ok(re) => re,
       e => return e
     }
   );
 )
 
-/// The public parse function. Builds the initial `State` from the 
+/// The public parse function. Builds the initial `State` from the
 /// input string, and calls an underlying parse function.
 ///
 /// # Arguments
@@ -61,20 +63,26 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   // Replace these with static vectors
   let cc = match current {
-    Some('d') => NumericClass, 
-    Some('D') => NegatedNumericClass, 
-    Some('w') => AlphaClass, 
-    Some('W') => NegatedAlphaClass, 
-    Some('s') => WhitespaceClass, 
-    Some('S') => NegatedWhitespaceClass, 
+    Some('d') => NumericClass,
+    Some('D') => NegatedNumericClass,
+    Some('w') => AlphaClass,
+    Some('W') => NegatedAlphaClass,
+    Some('s') => WhitespaceClass,
+    Some('S') => NegatedWhitespaceClass,
+    Some('p') => {
+      p.next();
+      return parse_unicode_charclass(p, false);
+    }
+    Some('P') => {
+      p.next();
+      return parse_unicode_charclass(p, true);
+    }
     Some('b') => {
       p.next();
-      
       return Ok(AssertNonWordBoundary)
     }
     Some('B') => {
       p.next();
-
       return Ok(AssertWordBoundary)
     }
     Some(_) => return parse_escape_char(p),
@@ -86,6 +94,49 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
   println(cc.to_str());
 
   Ok(cc)
+}
+
+/// Parses a named Unicode character class
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
+/// * neg - Whether or not the character class should be negated
+#[inline]
+fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> {
+  match p.current() {
+    Some('{') => {    // Unicode character class with name longer than 1 character
+      let mut prop_name_buf: ~[char] = ~[];
+      loop {
+        p.next();
+        match p.current() {
+          Some('}') => {
+            p.next();
+            if prop_name_buf.len() == 0 {
+              return Err(ParseEmptyPropertyName)
+            } else if neg {
+              return Ok(NegatedUnicodeCharClass(str::from_chars(prop_name_buf)))
+            } else {
+              return Ok(UnicodeCharClass(str::from_chars(prop_name_buf)))
+            }
+          }
+          Some(c) => {
+            prop_name_buf.push(c);
+          }
+          None => return Err(ParseExpectedClosingBrace)
+        }
+      }
+    }
+    Some(c) => {      // Unicode character class with 1 character name
+      p.next();
+      if neg {
+        return Ok(NegatedUnicodeCharClass(str::from_char(c)))
+      } else {
+        return Ok(UnicodeCharClass(str::from_char(c)))
+      }
+    }
+    None => return Err(ParseIncompleteEscapeSeq)
+  }
 }
 
 /// Parses an escaped character at a given state.
@@ -101,7 +152,7 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
 
       Ok(Literal(c))
     }
-    None => Err(ParseIncompleteEscapeSeq) 
+    None => Err(ParseIncompleteEscapeSeq)
   }
 }
 
@@ -117,7 +168,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   let mut name_buf: ~[char] = ~[];
 
   // Check for an extension denoted by a ?
-  // 
+  //
   // Currently supporting:
   //
   // * `?:` = No Capture
@@ -130,11 +181,11 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
           p.consume(2);
           capturing = false;
         }
-        // A Comment. Everything in the parenthases is 
+        // A Comment. Everything in the parenthases is
         // ignored
         Some('#') => {
           p.consume(2);
-          
+
           loop {
             match p.current() {
               Some(')') => {
@@ -187,7 +238,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
             }
           }
         }
-        _ => () 
+        _ => ()
       }
     }
     _ => ()
@@ -196,7 +247,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   p.nparens += 1;
 
   let ncap = p.ncaptures;
-  
+
   if (capturing) {
     p.ncaptures += 1;
   }
@@ -211,16 +262,16 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   p.nparens -= 1;
 
   if (capturing) {
-    Ok(Capture(~expr, ncap, name)) 
+    Ok(Capture(~expr, ncap, name))
   } else {
     Ok(expr)
   }
 }
 
-/// Parses a character class at a given state. 
-/// 
+/// Parses a character class at a given state.
+///
 /// NOTE: Open square brackets within a character class have no
-/// special meaning, they are treated as ordinary characters. 
+/// special meaning, they are treated as ordinary characters.
 /// There is no such thing as nested character classes.
 ///
 /// # Arguments
@@ -231,8 +282,8 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   let mut ranges = ~[];
 
   // check to see if the first char following
-  // '[' is a '^', if so, it is a negated char 
-  // class 
+  // '[' is a '^', if so, it is a negated char
+  // class
   let negate = match p.current() {
     Some('^') => {
       p.next();
@@ -241,7 +292,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
     _ => false
   };
 
-  // if the first character in a char class is ], 
+  // if the first character in a char class is ],
   // it is treated as a literal
   match p.current() {
     Some(']') => {
@@ -260,11 +311,11 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
         } else {
           new_charclass(ranges)
         };
-        // Check to see if the created char class is 
+        // Check to see if the created char class is
         // empty
         if (match cc {
           CharClass(ref r) => r.len() == 0,
-          _ => unreachable!() 
+          _ => unreachable!()
         }) {
           return Err(ParseEmptyCharClassRange)
         }
@@ -282,8 +333,8 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
       }
       Some(c) => {
         p.next();
-        
-        // check to see if its this is part of a 
+
+        // check to see if its this is part of a
         // range
         match p.current() {
           Some('-') => {
@@ -313,7 +364,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   Err(ParseExpectedClosingBracket)
 }
 
-/// Determines if there is a repetition operator at a given state and 
+/// Determines if there is a repetition operator at a given state and
 /// tries to parse it.
 ///
 /// # Arguments
@@ -346,10 +397,10 @@ fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
     return None
   }
 
-  // this is guaranteed to be a digit because 
+  // this is guaranteed to be a digit because
   // we only append it to the buffer if the char
   // is a digit
-  let start = from_str::<uint>(buf).unwrap(); 
+  let start = from_str::<uint>(buf).unwrap();
 
   buf.clear();
 
@@ -357,14 +408,14 @@ fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
   // if there is a ',', then there either is or isn't a bound
   // if there is a '}', there is an exact repetition
   match p.peekn(len) {
-    Some(',') => { 
+    Some(',') => {
       len += 1;
     }
     Some('}') => {
       p.consume(len + 1);
       return Some((start, Some(start)))
     }
-    _ => return None 
+    _ => return None
   }
 
   // If the next character is a '}', unbounded repetition
@@ -414,7 +465,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
         do_concat(&mut stack);
         let expr = check_ok!(parse_group(p));
         stack.push(expr);
-      } 
+      }
       Some(')') => {
         if (p.hasUnmatchedParens()) {
           break;
@@ -451,12 +502,12 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
           }
           _ => Greedy
         };
-        
+
         match stack.pop_opt() {
           None |
           Some(Repetition(..)) |
-          Some(AssertStart) | 
-          Some(AssertEnd) | 
+          Some(AssertStart) |
+          Some(AssertEnd) |
           Some(AssertWordBoundary) |
           Some(AssertNonWordBoundary) => {
             return Err(ParseEmptyRepetition)
@@ -551,7 +602,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
   }
 }
 
-/// Concatenates all itemes on the stack if there are more 
+/// Concatenates all itemes on the stack if there are more
 /// than two.
 ///
 /// # Arguments
@@ -586,12 +637,13 @@ mod parse_tests {
   macro_rules! test_parse(
     ($input: expr, $expect: pat) => (
       {
-        let ok = match parse($input) {
+        let result = parse($input);
+        let ok = match result {
           $expect => true,
           _ => false
         };
         //ps.trace();
-        assert!(ok); 
+        assert!(ok, "Was not expecting {:s}", result.to_str());
       }
     );
   )
@@ -638,7 +690,7 @@ mod parse_tests {
 
   #[test]
   fn parse_no_repetition_target_specified_err() {
-    test_parse!("{10,}", Err(ParseEmptyRepetition)); 
+    test_parse!("{10,}", Err(ParseEmptyRepetition));
   }
 
   #[test]
@@ -674,5 +726,45 @@ mod parse_tests {
   #[test]
   fn parse_named_group_invalid_name_character_err() {
     test_parse!("(?P<sdd$f>)", Err(ParseExpectedAlphaNumeric));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_single_letter() {
+    test_parse!("\\pN", Ok(UnicodeCharClass(~"N")));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_multiple_letter() {
+    test_parse!("\\p{Greek}", Ok(UnicodeCharClass(_)));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_single_letter_negated() {
+    test_parse!("\\PL", Ok(NegatedUnicodeCharClass(~"L")));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_multiple_letter_negated() {
+    test_parse!("\\P{Latin}", Ok(NegatedUnicodeCharClass(~"Latin")));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_empty_single_letter() {
+    test_parse!("\\p", Err(ParseIncompleteEscapeSeq));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_empty_multiple_letter() {
+    test_parse!("\\p{}", Err(ParseEmptyPropertyName));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_empty_unterminated() {
+    test_parse!("\\p{", Err(ParseExpectedClosingBrace));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_nonempty_unterminated() {
+    test_parse!("\\p{Gre", Err(ParseExpectedClosingBrace));
   }
 }
