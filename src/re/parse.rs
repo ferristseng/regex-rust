@@ -387,6 +387,47 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   Err(ParseExpectedClosingBracket)
 }
 
+/// Parses repetitions using the *, +, and ? operators and pushes them on the
+/// stack of parsed expressions
+///
+/// # Arguments
+///
+/// * p     - The current state of parsing
+/// * stack - The current stack of expressions parsed
+/// * c     - The repetition operator being parsed; either *, +, or ?
+#[inline]
+fn parse_repetition_op(p: &mut State, stack: &mut ~[Expr], c: char) -> Result<Expr, ParseCode> {
+  p.next();
+
+  // Look for a quantifier
+  let quantifier = match p.current() {
+    Some('?') => {
+      p.next();
+      NonGreedy
+    }
+    _ => Greedy
+  };
+
+  match stack.pop_opt() {
+    None |
+    Some(Repetition(..)) |
+    Some(AssertStart) |
+    Some(AssertEnd) |
+    Some(AssertWordBoundary) |
+    Some(AssertNonWordBoundary) => {
+      return Err(ParseEmptyRepetition)
+    }
+    Some(expr) => {
+      match c {
+        '?' => return Ok(Repetition(~expr, 0, Some(1), quantifier)),
+        '+' => return Ok(Repetition(~expr, 1, None, quantifier)),
+        '*' => return Ok(Repetition(~expr, 0, None, quantifier)),
+        _   => unreachable!()
+      }
+    }
+  }
+}
+
 /// Determines if there is a repetition operator at a given state and
 /// tries to parse it.
 ///
@@ -515,38 +556,13 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
       }
 
       Some(c) if c == '*' || c == '?' || c == '+' => {
-        p.next();
-
-        // Look for a quantifier
-        let quantifier = match p.current() {
-          Some('?') => {
-            p.next();
-            NonGreedy
-          }
-          _ => Greedy
-        };
-
-        match stack.pop_opt() {
-          None |
-          Some(Repetition(..)) |
-          Some(AssertStart) |
-          Some(AssertEnd) |
-          Some(AssertWordBoundary) |
-          Some(AssertNonWordBoundary) => {
-            return Err(ParseEmptyRepetition)
-          }
-          Some(expr) => {
-            match c {
-              '?' => stack.push(Repetition(~expr, 0, Some(1), quantifier)),
-              '+' => stack.push(Repetition(~expr, 1, None, quantifier)),
-              '*' => stack.push(Repetition(~expr, 0, None, quantifier)),
-              _   => unreachable!()
-            }
-          }
+        match parse_repetition_op(p, &mut stack, c) {
+          Ok(expr) => stack.push(expr),
+          e => return e
         }
       }
 
-      Some('{') => {
+      Some('{') => { // TODO: Factor this out; parse_repetition only used here
         p.next();
         match parse_repetition(p) {
           Some(rep) => {
