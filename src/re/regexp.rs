@@ -108,14 +108,20 @@ impl UncompiledRegexp {
     let len = input.len();
     let strat = PikeVM::new(self.prog, 0); 
     let mut replaced = input.to_owned();
+    let mut start = 0;
+    let emptyPatternAdd = if self.prog.len()==1 {1} else {0};
 
-    for start in range(0, len + 1) {
+    while len != 0{
       match strat.run(replaced, start) {
         Some(t) => {
           replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replaceWith, replaced.slice_from(t.end));
+          start += replaceWith.len() + emptyPatternAdd;
         }
-        None => ()
+        None => {
+          start += 1;
+        }
       }
+      if start > replaced.len() {break}
     }
 
     replaced
@@ -130,7 +136,6 @@ impl UncompiledRegexp {
 #[cfg(test)]
 mod library_functions_test {
   use super::*;
-  use error::ParseError::*;
 
   macro_rules! test_replace(
     ($input: expr, $re: expr, $replaceWith: expr, $expect: expr) => (
@@ -140,8 +145,9 @@ mod library_functions_test {
           Err(e) => fail!(e)
         };
         let result = re.replace($input, $replaceWith);
-        let ok = if result == ~$expect {true} else {false};
-        assert!(ok); 
+        if result != ~$expect {
+          fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s}, not expected result of {:s}\n", $re, $input, $replaceWith, result, $expect));
+        }
       }
     );
   )
@@ -154,6 +160,41 @@ mod library_functions_test {
   #[test]
   fn test_replace_2() {
     test_replace!("abaaacaabaaacca", "a*ba{1,}", "", "ccca");
+  }
+
+  #[test]
+  fn test_replace_3() {
+    test_replace!("abaaacaabaaacca", "a*ba{1,}", "aba", "abacabacca");
+  }
+
+  #[test]
+  fn test_replace_4() {
+    test_replace!("aaaaaaaaaaaa", "a", "b", "bbbbbbbbbbbb");
+  }
+
+  #[test]
+  fn test_replace_5() {
+    test_replace!("aaaaaaaaaaaa", "a{1,}", "b", "b");
+  }
+  
+  #[test]
+  fn test_replace_6() {
+    test_replace!("aaaaaaaaaaaa", "a{1,}", "", "");
+  }
+  
+  #[test]
+  fn test_replace_7() {
+    test_replace!("aaaa", "", "b", "babababab");
+  }
+
+  #[test]
+  fn test_replace_8() {
+    test_replace!("abababab", "a?bab", "c", "cc");
+  }
+
+  #[test]
+  fn test_replace_9() {
+    test_replace!("aa", "a", "ccc", "cccccc");
   }
 }
 
