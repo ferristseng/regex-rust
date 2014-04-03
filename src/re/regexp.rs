@@ -128,6 +128,37 @@ impl UncompiledRegexp {
 }
 
 #[cfg(test)]
+mod library_functions_test {
+  use super::*;
+  use error::ParseError::*;
+
+  macro_rules! test_replace(
+    ($input: expr, $re: expr, $replaceWith: expr, $expect: expr) => (
+      {
+        let re = match UncompiledRegexp::new($re) {
+          Ok(regex) => regex,
+          Err(e) => fail!(e)
+        };
+        let result = re.replace($input, $replaceWith);
+        let ok = if result == ~$expect {true} else {false};
+        assert!(ok); 
+      }
+    );
+  )
+
+  #[test]
+  fn test_replace_1() {
+    test_replace!("abaaacaabaaaccdab", "a*ba*", "", "cccd");
+  }
+
+  #[test]
+  fn test_replace_2() {
+    test_replace!("abaaacaabaaacca", "a*ba{1,}", "", "ccca");
+  }
+}
+
+
+#[cfg(test)]
 mod tests {
   use super::*;
 
