@@ -140,7 +140,7 @@ def ch_prefix(ix):
 
 def emit_bsearch_range_table(f):
     f.write("""
-fn bsearch_range_table(c: char, r: &'static [(char,char)]) -> bool {
+pub fn bsearch_range_table(c: char, r: &'static [(char,char)]) -> bool {
     use std::cmp::{Equal, Less, Greater};
     use std::vec::ImmutableVector; // Should be changed to std::slice::ImmutableVector for 0.10
     use std::option::None;
@@ -157,18 +157,22 @@ def emit_property_module(f, mod, tbl):
     keys = tbl.keys()
     keys.sort()
 
+    f.write("    pub fn get_prop_table(prop: ~str) -> Option<&'static [(char,char)]> {\n")
+    f.write("        match prop {\n")
     for cat in keys:
-        f.write("    static %s_table : &'static [(char,char)] = &[\n" % cat)
+        f.write("            ~\"%s\" => Some(%s_table),\n" % (cat, cat))
+    f.write("            _ => None\n")
+    f.write("        }\n")
+    f.write("    }\n\n")
+
+    for cat in keys:
+        f.write("    pub static %s_table : &'static [(char,char)] = &[\n" % cat)
         ix = 0
         for pair in tbl[cat]:
             f.write(ch_prefix(ix))
             f.write("(%s, %s)" % (escape_char(pair[0]), escape_char(pair[1])))
             ix += 1
         f.write("\n    ];\n\n")
-
-        f.write("    pub fn %s(c: char) -> bool {\n" % cat)
-        f.write("        super::bsearch_range_table(c, %s_table)\n" % cat)
-        f.write("    }\n\n")
     f.write("}\n")
 
 r = "../re/unicode.rs"
@@ -220,22 +224,22 @@ mod unicode_tests {
 
     #[test]
     fn test_general_property_contains() {
-        assert!(general_category::Nd('\uabf8'));
+        assert!(bsearch_range_table('\uabf8', general_category::get_prop_table(~"Nd").unwrap()));
     }
 
     #[test]
     fn test_general_property_doesnt_contain() {
-        assert!(!general_category::Nd('\uabfa'));
+        assert!(!bsearch_range_table('\uabfa', general_category::get_prop_table(~"Nd").unwrap()));
     }
 
     #[test]
     fn test_script_contains() {
-        assert!(script::Greek('\u1f39'));
+        assert!(bsearch_range_table('\u1f39', script::get_prop_table(~"Greek").unwrap()));
     }
 
     #[test]
     fn test_script_doesnt_contain() {
-        assert!(!script::Greek('\u1f58'));
+        assert!(!bsearch_range_table('\u1f58', script::get_prop_table(~"Greek").unwrap()));
     }
 }
 ''')
