@@ -2,6 +2,7 @@ use state::State;
 use std::char::MAX;
 use std::str;
 use error::ParseError::*;
+use unicode::*;
 use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
   NegatedWhitespaceClass};
@@ -18,8 +19,8 @@ pub enum Expr {
   Literal(char),
   CharClass(~[Range]),
   CharClassStatic(&'static [Range]),
-  UnicodeCharClass(~str),
-  NegatedUnicodeCharClass(~str),
+  UnicodeCharClass(&'static [(char,char)]),
+  NegatedUnicodeCharClass(&'static [(char,char)]),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -114,10 +115,22 @@ fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> 
             p.next();
             if prop_name_buf.len() == 0 {
               return Err(ParseEmptyPropertyName)
-            } else if neg {
-              return Ok(NegatedUnicodeCharClass(str::from_chars(prop_name_buf)))
             } else {
-              return Ok(UnicodeCharClass(str::from_chars(prop_name_buf)))
+              let prop_name = str::from_chars(prop_name_buf);
+              let prop_table = match general_category::get_prop_table(prop_name) {
+                Some(table) => table,
+                None => {
+                  match script::get_prop_table(prop_name) {
+                    Some(table) => table,
+                    None => return Err(ParseInvalidUnicodeProperty)
+                  }
+                }
+              };
+              if neg {
+                return Ok(NegatedUnicodeCharClass(prop_table))
+              } else {
+                return Ok(UnicodeCharClass(prop_table))
+              }
             }
           }
           Some(c) => {
@@ -129,10 +142,20 @@ fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> 
     }
     Some(c) => {      // Unicode character class with 1 character name
       p.next();
+      let prop_name = str::from_char(c);
+      let prop_table = match general_category::get_prop_table(prop_name) {
+        Some(table) => table,
+        None => {
+          match script::get_prop_table(prop_name) {
+            Some(table) => table,
+            None => return Err(ParseInvalidUnicodeProperty)
+          }
+        }
+      };
       if neg {
-        return Ok(NegatedUnicodeCharClass(str::from_char(c)))
+        return Ok(NegatedUnicodeCharClass(prop_table))
       } else {
-        return Ok(UnicodeCharClass(str::from_char(c)))
+        return Ok(UnicodeCharClass(prop_table))
       }
     }
     None => return Err(ParseIncompleteEscapeSeq)
@@ -728,24 +751,24 @@ mod parse_tests {
     test_parse!("(?P<sdd$f>)", Err(ParseExpectedAlphaNumeric));
   }
 
-  #[test]
-  fn parse_unicode_charclass_single_letter() {
-    test_parse!("\\pN", Ok(UnicodeCharClass(~"N")));
-  }
+  // #[test]
+  // fn parse_unicode_charclass_single_letter() {
+  //   test_parse!("\\pN", Ok(UnicodeCharClass(~"N")));
+  // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter() {
     test_parse!("\\p{Greek}", Ok(UnicodeCharClass(_)));
   }
 
-  #[test]
-  fn parse_unicode_charclass_single_letter_negated() {
-    test_parse!("\\PL", Ok(NegatedUnicodeCharClass(~"L")));
-  }
+  // #[test]
+  // fn parse_unicode_charclass_single_letter_negated() {
+  //   test_parse!("\\PL", Ok(NegatedUnicodeCharClass(_)));
+  // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter_negated() {
-    test_parse!("\\P{Latin}", Ok(NegatedUnicodeCharClass(~"Latin")));
+    test_parse!("\\P{Latin}", Ok(NegatedUnicodeCharClass(_)));
   }
 
   #[test]
@@ -766,5 +789,15 @@ mod parse_tests {
   #[test]
   fn parse_unicode_charclass_nonempty_unterminated() {
     test_parse!("\\p{Gre", Err(ParseExpectedClosingBrace));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_multiple_nonexistent() {
+    test_parse!("\\pA", Err(ParseInvalidUnicodeProperty));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_single_nonexistent() {
+    test_parse!("\\pA", Err(ParseInvalidUnicodeProperty));
   }
 }
