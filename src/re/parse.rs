@@ -428,8 +428,7 @@ fn parse_repetition_op(p: &mut State, stack: &mut ~[Expr], c: char) -> Result<Ex
   }
 }
 
-/// Determines if there is a repetition operator at a given state and
-/// tries to parse it.
+/// Finds the bounds on a bounded or unbounded repetition.
 ///
 /// # Arguments
 ///
@@ -441,7 +440,7 @@ fn parse_repetition_op(p: &mut State, stack: &mut ~[Expr], c: char) -> Result<Ex
 /// * {a} - Bounded repetition
 /// * {a,} - Unbounded repetition
 #[inline]
-fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
+fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
   // these help parse numbers with more than
   // 1 digit
   let mut buf = ~"";
@@ -514,6 +513,55 @@ fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
   }
 }
 
+/// Determines if there is a repetition operator at a given state and
+/// tries to parse it.
+///
+/// # Arguments
+///
+/// * p      - The current state of parsing
+/// * stack  - The current stack of parsed expressions
+///
+/// # Syntax
+///
+/// * {a,b} - Bounded repetition
+/// * {a} - Bounded repetition
+/// * {a,} - Unbounded repetition
+#[inline]
+fn parse_bounded_repetition(p: &mut State, stack: &mut ~[Expr]) -> Result<Expr, ParseCode>{
+  p.next();
+  match extract_repetition_bounds(p) {
+    Some(rep) => {
+      let (start, end) = rep;
+
+      match end {
+        Some(e) if (start > e) => {
+          return Err(ParseEmptyRepetitionRange)
+        }
+        _ => ()
+      }
+
+      // Look for a quantifier
+      let quantifier = match p.current() {
+        Some('?') => {
+          p.next();
+          NonGreedy
+        },
+        _ => Greedy
+      };
+
+      match stack.pop_opt() {
+        Some(expr) => {
+          return Ok(Repetition(~expr, start, end, quantifier));
+        }
+        None => {
+          return Err(ParseEmptyRepetition)
+        }
+      }
+    }
+    None => return Ok(Empty)
+  }
+}
+
 /// Parses a regular expression recursively.
 ///
 /// # Arguments
@@ -562,38 +610,11 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
         }
       }
 
-      Some('{') => { // TODO: Factor this out; parse_repetition only used here
-        p.next();
-        match parse_repetition(p) {
-          Some(rep) => {
-            let (start, end) = rep;
-
-            match end {
-              Some(e) if (start > e) => {
-                return Err(ParseEmptyRepetitionRange)
-              }
-              _ => ()
-            }
-
-            // Look for a quantifier
-            let quantifier = match p.current() {
-              Some('?') => {
-                p.next();
-                NonGreedy
-              },
-              _ => Greedy
-            };
-
-            match stack.pop_opt() {
-              Some(expr) => {
-                stack.push(Repetition(~expr, start, end, quantifier));
-              }
-              None => {
-                return Err(ParseEmptyRepetition)
-              }
-            }
-          }
-          None => ()
+      Some('{') => {
+        match parse_bounded_repetition(p, &mut stack) {
+          Ok(Empty) => (),
+          Ok(expr) => stack.push(expr),
+          e => return e
         }
       }
 
