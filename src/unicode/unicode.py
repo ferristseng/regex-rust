@@ -157,10 +157,10 @@ def emit_property_module(f, mod, tbl):
     keys = tbl.keys()
     keys.sort()
 
-    f.write("    pub fn get_prop_table(prop: ~str) -> Option<&'static [(char,char)]> {\n")
+    f.write("    pub fn get_prop_table(prop: &str) -> Option<&'static [(char,char)]> {\n")
     f.write("        match prop {\n")
     for cat in keys:
-        f.write("            ~\"%s\" => Some(%s_table),\n" % (cat, cat))
+        f.write("            &\"%s\" => Some(%s_table),\n" % (cat, cat))
     f.write("            _ => None\n")
     f.write("        }\n")
     f.write("    }\n\n")
@@ -224,22 +224,22 @@ mod unicode_tests {
 
     #[test]
     fn test_general_property_contains() {
-        assert!(bsearch_range_table('\uabf8', general_category::get_prop_table(~"Nd").unwrap()));
+        assert!(bsearch_range_table('\uabf8', general_category::get_prop_table(&"Nd").unwrap()));
     }
 
     #[test]
     fn test_general_property_doesnt_contain() {
-        assert!(!bsearch_range_table('\uabfa', general_category::get_prop_table(~"Nd").unwrap()));
+        assert!(!bsearch_range_table('\uabfa', general_category::get_prop_table(&"Nd").unwrap()));
     }
 
     #[test]
     fn test_script_contains() {
-        assert!(bsearch_range_table('\u1f39', script::get_prop_table(~"Greek").unwrap()));
+        assert!(bsearch_range_table('\u1f39', script::get_prop_table(&"Greek").unwrap()));
     }
 
     #[test]
     fn test_script_doesnt_contain() {
-        assert!(!bsearch_range_table('\u1f58', script::get_prop_table(~"Greek").unwrap()));
+        assert!(!bsearch_range_table('\u1f58', script::get_prop_table(&"Greek").unwrap()));
     }
 }
 ''')
