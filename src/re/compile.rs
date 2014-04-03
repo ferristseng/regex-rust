@@ -10,6 +10,8 @@ use charclass::Range;
 pub enum Instruction {
   InstLiteral(char),
   InstRange(char, char),
+  InstTableRange(&'static [(char,char)]),
+  InstNegatedTableRange(&'static [(char,char)]),
   InstMatch,
   InstJump(uint),
   InstCaptureStart(uint, Option<~str>),
@@ -28,6 +30,8 @@ impl ToStr for Instruction {
     match *self {
       InstLiteral(c)            => format!("InstLiteral {:c}", c),
       InstRange(s, e)           => format!("InstRange {:c}-{:c}", s, e),
+      InstTableRange(t)         => format!("InstTableRange"),
+      InstNegatedTableRange(t)  => format!("InstNegatedTableRange"),
       InstMatch                 => ~"InstMatch",
       InstJump(i)               => format!("InstJump {:u}", i),
       InstCaptureStart(id, _)   => format!("InstCaptureStart {:u}", id),
@@ -163,11 +167,11 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     CharClassStatic(ranges) => {
       compile_charclass(ranges, stack);
     }
-    UnicodeCharClass(ref prop) => {
-
+    UnicodeCharClass(table) => {
+      stack.push(InstTableRange(table));
     }
-    NegatedUnicodeCharClass(ref prop) => {
-
+    NegatedUnicodeCharClass(table) => {
+      stack.push(InstNegatedTableRange(table));
     }
     Capture(ref expr, id, ref name) => {
       ncap += 1;

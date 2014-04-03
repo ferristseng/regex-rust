@@ -1,13 +1,14 @@
 use std::vec;
 use std::util::swap;
 use compile::Instruction;
-use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
-  InstCaptureStart, InstCaptureEnd, InstSplit, 
-  InstAssertStart, InstAssertEnd, InstWordBoundary,
-  InstNonWordBoundary, InstNoop, InstProgress};
+use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
+  InstMatch, InstJump, InstCaptureStart, InstCaptureEnd, InstSplit,
+  InstAssertStart, InstAssertEnd, InstWordBoundary, InstNonWordBoundary,
+  InstNoop, InstProgress};
 use result::{Match, CapturingGroup};
+use unicode;
 
-/// This should be able to take compiled 
+/// This should be able to take compiled
 /// instructions and execute them (see compile.rs)
 pub trait ExecStrategy {
   fn run(&self, input: &str, start_index: uint) -> Option<Thread>;
@@ -23,8 +24,8 @@ struct Thread {
 
 impl Thread {
   fn new(pc: uint, end: uint, start_sp: uint) -> Thread {
-    Thread { 
-      pc: pc, 
+    Thread {
+      pc: pc,
       end: end,
       start_sp: start_sp,
       captures: ~[]
@@ -51,7 +52,7 @@ impl<'a> PikeVM<'a> {
   pub fn new(inst: &'a [Instruction], ncaps: uint) -> PikeVM<'a> {
     PikeVM {
       inst: inst,
-      ncaps: ncaps 
+      ncaps: ncaps
     }
   }
 }
@@ -75,7 +76,7 @@ impl<'a> PikeVM<'a> {
         }
         InstCaptureStart(num, ref name) => {
           t.pc = t.pc + 1;
-          
+
           // Fill in spaces with None, if there is no
           // knowledge of a capture instruction
           while (t.captures.len() < num + 1) {
@@ -130,7 +131,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
     let mut clist: ~[Thread] = vec::with_capacity(self.inst.len());
     let mut nlist: ~[Thread] = vec::with_capacity(self.inst.len());
-    
+
     // To start from an index other than than the first character,
     // need to compute the number of bytes from the beginning to
     // wherever we want to start
@@ -180,6 +181,22 @@ impl<'a> ExecStrategy for PikeVM<'a> {
               self.addThread(t, &mut nlist, sp);
             }
           }
+          InstTableRange(table) => {
+            if unicode::bsearch_range_table(c, table) {
+              t.pc = t.pc + 1;
+              t.end = sp;
+
+              self.addThread(t, &mut nlist, sp);
+            }
+          }
+          InstNegatedTableRange(table) => {
+            if !unicode::bsearch_range_table(c, table) {
+              t.pc = t.pc + 1;
+              t.end = sp;
+
+              self.addThread(t, &mut nlist, sp);
+            }
+          }
           InstAssertStart => {
             if (i == 0) {
               t.pc = t.pc + 1;
@@ -209,7 +226,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
               continue;
             }
             t.pc = t.pc + 1;
-            
+
             self.addThread(t, &mut clist, sp);
           }
           InstNonWordBoundary => {
