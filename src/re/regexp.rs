@@ -66,14 +66,17 @@ impl UncompiledRegexp {
     let len = input.len();
     let strat = PikeVM::new(self.prog, 0); 
 
-    for start in range(0, len + 1) {  // Run starting at each character
+    let mut start = 0;
+    for _ in range(0, len + 1) {  // Run starting at each character
         match strat.run(input, start) { // run only matches one thing...
           Some(t) => {
-            let nextPos = t.end + 1;
+            let nextPos = t.end;
             matches.push(Match::new(start, t.end, input, t.captures));
             start = nextPos;
           }
-          None => ()
+          None => {
+            start += 1;
+          }
         }
     }
 
@@ -202,52 +205,54 @@ mod library_functions_test {
 
   #[test]
   fn test_find_all_01() {
-    test_find_all!("a*ba*", "abaacaabaaaccdab", &["abaa", "aabaaa", "ab"]);
+    test_find_all!("a*ba*", "abaaacaabaaaccdab", &["abaaa", "aabaaa", "ab"]);
   }
 
   #[test]
   fn test_find_all_02() {
-    test_find_all!("a*ba{1,}", "abaaacaabaaacca", &[""]);
+    test_find_all!("a*ba{1,}", "abaaacaabaaaccab", &["abaaa", "aabaaa"]);
   }
 
   #[test]
   fn test_find_all_03() {
-    test_find_all!("a*ba{1,}", "abaaacaabaaacca", &[""]);
+    test_find_all!("a*ba{1,}", "abaaacaabaaaccab", &["abaaa", "aabaaa"]);
   }
 
   #[test]
   fn test_find_all_04() {
-    test_find_all!("a", "aaaaaaaaaaaa", &[""]);
+    test_find_all!("a", "aaaaaaaaaaaa", &["a", "a", "a", "a", "a", "a", "a", 
+      "a", "a", "a", "a", "a"]);
   }
 
   #[test]
   fn test_find_all_05() {
-    test_find_all!("a{1,}", "aaaaaaaaaaaa", &[""]);
+    test_find_all!("a{1,}", "aaaaaaaaaaaa", &["aaaaaaaaaaaa"]);
   }
   
   #[test]
   fn test_find_all_06() {
-    test_find_all!("a{1,}", "aaaaaaaaaaaa", &[""]);
+    test_find_all!("a{1,}", "aaabaaaabaaa", &["aaa", "aaaa", "aaa"]);
   }
   
   #[test]
   fn test_find_all_07() {
-    test_find_all!("", "aaaa", &[""]);
+    test_find_all!("", "aaaa", &["", "", "", ""]);
   }
 
   #[test]
   fn test_find_all_08() {
-    test_find_all!("a?bab", "abababab", &[""]);
+    test_find_all!("a?bab", "ababababbab", &["abab", "abab", "bab"]);
   }
 
   #[test]
   fn test_find_all_09() {
-    test_find_all!("a", "aa", &[""]);
+    test_find_all!("a", "aa", &["a", "a"]);
   }
 
   #[test]
   fn test_find_all_10() {
-    test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdabcd", &[""]);
+    test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdaabbbccccddddd", &["abcd", 
+      "b", "abcd", "abc", "b", "ab", "abc", "bd", "abc", "bd", "aabbbccccddddd"]);
   }
 }
 
