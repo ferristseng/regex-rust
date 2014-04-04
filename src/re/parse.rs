@@ -7,13 +7,13 @@ use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
   NegatedWhitespaceClass, ascii};
 
-#[deriving(ToStr)]
+#[deriving(ToStr, Clone)]
 pub enum QuantifierPrefix {
   Greedy,
   NonGreedy
 }
 
-#[deriving(ToStr)]
+#[deriving(ToStr, Clone)]
 pub enum Expr {
   Empty,
   Literal(char),
@@ -344,6 +344,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 #[inline]
 fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   let mut ranges = ~[];
+  let mut tables = ~[];
 
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char
@@ -379,15 +380,22 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
         } else {
           new_charclass(ranges)
         };
-        // Check to see if the created char class is
-        // empty
-        if (match cc {
-          CharClass(ref r) => r.len() == 0,
-          _ => unreachable!()
-        }) {
-          return Err(ParseEmptyCharClassRange)
-        }
-        return Ok(cc)
+
+        // return CharClass and/or any internal special character classes
+        let tables_expr = new_multiple_alternation(tables);
+        let expr_exists = match (&cc, &tables_expr) {
+          (&CharClass(ref r), &Some(_)) if r.len() > 0 => (true, true),
+          (&CharClass(ref r), &None) if r.len() > 0 => (true, false),
+          (_, &Some(_)) => (false, true),
+          (_, &None) => (false, false)
+        };
+
+        return match expr_exists {
+          (true, true) => Ok(Alternation(~cc, ~tables_expr.unwrap())),
+          (true, false) => Ok(cc),
+          (false, true) => Ok(tables_expr.unwrap()),
+          (false, false) => Err(ParseEmptyCharClassRange)
+        };
       }
       Some('\\') => {
         p.next();
@@ -398,6 +406,15 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
           None => return Err(ParseIncompleteEscapeSeq)
         }
         p.next();
+      }
+      Some('[') if p.peek() == Some(':') => {  // ASCII character class
+        p.consume(2);
+        match parse_ascii_charclass(p) {
+          Ok(table) => {
+            tables.push(table);
+          }
+          Err(e) => return Err(e)
+        }
       }
       Some(c) => {
         p.next();
@@ -430,6 +447,22 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   }
 
   Err(ParseExpectedClosingBracket)
+}
+
+#[inline]
+fn new_multiple_alternation(components: &[Expr]) -> Option<Expr> {
+  match components.len() {
+    0 => None,
+    _ => Some(new_alternation_recursive(components))
+  }
+}
+
+fn new_alternation_recursive(components: &[Expr]) -> Expr {
+  match components.len() {
+    1 => components[0].clone(),
+    2 => Alternation(~components[0].clone(), ~components[1].clone()),
+    n => Alternation(~components[0].clone(), ~new_alternation_recursive(components.slice(1,n)))
+  }
 }
 
 /// Parses repetitions using the *, +, and ? operators and pushes them on the
@@ -896,5 +929,10 @@ mod parse_tests {
   #[test]
   fn parse_ascii_charclass_unterminated() {
     test_parse!("[:alpha", Err(ParseExpectedAsciiCharClassClose));
+  }
+
+  #[test]
+  fn parse_ascii_charclass_nested() {
+    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))))
   }
 }
