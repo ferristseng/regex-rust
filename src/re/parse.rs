@@ -172,8 +172,19 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
   match p.current() {
     Some(c) => {
       p.next();
-
-      Ok(Literal(c))
+      match c {
+        'n' => {Ok(Literal('\n'))},
+        'r' => {Ok(Literal('\r'))},
+        't' => {Ok(Literal('\t'))},
+        'A' => {Ok(Literal(c))}, //TODO: Beginning of text
+        'z' => {Ok(Literal(c))}, //TODO: End of text
+        'f' => {Ok(Literal(c))}, //TODO: Form Feed
+        'v' => {Ok(Literal(c))}, //TODO: Vertical tab
+        'C' => {Ok(Literal(c))}, //TODO: A single byte (no matter the encoding)
+        'Q' => {Ok(Literal(c))}, //TODO: Match literal text, terminated with \E
+        'x' => {Ok(Literal(c))}, //TODO: Match hex character code (two or six digits)
+         _  => {Ok(Literal(c))}
+      }
     }
     None => Err(ParseIncompleteEscapeSeq)
   }
