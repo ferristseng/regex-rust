@@ -190,9 +190,5 @@ TESTS = [
   ("\\p{Greek}", "\U00010181", "\U00010181", MATCH),
   ("\\p{Greek}", "\u0374", "", NOMATCH),
   ("\\P{Greek}", "\U00010181", "", NOMATCH),
-  ("\\P{Greek}", "\u0374", "\u0374", MATCH),
-
-  # These tests are mostly for find_all
-  ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
-  ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.
+  ("\\P{Greek}", "\u0374", "\u0374", MATCH)
 ]

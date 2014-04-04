@@ -44,23 +44,6 @@ impl UncompiledRegexp {
     let len = input.len();
     let strat = PikeVM::new(self.prog, 0);
 
-
-    // IGNORE THIS BELOW. It's very dumb fake testing for 
-    // find_all until we actually implement a better test suite.
-
-    // let blah = self.find_all(input);
-    // match blah {
-    //   Some(x) => { 
-    //     print!("Matched {:u} elements: ", x.len());
-    //     for elem in x.iter() {
-    //       print!("{:s}, ", elem.to_str());
-    //     }
-    //     println!("");
-    //   }
-    //   None => { println!("Matched 0 elements"); }
-    // }
-
-
     for start in range(0, len + 1) {
       match strat.run(input, start) {
         Some(t) => {
@@ -77,27 +60,27 @@ impl UncompiledRegexp {
   //
   // }
 
-  pub fn find_all(&self, input: &str) -> Option<~[Match]> {
+  pub fn find_all(&self, input: &str) -> ~[Match] {
     let mut matches : ~[Match] = ~[];
 
     let len = input.len();
     let strat = PikeVM::new(self.prog, 0); 
 
-    for start in range(0, len + 1) {
-      match strat.run(input, start) {
-        Some(t) => {
-          matches.push(Match::new(start, t.end, input, t.captures))
+    let mut start = 0;
+    for _ in range(0, len + 1) {  // Run starting at each character
+        match strat.run(input, start) { // run only matches one thing...
+          Some(t) => {
+            let nextPos = t.end;
+            matches.push(Match::new(start, t.end, input, t.captures));
+            start = nextPos;
+          }
+          None => {
+            start += 1;
+          }
         }
-        None => ()
-      }
     }
 
-    if (matches.len() != 0) {
-      return Some(matches);
-    }
-    else {
-      return None;
-    }
+    return matches;
   }
 
   // pub fn find_iter(&self, input: &str) -> Option<Match> {
@@ -138,7 +121,7 @@ mod library_functions_test {
   use super::*;
 
   macro_rules! test_replace(
-    ($input: expr, $re: expr, $replaceWith: expr, $expect: expr) => (
+    ($re: expr, $input: expr, $replaceWith: expr, $expect: expr) => (
       {
         let re = match UncompiledRegexp::new($re) {
           Ok(regex) => regex,
@@ -152,49 +135,124 @@ mod library_functions_test {
     );
   )
 
+  macro_rules! test_find_all(
+    ($re: expr, $input: expr, $expect: expr) => (
+      {
+        let re = match UncompiledRegexp::new($re) {
+          Ok(regex) => regex,
+          Err(e) => fail!(e)
+        };
+        let result = re.find_all($input);
+        let mut i = 0;
+        for &item in $expect.iter() {
+          if i >= result.len() {
+            fail!(format!("Results list only has {:u} elements, expected to have {:u}\n", i, $expect.len()));
+          }
+          let res = result[i].input.slice(result[i].start, result[i].end);
+          if res != item {
+            fail!(format!("Find-all on regexp '{:s}' yielded '{:s}' at element {:u} of results list, not expected result of '{:s}'\n", $re, res, i, item.clone()));
+          }
+          i = i + 1;
+        }
+      }
+    );
+  )
+
   #[test]
   fn test_replace_1() {
-    test_replace!("abaaacaabaaaccdab", "a*ba*", "", "cccd");
+    test_replace!("a*ba*", "abaaacaabaaaccdab", "", "cccd");
   }
 
   #[test]
   fn test_replace_2() {
-    test_replace!("abaaacaabaaacca", "a*ba{1,}", "", "ccca");
+    test_replace!("a*ba{1,}", "abaaacaabaaacca", "", "ccca");
   }
 
   #[test]
   fn test_replace_3() {
-    test_replace!("abaaacaabaaacca", "a*ba{1,}", "aba", "abacabacca");
+    test_replace!("a*ba{1,}", "abaaacaabaaacca", "aba", "abacabacca");
   }
 
   #[test]
   fn test_replace_4() {
-    test_replace!("aaaaaaaaaaaa", "a", "b", "bbbbbbbbbbbb");
+    test_replace!("a", "aaaaaaaaaaaa", "b", "bbbbbbbbbbbb");
   }
 
   #[test]
   fn test_replace_5() {
-    test_replace!("aaaaaaaaaaaa", "a{1,}", "b", "b");
+    test_replace!("a{1,}", "aaaaaaaaaaaa", "b", "b");
   }
   
   #[test]
   fn test_replace_6() {
-    test_replace!("aaaaaaaaaaaa", "a{1,}", "", "");
+    test_replace!("a{1,}", "aaaaaaaaaaaa", "", "");
   }
   
   #[test]
   fn test_replace_7() {
-    test_replace!("aaaa", "", "b", "babababab");
+    test_replace!("", "aaaa", "b", "babababab");
   }
 
   #[test]
   fn test_replace_8() {
-    test_replace!("abababab", "a?bab", "c", "cc");
+    test_replace!("a?bab", "abababab", "c", "cc");
   }
 
   #[test]
   fn test_replace_9() {
-    test_replace!("aa", "a", "ccc", "cccccc");
+    test_replace!("a", "aa", "ccc", "cccccc");
+  }
+
+  #[test]
+  fn test_find_all_01() {
+    test_find_all!("a*ba*", "abaaacaabaaaccdab", &["abaaa", "aabaaa", "ab"]);
+  }
+
+  #[test]
+  fn test_find_all_02() {
+    test_find_all!("a*ba{1,}", "abaaacaabaaaccab", &["abaaa", "aabaaa"]);
+  }
+
+  #[test]
+  fn test_find_all_03() {
+    test_find_all!("a*ba{1,}", "abaaacaabaaaccab", &["abaaa", "aabaaa"]);
+  }
+
+  #[test]
+  fn test_find_all_04() {
+    test_find_all!("a", "aaaaaaaaaaaa", &["a", "a", "a", "a", "a", "a", "a", 
+      "a", "a", "a", "a", "a"]);
+  }
+
+  #[test]
+  fn test_find_all_05() {
+    test_find_all!("a{1,}", "aaaaaaaaaaaa", &["aaaaaaaaaaaa"]);
+  }
+  
+  #[test]
+  fn test_find_all_06() {
+    test_find_all!("a{1,}", "aaabaaaabaaa", &["aaa", "aaaa", "aaa"]);
+  }
+  
+  #[test]
+  fn test_find_all_07() {
+    test_find_all!("", "aaaa", &["", "", "", ""]);
+  }
+
+  #[test]
+  fn test_find_all_08() {
+    test_find_all!("a?bab", "ababababbab", &["abab", "abab", "bab"]);
+  }
+
+  #[test]
+  fn test_find_all_09() {
+    test_find_all!("a", "aa", &["a", "a"]);
+  }
+
+  #[test]
+  fn test_find_all_10() {
+    test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdaabbbccccddddd", &["abcd", 
+      "b", "abcd", "abc", "b", "ab", "abc", "bd", "abc", "bd", "aabbbccccddddd"]);
   }
 }
 
