@@ -346,6 +346,15 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   let mut ranges = ~[];
   let mut other_exprs = ~[];
 
+  // check to see if this is an ascii char class, not a general purpose one
+  match p.current() {
+    Some(':') => {
+      p.next();
+      return parse_ascii_charclass(p);
+    }
+    _ => { }
+  };
+
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char
   // class
@@ -363,10 +372,6 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
     Some(']') => {
       p.next();
       ranges.push((']', ']'));
-    }
-    Some(':') => {
-      p.next();
-      return parse_ascii_charclass(p);
     }
     _ => { }
   }
