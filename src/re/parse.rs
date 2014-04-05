@@ -344,7 +344,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 #[inline]
 fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   let mut ranges = ~[];
-  let mut tables = ~[];
+  let mut other_exprs = ~[];
 
   // check to see if the first char following
   // '[' is a '^', if so, it is a negated char
@@ -382,8 +382,8 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
         };
 
         // return CharClass and/or any internal special character classes
-        let tables_expr = new_multiple_alternation(tables);
-        let expr_exists = match (&cc, &tables_expr) {
+        let other_exprs_result = new_multiple_alternation(other_exprs);
+        let expr_exists = match (&cc, &other_exprs_result) {
           (&CharClass(ref r), &Some(_)) if r.len() > 0 => (true, true),
           (&CharClass(ref r), &None) if r.len() > 0 => (true, false),
           (_, &Some(_)) => (false, true),
@@ -391,16 +391,16 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
         };
 
         return match expr_exists {
-          (true, true) => Ok(Alternation(~cc, ~tables_expr.unwrap())),
+          (true, true) => Ok(Alternation(~cc, ~other_exprs_result.unwrap())),
           (true, false) => Ok(cc),
-          (false, true) => Ok(tables_expr.unwrap()),
+          (false, true) => Ok(other_exprs_result.unwrap()),
           (false, false) => Err(ParseEmptyCharClassRange)
         };
       }
       Some('\\') => {
         p.next();
         match parse_escape(p) {
-          Ok(expr) => tables.push(expr),
+          Ok(expr) => other_exprs.push(expr),
           err => return err
         }
       }
@@ -408,7 +408,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
         p.consume(2);
         match parse_ascii_charclass(p) {
           Ok(table) => {
-            tables.push(table);
+            other_exprs.push(table);
           }
           Err(e) => return Err(e)
         }
