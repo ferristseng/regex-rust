@@ -399,13 +399,10 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
       }
       Some('\\') => {
         p.next();
-        match p.current() {
-          Some(c) => {
-            ranges.push((c, c));
-          }
-          None => return Err(ParseIncompleteEscapeSeq)
+        match parse_escape(p) {
+          Ok(expr) => tables.push(expr),
+          err => return err
         }
-        p.next();
       }
       Some('[') if p.peek() == Some(':') => {  // ASCII character class
         p.consume(2);
@@ -917,6 +914,11 @@ mod parse_tests {
   }
 
   #[test]
+  fn parse_unicode_charclass_nested() {
+    test_parse!("[sdkfj\\p{Latin}]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
+  }
+
+  #[test]
   fn parse_ascii_charclass() {
     test_parse!("[:alpha:]", Ok(CharClassTable(_)));
   }
@@ -933,6 +935,6 @@ mod parse_tests {
 
   #[test]
   fn parse_ascii_charclass_nested() {
-    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))))
+    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
   }
 }
