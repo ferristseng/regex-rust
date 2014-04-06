@@ -110,9 +110,30 @@ impl UncompiledRegexp {
     replaced
   }
 
-  // pub fn replacen(&self, input: &str) -> Option<Match> {
-  // 
-  // }
+  pub fn replacen(&self, input: &str, replaceWith: &str) -> (~str, uint) {
+    let len = input.len();
+    let strat = PikeVM::new(self.prog, 0); 
+    let mut replaced = input.to_owned();
+    let mut start = 0;
+    let emptyPatternAdd = if self.prog.len()==1 {1} else {0};
+    let mut repCount = 0;
+
+    while len != 0{
+      match strat.run(replaced, start) {
+        Some(t) => {
+          replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replaceWith, replaced.slice_from(t.end));
+          start += replaceWith.len() + emptyPatternAdd;
+          repCount += 1;
+        }
+        None => {
+          start += 1;
+        }
+      }
+      if start > replaced.len() {break}
+    }
+
+    (replaced, repCount)
+  }
 
 }
 
@@ -201,6 +222,11 @@ mod library_functions_test {
   #[test]
   fn test_replace_9() {
     test_replace!("a", "aa", "ccc", "cccccc");
+  }
+
+  #[test]
+  fn test_replace_10() {
+    test_replace!("b", "aa", "ccc", "aa");
   }
 
   #[test]
