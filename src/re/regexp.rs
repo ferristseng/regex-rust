@@ -156,6 +156,26 @@ mod library_functions_test {
     );
   )
 
+  macro_rules! test_replacen(
+    ($re: expr, $input: expr, $replaceWith: expr, $expect: expr, $expectCount: expr) => (
+      {
+        let re = match UncompiledRegexp::new($re) {
+          Ok(regex) => regex,
+          Err(e) => fail!(e)
+        };
+        let result = re.replacen($input, $replaceWith);
+        match result {
+          (answer, repCount) => {
+            if answer != ~$expect || repCount != $expectCount {
+              fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s} with {:u} replaces, not expected result of {:s} with {:d} replaces\n", 
+                $re, $input, $replaceWith, answer, repCount, $expect, $expectCount));
+            }
+		  }
+        }
+      }
+    );
+  )
+
   macro_rules! test_find_all(
     ($re: expr, $input: expr, $expect: expr) => (
       {
@@ -180,53 +200,103 @@ mod library_functions_test {
   )
 
   #[test]
-  fn test_replace_1() {
+  fn test_replace_01() {
     test_replace!("a*ba*", "abaaacaabaaaccdab", "", "cccd");
   }
 
   #[test]
-  fn test_replace_2() {
+  fn test_replace_02() {
     test_replace!("a*ba{1,}", "abaaacaabaaacca", "", "ccca");
   }
 
   #[test]
-  fn test_replace_3() {
+  fn test_replace_03() {
     test_replace!("a*ba{1,}", "abaaacaabaaacca", "aba", "abacabacca");
   }
 
   #[test]
-  fn test_replace_4() {
+  fn test_replace_04() {
     test_replace!("a", "aaaaaaaaaaaa", "b", "bbbbbbbbbbbb");
   }
 
   #[test]
-  fn test_replace_5() {
+  fn test_replace_05() {
     test_replace!("a{1,}", "aaaaaaaaaaaa", "b", "b");
   }
   
   #[test]
-  fn test_replace_6() {
+  fn test_replace_06() {
     test_replace!("a{1,}", "aaaaaaaaaaaa", "", "");
   }
   
   #[test]
-  fn test_replace_7() {
+  fn test_replace_07() {
     test_replace!("", "aaaa", "b", "babababab");
   }
 
   #[test]
-  fn test_replace_8() {
+  fn test_replace_08() {
     test_replace!("a?bab", "abababab", "c", "cc");
   }
 
   #[test]
-  fn test_replace_9() {
+  fn test_replace_09() {
     test_replace!("a", "aa", "ccc", "cccccc");
   }
 
   #[test]
   fn test_replace_10() {
     test_replace!("b", "aa", "ccc", "aa");
+  }
+
+  #[test]
+  fn test_replacen_01() {
+    test_replacen!("a*ba*", "abaaacaabaaaccdab", "", "cccd", 3);
+  }
+
+  #[test]
+  fn test_replacen_02() {
+    test_replacen!("a*ba{1,}", "abaaacaabaaacca", "", "ccca", 2);
+  }
+
+  #[test]
+  fn test_replacen_03() {
+    test_replacen!("a*ba{1,}", "abaaacaabaaacca", "aba", "abacabacca", 2);
+  }
+
+  #[test]
+  fn test_replacen_04() {
+    test_replacen!("a", "aaaaaaaaaaaa", "b", "bbbbbbbbbbbb", 12);
+  }
+
+  #[test]
+  fn test_replacen_05() {
+    test_replacen!("a{1,}", "aaaaaaaaaaaa", "b", "b", 1);
+  }
+  
+  #[test]
+  fn test_replacen_06() {
+    test_replacen!("a{1,}", "aaaaaaaaaaaa", "", "", 1);
+  }
+  
+  #[test]
+  fn test_replacen_07() {
+    test_replacen!("", "aaaa", "b", "babababab", 5);
+  }
+
+  #[test]
+  fn test_replacen_08() {
+    test_replacen!("a?bab", "abababab", "c", "cc", 2);
+  }
+
+  #[test]
+  fn test_replacen_09() {
+    test_replacen!("a", "aa", "ccc", "cccccc", 2);
+  }
+
+  #[test]
+  fn test_replacen_10() {
+    test_replacen!("b", "aa", "ccc", "aa", 0);
   }
 
   #[test]
