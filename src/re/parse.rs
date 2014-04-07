@@ -33,6 +33,50 @@ pub enum Expr {
   AssertEnd
 }
 
+pub struct ParseFlags {
+  i: bool,
+  m: bool,
+  d: bool,
+  U: bool
+}
+
+impl ParseFlags {
+  pub fn new() -> ParseFlags {
+    ParseFlags {
+      i: false,
+      m: false,
+      d: false,
+      U: false
+    }
+  }
+}
+
+impl ParseFlags {
+  pub fn setFlags(&mut self, s: ~str) {
+    for c in s.chars() {
+      match c {
+        'i' => self.i = true,
+        'm' => self.m = true,
+        'd' => self.d = true,
+        'U' => self.U = true,
+        _ => ()
+      }
+    }
+  }
+
+  pub fn clearFlags(&mut self, s: ~str) {
+    for c in s.chars() {
+      match c {
+        'i' => self.i = false,
+        'm' => self.m = false,
+        'd' => self.d = false,
+        'U' => self.U = false,
+        _ => ()
+      }
+    }
+  }
+}
+
 macro_rules! check_ok(
   ($f: expr) => (
     match $f {
