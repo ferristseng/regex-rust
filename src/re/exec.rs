@@ -1,5 +1,5 @@
 use std::vec;
-use std::util::swap;
+use std::mem::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
   InstMatch, InstJump, InstCaptureStart, InstCaptureEnd, InstSplit,
