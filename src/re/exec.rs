@@ -1,4 +1,5 @@
-use std::vec::Vec;
+use std::fmt;
+use std::slice;
 use std::mem::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
@@ -33,9 +34,9 @@ impl Thread {
   }
 }
 
-impl ToStr for Thread {
-  fn to_str(&self) -> ~str {
-    format!("<Thread pc: {:u}, end: {:u}, start_sp: {:u}>", self.pc, self.end, self.start_sp)
+impl fmt::Show for Thread {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f.buf, "<Thread pc: {:u}, end: {:u}, start_sp: {:u}>", self.pc, self.end, self.start_sp)
   }
 }
 
@@ -129,8 +130,8 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     let mut sp = 0;
     let mut found = None;
 
-    let mut clist: ~[Thread] = Vec::with_capacity(self.inst.len());
-    let mut nlist: ~[Thread] = Vec::with_capacity(self.inst.len());
+    let mut clist: ~[Thread] = slice::with_capacity(self.inst.len());
+    let mut nlist: ~[Thread] = slice::with_capacity(self.inst.len());
 
     // To start from an index other than than the first character,
     // need to compute the number of bytes from the beginning to

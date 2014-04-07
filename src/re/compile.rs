@@ -1,3 +1,4 @@
+use std::fmt;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
 use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
@@ -25,24 +26,24 @@ pub enum Instruction {
   InstNoop
 }
 
-impl ToStr for Instruction {
-  fn to_str(&self) -> ~str {
+impl fmt::Show for Instruction {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
-      InstLiteral(c)            => format!("InstLiteral {:c}", c),
-      InstRange(s, e)           => format!("InstRange {:c}-{:c}", s, e),
-      InstTableRange(t)         => format!("InstTableRange"),
-      InstNegatedTableRange(t)  => format!("InstNegatedTableRange"),
-      InstMatch                 => ~"InstMatch",
-      InstJump(i)               => format!("InstJump {:u}", i),
-      InstCaptureStart(id, _)   => format!("InstCaptureStart {:u}", id),
-      InstCaptureEnd(id)        => format!("InstCaptureEnd {:u}", id),
-      InstSplit(l, r)           => format!("InstSplit {:u} | {:u}", l, r),
-      InstAssertStart           => ~"InstLineStart",
-      InstAssertEnd             => ~"InstLineEnd",
-      InstWordBoundary          => ~"InstWordBoundary",
-      InstNonWordBoundary       => ~"InstNonWordBoundary",
-      InstProgress              => ~"InstProgress",
-      InstNoop                  => ~"InstNoop"
+      InstLiteral(c)            => write!(f.buf, "InstLiteral {:c}", c),
+      InstRange(s, e)           => write!(f.buf, "InstRange {:c}-{:c}", s, e),
+      InstTableRange(t)         => write!(f.buf, "InstTableRange"),
+      InstNegatedTableRange(t)  => write!(f.buf, "InstNegatedTableRange"),
+      InstMatch                 => write!(f.buf, "InstMatch"),
+      InstJump(i)               => write!(f.buf, "InstJump {:u}", i),
+      InstCaptureStart(id, _)   => write!(f.buf, "InstCaptureStart {:u}", id),
+      InstCaptureEnd(id)        => write!(f.buf, "InstCaptureEnd {:u}", id),
+      InstSplit(l, r)           => write!(f.buf, "InstSplit {:u} | {:u}", l, r),
+      InstAssertStart           => write!(f.buf, "InstLineStart"),
+      InstAssertEnd             => write!(f.buf, "InstLineEnd"),
+      InstWordBoundary          => write!(f.buf, "InstWordBoundary"),
+      InstNonWordBoundary       => write!(f.buf, "InstNonWordBoundary"),
+      InstProgress              => write!(f.buf, "InstProgress"),
+      InstNoop                  => write!(f.buf, "InstNoop")
     }
   }
 }
