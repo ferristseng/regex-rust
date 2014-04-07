@@ -93,10 +93,11 @@ macro_rules! check_ok(
 /// # Arguments
 ///
 /// * t - The regular expression string
-pub fn parse(t: &str) -> Result<Expr, ParseCode> {
+/// * f - The current flags for parsing
+pub fn parse(t: &str, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   let mut p = State::new(t);
 
-  _parse_recursive(&mut p)
+  _parse_recursive(&mut p, f)
 }
 
 /// Parses an escaped value at a given state.
@@ -272,8 +273,9 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
 /// # Arguments
 ///
 /// * p - The current state of parsing
+/// * f - The current parse flags
 #[inline]
-fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
+fn parse_group(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   let mut capturing = true;
   let mut name: Option<~str> = None;
   let mut name_buf: ~[char] = ~[];
@@ -363,7 +365,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
     p.ncaptures += 1;
   }
 
-  let expr = match _parse_recursive(p) {
+  let expr = match _parse_recursive(p, f) {
     Ok(re) => re,
     e => return e
   };
@@ -520,10 +522,11 @@ fn new_alternation_recursive(components: &[Expr]) -> Expr {
 /// # Arguments
 ///
 /// * p     - The current state of parsing
+/// * f     - The current parse flags
 /// * stack - The current stack of expressions parsed
 /// * c     - The repetition operator being parsed; either *, +, or ?
 #[inline]
-fn parse_repetition_op(p: &mut State, stack: &mut ~[Expr], c: char) -> Result<Expr, ParseCode> {
+fn parse_repetition_op(p: &mut State, f: &mut ParseFlags, stack: &mut ~[Expr], c: char) -> Result<Expr, ParseCode> {
   p.next();
 
   // Look for a quantifier
@@ -654,7 +657,7 @@ fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
 /// * {a} - Bounded repetition
 /// * {a,} - Unbounded repetition
 #[inline]
-fn parse_bounded_repetition(p: &mut State, stack: &mut ~[Expr]) -> Result<Expr, ParseCode>{
+fn parse_bounded_repetition(p: &mut State, f: &mut ParseFlags, stack: &mut ~[Expr]) -> Result<Expr, ParseCode>{
   p.next();
   match extract_repetition_bounds(p) {
     Some(rep) => {
@@ -694,7 +697,8 @@ fn parse_bounded_repetition(p: &mut State, stack: &mut ~[Expr]) -> Result<Expr, 
 /// # Arguments
 ///
 /// * p - The current state of parsing
-fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
+/// * f - The current parse flags
+fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   let mut stack = ~[];
 
   loop {
@@ -702,7 +706,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
       Some('(') => {
         p.next();
         do_concat(&mut stack);
-        let expr = check_ok!(parse_group(p));
+        let expr = check_ok!(parse_group(p, f));
         stack.push(expr);
       }
       Some(')') => {
@@ -717,7 +721,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
         p.next();
 
-        match _parse_recursive(p) {
+        match _parse_recursive(p, f) {
           Ok(expr) => {
             let alt = match stack.pop() {
               Some(ans) => ans,
@@ -734,14 +738,14 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
       }
 
       Some(c) if c == '*' || c == '?' || c == '+' => {
-        match parse_repetition_op(p, &mut stack, c) {
+        match parse_repetition_op(p, f, &mut stack, c) {
           Ok(expr) => stack.push(expr),
           e => return e
         }
       }
 
       Some('{') => {
-        match parse_bounded_repetition(p, &mut stack) {
+        match parse_bounded_repetition(p, f, &mut stack) {
           Ok(Empty) => (),
           Ok(expr) => stack.push(expr),
           e => return e
@@ -827,7 +831,7 @@ mod parse_tests {
   macro_rules! test_parse(
     ($input: expr, $expect: pat) => (
       {
-        let result = parse($input);
+        let result = parse($input, &mut ParseFlags::new());
         let ok = match result {
           $expect => true,
           _ => false

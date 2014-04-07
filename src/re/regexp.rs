@@ -1,20 +1,20 @@
 use exec::{ExecStrategy, PikeVM};
 use compile::Instruction;
 use result::Match;
-use parse::parse;
+use parse::{parse, ParseFlags};
 use compile::compile_recursive;
 use error::ParseError::*;
 use std::slice::Items;
 
-/// Uncompiled regular expression. 
+/// Uncompiled regular expression.
 pub struct UncompiledRegexp {
 	prog: ~[Instruction]
 }
 
 /// Constructors
 impl UncompiledRegexp {
-	pub fn new(s: &str) -> Result<UncompiledRegexp, ParseCode> {
-		match parse(s) {
+	pub fn new(s: &str, f: &mut ParseFlags) -> Result<UncompiledRegexp, ParseCode> {
+		match parse(s, f) {
 			Ok(ref expr) => {
 				let prog = compile_recursive(expr);
 				Ok(UncompiledRegexp { prog: prog })
@@ -27,8 +27,8 @@ impl UncompiledRegexp {
 /// TODO:
 /// The API needs some work.
 /// Allow for other implementations to be used?
-impl UncompiledRegexp { 
-	/// Checks if the beginning of the input string 
+impl UncompiledRegexp {
+	/// Checks if the beginning of the input string
 	/// contains a match, and returns it.
 	pub fn exec(&self, input: &str) -> Option<Match> {
 		let strat = PikeVM::new(self.prog, 0);
@@ -39,7 +39,7 @@ impl UncompiledRegexp {
 			None => None
 		}
 	}
-	/// Finds the first occurrence of the pattern in the 
+	/// Finds the first occurrence of the pattern in the
 	/// input string and returns it.
 	pub fn search(&self, input: &str) -> Option<Match> {
 		let len = input.len();
@@ -63,7 +63,7 @@ impl UncompiledRegexp {
 		let mut matches: ~[Match] = ~[];
 		let mut result: ~[~str] = ~[];
 		let len = input.len();
-		let strat = PikeVM::new(self.prog, 0); 
+		let strat = PikeVM::new(self.prog, 0);
 
 		matches = self.find_all(input); // Check whether input contains the regex
 		for i in range(0, matches.len()) {
@@ -99,7 +99,7 @@ impl UncompiledRegexp {
 				result.push(res);
 				return result;
 			}
-		} 
+		}
 
 		for i in range(0, start_indices.len()) { // If more than 1 match
 			if (i == start_indices.len()-1) { // If reached end of input
@@ -117,7 +117,7 @@ impl UncompiledRegexp {
 		let mut matches : ~[Match] = ~[];
 
 		let len = input.len();
-		let strat = PikeVM::new(self.prog, 0); 
+		let strat = PikeVM::new(self.prog, 0);
 
 		let mut start = 0;
 		for _ in range(0, len + 1) {	// Run starting at each character
@@ -144,7 +144,7 @@ impl UncompiledRegexp {
 
 	pub fn replacen(&self, input: &str, replaceWith: &str) -> (~str, uint) {
 		let len = input.len();
-		let strat = PikeVM::new(self.prog, 0); 
+		let strat = PikeVM::new(self.prog, 0);
 		let mut replaced = input.to_owned();
 		let mut start = 0;
 		let emptyPatternAdd = if self.prog.len()==1 {1} else {0};
@@ -199,7 +199,7 @@ mod library_functions_test {
 				match result {
 					(answer, repCount) => {
 						if answer != ~$expect || repCount != $expectCount {
-							fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s} with {:u} replaces, not expected result of {:s} with {:d} replaces\n", 
+							fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s} with {:u} replaces, not expected result of {:s} with {:d} replaces\n",
 								$re, $input, $replaceWith, answer, repCount, $expect, $expectCount));
 						}
 					}
@@ -278,12 +278,12 @@ mod library_functions_test {
 	fn test_replace_05() {
 		test_replace!("a{1,}", "aaaaaaaaaaaa", "b", "b");
 	}
-	
+
 	#[test]
 	fn test_replace_06() {
 		test_replace!("a{1,}", "aaaaaaaaaaaa", "", "");
 	}
-	
+
 	#[test]
 	fn test_replace_07() {
 		test_replace!("", "aaaa", "b", "babababab");
@@ -328,12 +328,12 @@ mod library_functions_test {
 	fn test_replacen_05() {
 		test_replacen!("a{1,}", "aaaaaaaaaaaa", "b", "b", 1);
 	}
-	
+
 	#[test]
 	fn test_replacen_06() {
 		test_replacen!("a{1,}", "aaaaaaaaaaaa", "", "", 1);
 	}
-	
+
 	#[test]
 	fn test_replacen_07() {
 		test_replacen!("", "aaaa", "b", "babababab", 5);
@@ -371,7 +371,7 @@ mod library_functions_test {
 
 	#[test]
 	fn test_find_all_04() {
-		test_find_all!("a", "aaaaaaaaaaaa", &["a", "a", "a", "a", "a", "a", "a", 
+		test_find_all!("a", "aaaaaaaaaaaa", &["a", "a", "a", "a", "a", "a", "a",
 			"a", "a", "a", "a", "a"]);
 	}
 
@@ -379,12 +379,12 @@ mod library_functions_test {
 	fn test_find_all_05() {
 		test_find_all!("a{1,}", "aaaaaaaaaaaa", &["aaaaaaaaaaaa"]);
 	}
-	
+
 	#[test]
 	fn test_find_all_06() {
 		test_find_all!("a{1,}", "aaabaaaabaaa", &["aaa", "aaaa", "aaa"]);
 	}
-	
+
 	#[test]
 	fn test_find_all_07() {
 		test_find_all!("", "aaaa", &["", "", "", ""]);
@@ -402,7 +402,7 @@ mod library_functions_test {
 
 	#[test]
 	fn test_find_all_10() {
-		test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdaabbbccccddddd", &["abcd", 
+		test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdaabbbccccddddd", &["abcd",
 			"b", "abcd", "abc", "b", "ab", "abc", "bd", "abc", "bd", "aabbbccccddddd"]);
 	}
 
@@ -425,10 +425,10 @@ mod library_functions_test {
 	fn test_split_04() {
 		test_split!("a{1,}", "aaaaaabc", &["bc"]);
 	}
-	
+
 	#[test]
 	fn test_split_05() {
-		test_split!("a{1,}", "aaaaaabaab", &["b", "b"]); 
+		test_split!("a{1,}", "aaaaaabaab", &["b", "b"]);
 	}
 
 	#[test]
@@ -487,7 +487,7 @@ mod tests {
 					None => {
 						fail!("Didn't match a group when expected");
 					}
-				}				 
+				}
 			}
 			Err(error) => {
 				fail!(error.to_str());
