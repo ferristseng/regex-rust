@@ -7,13 +7,13 @@ use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
   NegatedWhitespaceClass, ascii};
 
-#[deriving(ToStr, Clone)]
+#[deriving(Show, Clone)]
 pub enum QuantifierPrefix {
   Greedy,
   NonGreedy
 }
 
-#[deriving(ToStr, Clone)]
+#[deriving(Show, Clone)]
 pub enum Expr {
   Empty,
   Literal(char),
