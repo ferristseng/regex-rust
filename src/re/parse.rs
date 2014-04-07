@@ -92,7 +92,7 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   p.next();
 
-  println(cc.to_str());
+  println!("{:s}", cc.to_str());
 
   Ok(cc)
 }
@@ -763,9 +763,9 @@ fn do_concat(stack: &mut ~[Expr]) {
 ///
 /// * stack - The stack to print
 fn print_stack(stack: &mut ~[Expr]) {
-  println("--E-Stack--");
+  println!("--E-Stack--");
   for e in stack.iter() {
-    println(e.to_str());
+    println!("{:s}", e.to_str());
   }
 }
 

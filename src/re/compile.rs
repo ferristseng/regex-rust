@@ -242,9 +242,9 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
 fn debug_stack(stack: ~[Instruction]) {
   let mut count: uint = 0;
 
-  println("--COMPILE STACK--");
+  println!("--COMPILE STACK--");
   for e in stack.iter() {
-    println(format!("{:u}: {:s}", count, e.to_str()));
+    println!(format!("{:u}: {:s}", count, e.to_str()));
     count += 1;
   }
 }

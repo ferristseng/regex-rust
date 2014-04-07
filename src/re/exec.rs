@@ -160,7 +160,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
       sp += c.len_utf8_bytes();
 
-      //println(format!("-- Execution ({:c}|{:u}) --", c, sp));
+      //println!(format!("-- Execution ({:c}|{:u}) --", c, sp));
 
       while (clist.len() > 0) {
         let mut t = clist.shift();;

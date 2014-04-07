@@ -16,7 +16,7 @@ macro_rules! run_tests(
       let expect_test = match res {
         $expect => true,
         _ => {
-          println(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: '{:s}'>",
+          println!(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: '{:s}'>",
                   $ident, $re, $input, res.to_str()));
           false
         }
@@ -56,7 +56,7 @@ mod python_tests {
   use regexp::UncompiledRegexp;
 
   // Tests start here
-  
+
   #[test]
   fn test_case_ident_000() {
     run_tests!("[^^]+", "abc", ~"abc", "000", Some(_), &'static [])
