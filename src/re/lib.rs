@@ -7,7 +7,7 @@
 #[license = "MIT"];
 #[comment = "Regular Expression Engine in Rust"];
 
-extern mod extra;
+extern crate extra;
 
 pub use regexp::UncompiledRegexp;
 
