@@ -244,7 +244,7 @@ fn debug_stack(stack: ~[Instruction]) {
 
   println!("--COMPILE STACK--");
   for e in stack.iter() {
-    println!(format!("{:u}: {:s}", count, e.to_str()));
+    println!("{:u}: {:s}", count, e.to_str());
     count += 1;
   }
 }
