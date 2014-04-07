@@ -1,4 +1,4 @@
-use std::vec;
+use std::vec::Vec;
 use std::mem::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
@@ -129,8 +129,8 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     let mut sp = 0;
     let mut found = None;
 
-    let mut clist: ~[Thread] = vec::with_capacity(self.inst.len());
-    let mut nlist: ~[Thread] = vec::with_capacity(self.inst.len());
+    let mut clist: ~[Thread] = Vec::with_capacity(self.inst.len());
+    let mut nlist: ~[Thread] = Vec::with_capacity(self.inst.len());
 
     // To start from an index other than than the first character,
     // need to compute the number of bytes from the beginning to
