@@ -215,6 +215,15 @@ TESTS = [
   ("\\615", '1', '1', NOMATCH),
   ("\\77\\123+\\111*", '?SSSSS', '?SSSSS', MATCH),
 
+  # Special character escape tests
+  ("\\v", '\v', '\v', MATCH),
+  ("\\f", '\f', '\f', MATCH),
+  ("\\n", '\n', '\n', MATCH),
+  ("\\t", '\t', '\t', MATCH),
+  ("\\r", '\r', '\r', MATCH),
+  ("\\v\\f*\\n\\t+\\r", '\v\f\f\n\t\t\r', '\v\f\f\n\t\t\r', MATCH),
+  ("\\T", '\t', '\t', NOMATCH),
+
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
   ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.

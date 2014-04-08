@@ -179,8 +179,8 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
         't' => {Ok(Literal('\t'))},
         'f' => {Ok(Literal('\x0C'))},
         'v' => {Ok(Literal('\x0B'))},
-        'A' => {Ok(Literal(c))}, //TODO: Beginning of text
-        'z' => {Ok(Literal(c))}, //TODO: End of text
+        'A' => {Ok(Literal('\x02'))},
+        'z' => {Ok(Literal('\x03'))},
         'C' => {Ok(Literal(c))}, //TODO: A single byte (no matter the encoding)
         'Q' => {Ok(Literal(c))}, //TODO: Match literal text, terminated with \E
         'x' => {parse_hex_escape(p)},
