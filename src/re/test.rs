@@ -847,4 +847,19 @@ mod python_tests {
     run_tests!("\\P{Greek}", "\u0374", ~"", ~"\u0374", "155", Some(_), &[])
   }
 
+  #[test]
+  fn test_case_ident_156() {
+    run_tests!("a.b", "a\nb", ~"", ~"", "156", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_157() {
+    run_tests!("a.b", "a\nb", ~"s", ~"a\nb", "157", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_158() {
+    run_tests!(".", "\n", ~"s", ~"\n", "158", Some(_), &[])
+  }
+
 }
