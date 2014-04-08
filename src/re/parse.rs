@@ -771,11 +771,7 @@ fn do_concat(stack: &mut ~[Expr]) {
 fn print_stack(stack: &mut ~[Expr]) {
   println!("--E-Stack--");
   for e in stack.iter() {
-<<<<<<< Updated upstream
     println!("{:s}", e.to_str());
-=======
-    //println!("{}", e.to_str());
->>>>>>> Stashed changes
   }
 }
 
