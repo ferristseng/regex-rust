@@ -5,7 +5,7 @@ use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
   InstMatch, InstJump, InstCaptureStart, InstCaptureEnd, InstSplit,
   InstAssertStart, InstAssertEnd, InstWordBoundary, InstNonWordBoundary,
-  InstNoop, InstProgress};
+  InstNoop, InstProgress, InstSingleByte};
 use result::CapturingGroup;
 use unicode;
 
@@ -183,6 +183,13 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
               self.addThread(t, &mut nlist);
             }
+          }
+          InstSingleByte => {
+            t.sp += 1;
+            t.pc = t.pc + 1;
+            t.end = t.sp;
+
+            self.addThread(t, &mut nlist);
           }
           InstRange(start, end) => {
             if c >= start && c <= end && i != input.char_len() {

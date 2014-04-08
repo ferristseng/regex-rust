@@ -11,6 +11,7 @@ use std::str::CharRange;
 #[deriving(Clone)]
 pub enum Instruction {
   InstLiteral(char),
+  InstSingleByte,
   InstRange(char, char),
   InstTableRange(&'static [(char,char)]),
   InstNegatedTableRange(&'static [(char,char)]),
@@ -31,6 +32,7 @@ impl fmt::Show for Instruction {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
       InstLiteral(c)            => write!(f.buf, "InstLiteral {:c}", c),
+      InstSingleByte            => write!(f.buf, "InstSingleByte"),
       InstRange(s, e)           => write!(f.buf, "InstRange {:c}-{:c}", s, e),
       InstTableRange(_)         => write!(f.buf, "InstTableRange"),
       InstNegatedTableRange(_)  => write!(f.buf, "InstNegatedTableRange"),
