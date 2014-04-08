@@ -203,5 +203,15 @@ TESTS = [
   ("^b$", "a\\nb\\nc", "", "", NOMATCH),
   ("^b$", "a\\nb\\nc", "m", "b", MATCH),
   ("^c$", "a\\nb\\nc", "", "", NOMATCH),
-  ("^c$", "a\\nb\\nc", "m", "c", MATCH)
+  ("^c$", "a\\nb\\nc", "m", "c", MATCH),
+
+  # Ungreedy flag test
+  ("a*", "aaaa", "", "aaaa", MATCH),
+  ("a*", "aaaa", "U", "", MATCH),
+  ("a*?", "aaaa", "", "", MATCH),
+  ("a*?", "aaaa", "U", "aaaa", MATCH),
+  ("a{1,3}", "aaaa", "", "aaa", MATCH),
+  ("a{1,3}", "aaaa", "U", "a", MATCH),
+  ("a{1,3}?", "aaaa", "", "a", MATCH),
+  ("a{1,3}?", "aaaa", "U", "aaa", MATCH)
 ]

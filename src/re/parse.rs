@@ -535,9 +535,19 @@ fn parse_repetition_op(p: &mut State, f: &mut ParseFlags, stack: &mut ~[Expr], c
   let quantifier = match p.current() {
     Some('?') => {
       p.next();
-      NonGreedy
+      if f.U {
+        Greedy
+      } else {
+        NonGreedy
+      }
     }
-    _ => Greedy
+    _ => {
+      if f.U {
+        NonGreedy
+      } else {
+        Greedy
+      }
+    }
   };
 
   match stack.pop() {
@@ -676,9 +686,19 @@ fn parse_bounded_repetition(p: &mut State, f: &mut ParseFlags, stack: &mut ~[Exp
       let quantifier = match p.current() {
         Some('?') => {
           p.next();
-          NonGreedy
+          if f.U {
+            Greedy
+          } else {
+            NonGreedy
+          }
         },
-        _ => Greedy
+        _ => {
+          if f.U {
+            NonGreedy
+          } else {
+            Greedy
+          }
+        }
       };
 
       match stack.pop() {
