@@ -3,7 +3,7 @@
 
 // parsing codes
 pub mod ParseError {
-  static PARSE_ERR: &'static str = "Parse Error: ";
+  use std::fmt;
 
   pub enum ParseCode {
     ParseOk,
@@ -48,40 +48,41 @@ pub mod ParseError {
     ParseUnknownError
   }
 
-  impl ToStr for ParseCode {
-    fn to_str(&self) -> ~str {
+  impl fmt::Show for ParseCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
       match *self {
-        ParseOk                          => ~"Ok",
-        ParseEmptyAlternate              => PARSE_ERR + "Nothing to alternate",
-        ParseEmptyConcatenate            => PARSE_ERR + "Nothing to concatenate",
-        ParseRepeatedRepetition          => PARSE_ERR + "Multiple repeat operations",
-        ParseEmptyRepetition             => PARSE_ERR + "Nothing to repeat",
-        ParseEmptyRepetitionRange        => PARSE_ERR + "Repeat range is empty",
-        ParseEmptyGroupName              => PARSE_ERR + "Group name is empty",
-        ParseEmptyPropertyName           => PARSE_ERR + "Property character class name is empty",
-        ParseExpectedClosingParen        => PARSE_ERR + "Expected ')'",
-        ParseExpectedClosingBracket      => PARSE_ERR + "Expected ']'",
-        ParseExpectedClosingBrace        => PARSE_ERR + "Expected '}'",
-        ParseExpectedOpeningAngleBracket => PARSE_ERR + "Expected '<'",
-        ParseExpectedClosingAngleBracket => PARSE_ERR + "Expected '>'",
-        ParseExpectedComma               => PARSE_ERR + "Expected ','",
-        ParseExpectedAlpha               => PARSE_ERR + "Expected alpha character",
-        ParseExpectedNumeric             => PARSE_ERR + "Expected number",
-        ParseExpectedAlphaNumeric        => PARSE_ERR + "Expected alphanumeric character (or underscore)",
-        ParseExpectedOperand             => PARSE_ERR + "Expected an operand on the stack",
-        ParseExpectedAsciiCharClassClose => PARSE_ERR + "Expected \":]\"",
-        ParseUnexpectedClosingParen      => PARSE_ERR + "Unexpected closing parenthases in input",
-        ParseUnexpectedOperand           => PARSE_ERR + "Unexpected operand was on the stack",
-        ParseUnexpectedCharacter         => PARSE_ERR + "Unexpected character in input",
-        ParseInvalidUnicodeProperty      => PARSE_ERR + "Invalid Unicode property provided",
-        ParseInvalidAsciiCharClass       => PARSE_ERR + "Invalid ASCII character class name provided",
-        ParseIncompleteEscapeSeq         => PARSE_ERR + "Expected a character to escape",
-        ParseEmptyCharClassRange         => PARSE_ERR + "Empty character class",
+        ParseOk                          => write!(f.buf, "Ok"),
+        ParseEmptyAlternate              => write!(f.buf, "Parse Error: Nothing to alternate"),
+        ParseEmptyConcatenate            => write!(f.buf, "Parse Error: Nothing to concatenate"),
+        ParseRepeatedRepetition          => write!(f.buf, "Parse Error: Multiple repeat operations"),
+        ParseEmptyRepetition             => write!(f.buf, "Parse Error: Nothing to repeat"),
+        ParseEmptyRepetitionRange        => write!(f.buf, "Parse Error: Repeat range is empty"),
+        ParseEmptyGroupName              => write!(f.buf, "Parse Error: Group name is empty"),
+        ParseEmptyPropertyName           => write!(f.buf, "Parse Error: Property character class name is empty"),
+        ParseExpectedClosingParen        => write!(f.buf, "Parse Error: Expected ')'"),
+        ParseExpectedClosingBracket      => write!(f.buf, "Parse Error: Expected ']'"),
+        ParseExpectedClosingBrace        => write!(f.buf, "Parse Error: Expected '{:s}'", "}"),
+        ParseExpectedOpeningAngleBracket => write!(f.buf, "Parse Error: Expected '<'"),
+        ParseExpectedClosingAngleBracket => write!(f.buf, "Parse Error: Expected '>'"),
+        ParseExpectedComma               => write!(f.buf, "Parse Error: Expected ','"),
+        ParseExpectedAlpha               => write!(f.buf, "Parse Error: Expected alpha character"),
+        ParseExpectedNumeric             => write!(f.buf, "Parse Error: Expected number"),
+        ParseExpectedAlphaNumeric        => write!(f.buf, "Parse Error: Expected alphanumeric character (or underscore)"),
+        ParseExpectedOperand             => write!(f.buf, "Parse Error: Expected an operand on the stack"),
+        ParseExpectedAsciiCharClassClose => write!(f.buf, "Parse Error: Expected \":]\""),
+        ParseUnexpectedClosingParen      => write!(f.buf, "Parse Error: Unexpected closing parenthases in input"),
+        ParseUnexpectedOperand           => write!(f.buf, "Parse Error: Unexpected operand was on the stack"),
+        ParseUnexpectedCharacter         => write!(f.buf, "Parse Error: Unexpected character in input"),
+        ParseInvalidUnicodeProperty      => write!(f.buf, "Parse Error: Invalid Unicode property provided"),
+        ParseInvalidAsciiCharClass       => write!(f.buf, "Parse Error: Invalid ASCII character class name provided"),
+        ParseIncompleteEscapeSeq         => write!(f.buf, "Parse Error: Expected a character to escape"),
+        ParseEmptyCharClassRange         => write!(f.buf, "Parse Error: Empty character class"),
         ParseInternalError |
         ParseNotRepetition |
-        ParseUnknownError           => PARSE_ERR + "Unknown error (probably a bug)",
-        ParseEmptyStack             => PARSE_ERR + "Nothing on the stack"
+        ParseUnknownError           => write!(f.buf, "Parse Error: Unknown error (probably a bug)"),
+        ParseEmptyStack             => write!(f.buf, "Parse Error: Nothing on the stack")
       }
     }
   }
+
 }

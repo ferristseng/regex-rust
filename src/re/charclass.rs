@@ -144,10 +144,10 @@ fn order_ranges(ranges: &mut ~[Range]) {
     let &(start1, end1) = range1;
     let &(start2, end2) = range2;
 
-    if (start1 < start2) {
+    if start1 < start2 {
       Less
-    } else if (start1 == start2) {
-      if (end1 > end2) {
+    } else if start1 == start2 {
+      if end1 > end2 {
         Less
       } else {
         Greater
@@ -169,24 +169,24 @@ pub fn new_charclass(ranges: ~[Range]) -> Expr {
   let mut new_ranges = ~[];
 
   for &(start, end) in ranges.iter() {
-    match new_ranges.pop_opt() {
+    match new_ranges.pop() {
       Some(range) => {
         let (s, e): (char, char) = range;
-        if (start > e) {
+        if start > e {
           new_ranges.push((s, e));
-          if (start <= end) {
+          if start <= end {
             new_ranges.push((start, end))
           }
-        } else if (start < e && end > e) {
+        } else if start < e && end > e {
           new_ranges.push((s, end))
-        } else if (start < e && end < e) {
+        } else if start < e && end < e {
           new_ranges.push((s, e))
         } else {
           new_ranges.push((s, e))
         }
       }
       None => {
-        if (start <= end) {
+        if start <= end {
           new_ranges.push((start, end))
         }
       }
@@ -209,13 +209,13 @@ pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
   for &(start, end) in ranges.iter() {
     match prev_char(start) {
       Some(e) => {
-        if (min <= e && end >= start) {
+        if min <= e && end >= start {
           new_ranges.push((min, e));
         }
       },
       None => ()
     };
-    if (min <= end) {
+    if min <= end {
       min = match next_char(end) {
         Some(c) => c,
         None => end
@@ -224,7 +224,7 @@ pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
   }
 
   // Patch the end
-  if (min != MAX) {
+  if min != MAX {
     new_ranges.push((min, MAX));
   }
 
