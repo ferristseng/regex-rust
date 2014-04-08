@@ -224,6 +224,12 @@ TESTS = [
   ("\\v\\f*\\n\\t+\\r", '\v\f\f\n\t\t\r', '\v\f\f\n\t\t\r', MATCH),
   ("\\T", '\t', '\t', NOMATCH),
 
+  # Literal string escape tests
+  ("\\QThis is the string!\\E", 'This is the string!', 'This is the string!', MATCH),
+  ("\\Q((a)*)*\\E", '((a)*)*', '((a)*)*', MATCH),
+  ("(\\Q({[\\E)*", '({[({[({[({[({[', '({[({[({[({[({[', MATCH),
+  ("\\Q\\E", '', '', MATCH),
+
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
   ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.

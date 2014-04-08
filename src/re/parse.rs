@@ -87,6 +87,32 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
       p.next();
       return Ok(AssertWordBoundary)
     }
+    Some('Q') => {
+      p.next();
+      let mut literal : ~str = ~"";
+      loop {
+        match p.current() {
+          Some('\\') => {
+            p.next();
+            match p.current() {
+              Some('E') => {
+                p.next();
+                return Ok(LiteralString(literal));
+              },
+              Some(c) => {
+                literal.push_char('\\');
+              },
+              _ => {return Err(ParseIncompleteEscapeSeq)}
+            }
+          },
+          Some(c) => {
+            p.next();
+            literal.push_char(c);
+          },
+          _ => return Err(ParseIncompleteEscapeSeq)
+        }
+      }
+    }
     Some(_) => return parse_escape_char(p),
     None => return Err(ParseIncompleteEscapeSeq)
   };
@@ -182,7 +208,6 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
         'A' => {Ok(Literal('\x02'))},
         'z' => {Ok(Literal('\x03'))},
         'C' => {Ok(Literal(c))}, //TODO: A single byte (no matter the encoding)
-        'Q' => {Ok(Literal(c))}, //TODO: Match literal text, terminated with \E
         'x' => {parse_hex_escape(p)},
          _  => {
            if(c >= '0' && c <= '7') {
