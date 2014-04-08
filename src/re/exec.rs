@@ -6,7 +6,7 @@ use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
   InstMatch, InstJump, InstCaptureStart, InstCaptureEnd, InstSplit,
   InstAssertStart, InstAssertEnd, InstWordBoundary, InstNonWordBoundary,
   InstNoop, InstProgress};
-use result::{Match, CapturingGroup};
+use result::CapturingGroup;
 use unicode;
 
 /// This should be able to take compiled
@@ -86,7 +86,7 @@ impl<'a> PikeVM<'a> {
 
           // Fill in spaces with None, if there is no
           // knowledge of a capture instruction
-          while (t.captures.len() < num + 1) {
+          while t.captures.len() < num + 1 {
             t.captures.push(None);
           }
 
@@ -106,7 +106,7 @@ impl<'a> PikeVM<'a> {
           t.pc = t.pc + 1;
         }
         InstProgress => {
-            if(t.start_sp < sp) {
+            if t.start_sp < sp {
                 t.pc = t.pc + 1;
             } else {
                 //println!("Progess Instruction Failed {}", t.to_str());
@@ -146,7 +146,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
       let c = input.char_at(sp);
 
       // Wait until the start_index is hit
-      if (i == start_index) {
+      if i == start_index {
         break;
       }
 
@@ -169,14 +169,14 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
       //println!("-- Execution ({:c}|{:u}) --", c, sp);
 
-      while (clist.len() > 0) {
+      while clist.len() > 0 {
         let mut t = match clist.shift() {
           Some(temp) => temp,
           None => Thread::new(0,sp,sp) //Should be unreachable...
         };
         match self.inst[t.pc] {
           InstLiteral(m) => {
-            if (c == m && i != input.char_len()) {
+            if c == m && i != input.char_len() {
               t.pc = t.pc + 1;
               t.end = sp;
 
@@ -184,7 +184,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
           }
           InstRange(start, end) => {
-            if (c >= start && c <= end && i != input.char_len()) {
+            if c >= start && c <= end && i != input.char_len() {
               t.pc = t.pc + 1;
               t.end = sp;
 
@@ -208,7 +208,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
           }
           InstAssertStart => {
-            if (i == 0) {
+            if i == 0 {
               t.pc = t.pc + 1;
 
               self.addThread(t, &mut clist, sp);
@@ -217,22 +217,21 @@ impl<'a> ExecStrategy for PikeVM<'a> {
           InstAssertEnd => {
             // Account for the extra character added onto each
             // input string
-            if (i == input.char_len() - 1) {
+            if i == input.char_len() - 1 {
               t.pc = t.pc + 1;
 
               self.addThread(t, &mut clist, sp);
             }
           }
           InstWordBoundary => {
-            if (i == 0 ||
-                i == input.char_len()) {
+            if i == 0 || i == input.char_len() {
               continue;
             }
-            if (i == start_index &&
-                !input.char_at_reverse(t.end).is_alphanumeric()) {
+            if i == start_index &&
+                !input.char_at_reverse(t.end).is_alphanumeric() {
               continue;
             }
-            if (!c.is_alphanumeric()) {
+            if !c.is_alphanumeric() {
               continue;
             }
             t.pc = t.pc + 1;
@@ -240,15 +239,15 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             self.addThread(t, &mut clist, sp);
           }
           InstNonWordBoundary => {
-            if (i == start_index &&
+            if i == start_index &&
                 i != 0 &&
-                input.char_at_reverse(t.end).is_alphanumeric()) {
+                input.char_at_reverse(t.end).is_alphanumeric() {
               continue;
             }
-            if (i != input.char_len() &&
+            if i != input.char_len() &&
                 i != 0 &&
                 i != start_index &&
-                c.is_alphanumeric()) {
+                c.is_alphanumeric() {
               continue;
             }
             t.pc = t.pc + 1;
@@ -272,7 +271,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     // groups length in the `Match`.
     match found {
       Some(ref mut ma) => {
-        if (ma.captures.len() < self.ncaps) {
+        if ma.captures.len() < self.ncaps {
           for _ in range(ma.captures.len(), self.ncaps) {
             ma.captures.push(None);
           }

@@ -21,11 +21,11 @@ macro_rules! run_tests(
           false
         }
       };
-      if (!expect_test) {
+      if !expect_test {
         assert!(expect_test);
         return
       }
-      if (res.is_some()) {
+      if res.is_some() {
         match res {
           Some(ma) => {
             assert_eq!(ma.matched(), $matched)
@@ -56,7 +56,7 @@ mod python_tests {
   use regexp::UncompiledRegexp;
 
   // Tests start here
-  
+
   #[test]
   fn test_case_ident_000() {
     run_tests!("[^^]+", "abc", ~"abc", "000", Some(_), &'static [])

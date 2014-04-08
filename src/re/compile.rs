@@ -31,8 +31,8 @@ impl fmt::Show for Instruction {
     match *self {
       InstLiteral(c)            => write!(f.buf, "InstLiteral {:c}", c),
       InstRange(s, e)           => write!(f.buf, "InstRange {:c}-{:c}", s, e),
-      InstTableRange(t)         => write!(f.buf, "InstTableRange"),
-      InstNegatedTableRange(t)  => write!(f.buf, "InstNegatedTableRange"),
+      InstTableRange(_)         => write!(f.buf, "InstTableRange"),
+      InstNegatedTableRange(_)  => write!(f.buf, "InstNegatedTableRange"),
       InstMatch                 => write!(f.buf, "InstMatch"),
       InstJump(i)               => write!(f.buf, "InstJump {:u}", i),
       InstCaptureStart(id, _)   => write!(f.buf, "InstCaptureStart {:u}", id),
@@ -56,7 +56,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
   let rsize = ssize + rlen * 3;
 
   for &(start, end) in ranges.iter() {
-    if (rlen >= 2) {
+    if rlen >= 2 {
       let split = InstSplit(ssize + 1, ssize + 3);
       stack.push(split);
 
@@ -64,7 +64,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
       rlen  -= 1;
     }
 
-    if (start == end) {
+    if start == end {
       stack.push(InstLiteral(start));
     } else {
       stack.push(InstRange(start, end));
@@ -84,7 +84,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
 /// *  nongreedy - Specifies which branch to prefer (left or right).
 #[inline]
 fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instruction {
-  if (nongreedy) {
+  if nongreedy {
     InstSplit(left, right)
   } else {
     InstSplit(right, left)

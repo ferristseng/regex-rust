@@ -29,11 +29,11 @@ impl<'a> State<'a> {
   pub fn peekn(&self, num: uint) -> Option<char> {
     let mut ptr = self.cursor;
     for _ in range(0, num) {
-      if (ptr < self.input.len()) {
+      if ptr < self.input.len() {
         ptr += self.input.char_at(ptr).len_utf8_bytes();
       }
     }
-    if (ptr < self.input.len()) {
+    if ptr < self.input.len() {
       Some(self.input.char_at(ptr))
     } else {
       None
@@ -54,7 +54,7 @@ impl<'a> State<'a> {
     }
   }
   pub fn current(&mut self) -> Option<char> {
-    if (self.cursor < self.input.len()) {
+    if self.cursor < self.input.len() {
       Some(self.input.char_at(self.cursor))
     } else {
       None

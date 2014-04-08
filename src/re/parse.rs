@@ -315,7 +315,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 
   let ncap = p.ncaptures;
 
-  if (capturing) {
+  if capturing {
     p.ncaptures += 1;
   }
 
@@ -328,7 +328,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 
   p.nparens -= 1;
 
-  if (capturing) {
+  if capturing {
     Ok(Capture(~expr, ncap, name))
   } else {
     Ok(expr)
@@ -383,7 +383,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
     match p.current() {
       Some(']') => {
         p.next();
-        let cc = if (negate) {
+        let cc = if negate {
           new_negated_charclass(ranges)
         } else {
           new_charclass(ranges)
@@ -539,7 +539,7 @@ fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
     }
   }
 
-  if (len == 0) {
+  if len == 0 {
     return None
   }
 
@@ -617,7 +617,7 @@ fn parse_bounded_repetition(p: &mut State, stack: &mut ~[Expr]) -> Result<Expr, 
       let (start, end) = rep;
 
       match end {
-        Some(e) if (start > e) => {
+        Some(e) if start > e => {
           return Err(ParseEmptyRepetitionRange)
         }
         _ => ()
@@ -662,7 +662,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
         stack.push(expr);
       }
       Some(')') => {
-        if (p.hasUnmatchedParens()) {
+        if p.hasUnmatchedParens() {
           break;
         }
         return Err(ParseUnexpectedClosingParen);
@@ -684,7 +684,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
           e => return e
         };
 
-        if (p.hasUnmatchedParens()) {
+        if p.hasUnmatchedParens() {
           break;
         }
       }
@@ -738,7 +738,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
   do_concat(&mut stack);
 
-  if (p.hasUnmatchedParens() && p.isEnd()) {
+  if p.hasUnmatchedParens() && p.isEnd() {
     Err(ParseExpectedClosingParen)
   } else {
     match stack.pop() {
@@ -755,7 +755,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 ///
 /// * stack - The stack with items to concatenate
 fn do_concat(stack: &mut ~[Expr]) {
-  while (stack.len() > 1) {
+  while stack.len() > 1 {
     let rgt = match stack.pop() { Some(ans) => ans, None => Empty };
     let lft = match stack.pop() { Some(ans) => ans, None => Empty };
 

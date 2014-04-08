@@ -24,7 +24,7 @@ impl Match {
 
 impl Match {
   pub fn group(&self, index: uint) -> Option<~str> {
-    if (index < self.groups.len()) {
+    if index < self.groups.len() {
       match self.groups[index] {
         Some(ref group) => {
           Some(self.input.slice(group.start, group.end).to_owned())
@@ -55,7 +55,7 @@ impl Match {
   }
 
   pub fn matched(&self) -> ~str {
-    if (self.start < self.input.len()) {
+    if self.start < self.input.len() {
       self.input.slice(self.start, self.end).to_owned()
     } else {
       ~""
