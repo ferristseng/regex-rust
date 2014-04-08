@@ -862,4 +862,34 @@ mod python_tests {
     run_tests!(".", "\n", ~"s", ~"\n", "158", Some(_), &[])
   }
 
+  #[test]
+  fn test_case_ident_159() {
+    run_tests!("^a$", "a\nb\nc", ~"", ~"", "159", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_160() {
+    run_tests!("^a$", "a\nb\nc", ~"m", ~"a", "160", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_161() {
+    run_tests!("^b$", "a\nb\nc", ~"", ~"", "161", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_162() {
+    run_tests!("^b$", "a\nb\nc", ~"m", ~"b", "162", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_163() {
+    run_tests!("^c$", "a\nb\nc", ~"", ~"", "163", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_164() {
+    run_tests!("^c$", "a\nb\nc", ~"m", ~"c", "164", Some(_), &[])
+  }
+
 }

@@ -195,5 +195,13 @@ TESTS = [
   # Dotall flag test
   ("a.b", "a\\nb", "", "", NOMATCH),
   ("a.b", "a\\nb", "s", "a\\nb", MATCH),
-  (".", "\\n", "s", "\\n", MATCH)
+  (".", "\\n", "s", "\\n", MATCH),
+
+  # Multiline flag test
+  ("^a$", "a\\nb\\nc", "", "", NOMATCH),
+  ("^a$", "a\\nb\\nc", "m", "a", MATCH),
+  ("^b$", "a\\nb\\nc", "", "", NOMATCH),
+  ("^b$", "a\\nb\\nc", "m", "b", MATCH),
+  ("^c$", "a\\nb\\nc", "", "", NOMATCH),
+  ("^c$", "a\\nb\\nc", "m", "c", MATCH)
 ]

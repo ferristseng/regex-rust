@@ -30,7 +30,9 @@ pub enum Expr {
   AssertWordBoundary,
   AssertNonWordBoundary,
   AssertStart,
-  AssertEnd
+  AssertStartMultiline,
+  AssertEnd,
+  AssertEndMultiline
 }
 
 pub struct ParseFlags {
@@ -763,11 +765,19 @@ fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode
 
       Some('^') => {
         p.next();
-        stack.push(AssertStart);
+        if f.m {
+          stack.push(AssertStartMultiline);
+        } else {
+          stack.push(AssertStart);
+        }
       }
       Some('$') => {
         p.next();
-        stack.push(AssertEnd);
+        if f.m {
+          stack.push(AssertEndMultiline);
+        } else {
+          stack.push(AssertEnd);
+        }
       }
 
       Some('[') => {
