@@ -106,3 +106,5 @@ Understand that you **must** now be on rustc version 0.10 or newer. Otherwise yo
   * **Extra is now depreceated**. Yes you read right. Please check the 0.10 [Docs](http://static.rust-lang.org/doc/master/index.html). You will discover that much of std has been refactored. About a dozen other libraries have now apparantly been created from the pieces of Extra.
   * **Vector has been overhauled**. The old class is no more, most of the inherited vector classes are now split between str::vec and vec::Vec. Please be careful when using vectors and ensure you are using the right one. The general one is std::vec::Vec now.
   * **Most functions return Options now in std**. This is especially important. Vector for instance will return an Option now for functions like shift() or pop(). There used to be shift_opt() that did the same thing but now its the only way to get a value back. So you have to check to make sure you handle the Option. **Note** Brian finds this extremely annoying.
+
+## Benchmark support
