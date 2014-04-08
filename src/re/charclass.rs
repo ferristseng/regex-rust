@@ -169,7 +169,7 @@ pub fn new_charclass(ranges: ~[Range]) -> Expr {
   let mut new_ranges = ~[];
 
   for &(start, end) in ranges.iter() {
-    match new_ranges.pop_opt() {
+    match new_ranges.pop() {
       Some(range) => {
         let (s, e): (char, char) = range;
         if (start > e) {

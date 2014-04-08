@@ -48,6 +48,7 @@ impl fmt::Show for Instruction {
   }
 }
 
+
 #[inline]
 fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
   let mut ssize = stack.len();
@@ -246,6 +247,7 @@ fn debug_stack(stack: ~[Instruction]) {
   println!("--COMPILE STACK--");
   for e in stack.iter() {
     println!("{:u}: {:s}", count, e.to_str());
+
     count += 1;
   }
 }

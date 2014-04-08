@@ -23,8 +23,8 @@ macro_rules! run_tests(
       let expect_test = match res {
         $expect => true,
         _ => {
-          println(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: '{:s}'>",
-                  $ident, $re, $input, res.to_str()));
+          println!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: >",
+                  $ident, $re, $input);
           false
         }
       };

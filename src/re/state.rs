@@ -1,9 +1,9 @@
 pub struct State<'a> {
-  priv input: &'a str,
-  priv cursor: uint,
-  priv len: uint,
-  ncaptures: uint,
-  nparens: uint
+  pub input: &'a str,
+  pub cursor: uint,
+  pub len: uint,
+  pub ncaptures: uint,
+  pub nparens: uint
 }
 
 impl<'a> State<'a> {
@@ -44,7 +44,7 @@ impl<'a> State<'a> {
       Some(c) => {
         self.cursor += c.len_utf8_bytes();
       }
-      None => () 
+      None => ()
     }
     self.len -= 1;
   }

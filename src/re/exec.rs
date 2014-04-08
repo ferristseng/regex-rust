@@ -16,11 +16,11 @@ pub trait ExecStrategy {
 }
 
 #[deriving(Clone)]
-struct Thread {
-  pc: uint,
-  end: uint,
-  start_sp: uint,
-  captures: ~[Option<CapturingGroup>]
+pub struct Thread {
+  pub pc: uint,
+  pub end: uint,
+  pub start_sp: uint,
+  pub captures: ~[Option<CapturingGroup>]
 }
 
 impl Thread {
@@ -40,13 +40,19 @@ impl fmt::Show for Thread {
   }
 }
 
+// impl ToStr for Thread {
+//   fn to_str(&self) -> ~str {
+//     format!("<Thread pc: {:u}, end: {:u}, start_sp: {:u}>", self.pc, self.end, self.start_sp)
+//   }
+// }
+
 /// Pike VM implementation
 ///
 /// Supports everything except
 /// Assertions and Backreferences
 pub struct PikeVM<'a> {
-  priv inst:  &'a [Instruction],
-  priv ncaps: uint
+  inst:  &'a [Instruction],
+  ncaps: uint
 }
 
 impl<'a> PikeVM<'a> {
@@ -164,7 +170,10 @@ impl<'a> ExecStrategy for PikeVM<'a> {
       //println!("-- Execution ({:c}|{:u}) --", c, sp);
 
       while (clist.len() > 0) {
-        let mut t = clist.shift();;
+        let mut t = match clist.shift() {
+          Some(temp) => temp,
+          None => Thread::new(0,sp,sp) //Should be unreachable...
+        };
         match self.inst[t.pc] {
           InstLiteral(m) => {
             if (c == m && i != input.char_len()) {

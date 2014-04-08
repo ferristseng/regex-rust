@@ -70,10 +70,17 @@ impl fmt::Show for Match {
   }
 }
 
+// impl ToStr for Match {
+//   fn to_str(&self) -> ~str {
+//     format!("<Match str: {:s} groups: {:u}>", self.matched(),
+//             self.groups.len())
+//   }
+// }
+
 #[deriving(Clone)]
 pub struct CapturingGroup {
   start: uint,
-  end: uint,
+  pub end: uint,
   num: uint,
   name: Option<~str>
 }
