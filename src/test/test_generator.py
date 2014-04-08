@@ -12,10 +12,12 @@ OUTPUT = """
 // Last Modified: %s
 
 macro_rules! run_tests(
-  ($re: expr, $input: expr, $matched: expr, $ident: expr,
+  ($re: expr, $input: expr, $flags: expr, $matched: expr, $ident: expr,
    $expect: pat, $groups: expr) => (
     {
-      let re = match UncompiledRegexp::new($re) {
+      let f = &mut ParseFlags::new();
+      f.setFlags($flags);
+      let re = match UncompiledRegexp::new($re, f) {
         Ok(regex) => regex,
         Err(e) => fail!(e)
       };
@@ -61,6 +63,7 @@ macro_rules! run_tests(
 #[cfg(test)]
 mod python_tests {
   use regexp::UncompiledRegexp;
+  use parse::ParseFlags;
 
   // Tests start here
   %s
@@ -70,7 +73,7 @@ mod python_tests {
 TEST_FN = \
 """
   fn test_case_ident_%s() {
-    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &[%s])
+    run_tests!(\"%s\", \"%s\", ~\"%s\", ~\"%s\", \"%s\", %s, &[%s])
   }"""
 
 SUCCESS_FN = \
@@ -90,7 +93,7 @@ def generate_test_num(num, digits):
     ret = "0" + ret
   return ret
 
-def generate_test_case(ident, regexp, input_str,
+def generate_test_case(ident, regexp, input_str, flags,
     matched_str, expected, groups):
   if expected == NOMATCH:
     match = "None"
@@ -110,7 +113,7 @@ def generate_test_case(ident, regexp, input_str,
 
   test = FAIL_FN if expected == PARSEERR else SUCCESS_FN
 
-  return test % (ident, regexp, input_str, matched_str, ident,
+  return test % (ident, regexp, input_str, flags, matched_str, ident,
       match, groups_str)
 
 if __name__ == "__main__":
@@ -119,12 +122,12 @@ if __name__ == "__main__":
 
   for (i, test) in enumerate(TESTS):
     ident = generate_test_num(i, len(str(len(TESTS))))
-    if (len(test) == 5):
-      groups = test[4]
+    if (len(test) == 6):
+      groups = test[5]
     else:
       groups = []
     buf += \
-      generate_test_case(ident, test[0], test[1], test[2], test[3],
+      generate_test_case(ident, test[0], test[1], test[2], test[3], test[4],
                          groups)
 
   FILE.write(OUTPUT % (date, buf))

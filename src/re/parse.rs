@@ -45,7 +45,7 @@ impl ParseFlags {
     ParseFlags {
       i: false,
       m: false,
-      d: false,
+      s: false,
       U: false
     }
   }
