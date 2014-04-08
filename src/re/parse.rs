@@ -34,7 +34,7 @@ pub enum Expr {
 pub struct ParseFlags {
   i: bool,
   m: bool,
-  d: bool,
+  s: bool,
   U: bool
 }
 
@@ -55,7 +55,7 @@ impl ParseFlags {
       match c {
         'i' => self.i = true,
         'm' => self.m = true,
-        'd' => self.d = true,
+        's' => self.s = true,
         'U' => self.U = true,
         _ => ()
       }
@@ -67,7 +67,7 @@ impl ParseFlags {
       match c {
         'i' => self.i = false,
         'm' => self.m = false,
-        'd' => self.d = false,
+        's' => self.s = false,
         'U' => self.U = false,
         _ => ()
       }
@@ -748,7 +748,11 @@ fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode
 
       Some('.') => {
         p.next();
-        stack.push(CharClass(~[('\0', MAX)]));
+        if f.s {
+          stack.push(CharClass(~[('\0', MAX)]));
+        } else {
+          stack.push(CharClass(~[('\0', '\x09'), ('\x0B', MAX)]))
+        }
       }
 
       Some('^') => {
