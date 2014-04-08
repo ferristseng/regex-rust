@@ -192,6 +192,12 @@ TESTS = [
   ("\\P{Greek}", "\U00010181", "", NOMATCH),
   ("\\P{Greek}", "\u0374", "\u0374", MATCH),
 
+  # Hex character code escape tests
+  ("\\x54", 'T', 'T', MATCH),
+  ("\\x79", '\x79', '\x79', MATCH),
+  ("\\x00", '7', '', NOMATCH),
+  ("\\x32\\x45+\\x30*", '\x32\x45\x45\x45', '\x32\x45\x45\x45', MATCH),
+
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
   ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.

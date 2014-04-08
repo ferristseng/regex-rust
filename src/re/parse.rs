@@ -176,18 +176,73 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
         'n' => {Ok(Literal('\n'))},
         'r' => {Ok(Literal('\r'))},
         't' => {Ok(Literal('\t'))},
+        'f' => {Ok(Literal('\x0C'))},
+        'v' => {Ok(Literal('\x0B'))},
         'A' => {Ok(Literal(c))}, //TODO: Beginning of text
         'z' => {Ok(Literal(c))}, //TODO: End of text
-        'f' => {Ok(Literal(c))}, //TODO: Form Feed
-        'v' => {Ok(Literal(c))}, //TODO: Vertical tab
         'C' => {Ok(Literal(c))}, //TODO: A single byte (no matter the encoding)
         'Q' => {Ok(Literal(c))}, //TODO: Match literal text, terminated with \E
-        'x' => {Ok(Literal(c))}, //TODO: Match hex character code (two or six digits)
+        'x' => {parse_hex_escape(p)},
          _  => {Ok(Literal(c))}
       }
     }
     None => Err(ParseIncompleteEscapeSeq)
   }
+}
+
+#[inline]
+fn parse_hex_escape(p: &mut State) -> Result<Expr, ParseCode> {
+  match p.current() {
+    Some('{') => {
+        p.next();
+        return Ok(Literal('{')); // TODO: Implement the UTF-8 state machine for this
+      },
+    Some(c) => {
+      match extract_hex_value(p) {
+        Some(c) => {
+            return Ok(Literal(c as char));
+          },
+        _ => {return Err(ParseIncompleteEscapeSeq)}
+      }
+    },
+    _ => {return Err(ParseIncompleteEscapeSeq)}
+    }
+}
+
+#[inline]
+fn extract_hex_value(p: &mut State) -> Option<u8> {
+  let mut charValue : u8 = 0;
+  match p.current() {
+    Some(c) => {
+      if(c >= '0' && c <= '9') {
+        charValue += ((c as u8) - 48) * (16 as u8);
+      } else if(c >= 'A' && c <= 'F') {
+        charValue += ((c as u8) - 55) * (16 as u8);
+      } else if(c >= 'a' && c <= 'f') {
+        charValue += ((c as u8) - 87) * (16 as u8);
+      } else {
+        return None;
+      }
+      p.next();
+    }
+    _ => {return None}
+  }
+  match p.current() {
+    Some(c) => {
+      if(c >= '0' && c <= '9') {
+        charValue += ((c as u8) - 48);
+      } else if(c >= 'A' && c <= 'F') {
+        charValue += ((c as u8) - 55);
+      } else if(c >= 'a' && c <= 'f') {
+        charValue += ((c as u8) - 87);
+      } else {
+        return None;
+      }
+      p.next();
+    }
+    _ => {return None}
+  }
+  return Some(charValue);
 }
 
 /// Parses a capturing group.
