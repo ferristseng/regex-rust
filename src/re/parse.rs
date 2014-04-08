@@ -191,6 +191,11 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
   }
 }
 
+/// Parses an escaped hex character of the form \xff or \x{ffffff}
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
 #[inline]
 fn parse_hex_escape(p: &mut State) -> Result<Expr, ParseCode> {
   match p.current() {
@@ -242,6 +247,12 @@ fn parse_hex_escape(p: &mut State) -> Result<Expr, ParseCode> {
     }
 }
 
+/// Consumes two characters of the parse state and returns their value when
+/// converted from hex to a uint. Returns None if hex is invalid
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
 #[inline]
 fn extract_hex_value(p: &mut State) -> Option<u8> {
   let mut charValue : u8 = 0;
