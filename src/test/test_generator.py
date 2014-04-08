@@ -28,16 +28,16 @@ macro_rules! run_tests(
           false
         }
       };
-      if (!expect_test) {
+      if !expect_test {
         assert!(expect_test);
         return
       }
-      if (res.is_some()) {
+      if res.is_some() {
         match res {
           Some(ma) => {
             assert_eq!(ma.matched(), $matched)
 
-            let groups: &'static[&'static str] = $groups;
+            let groups: &[~str] = $groups;
             let mut i = 0;
 
             for g in groups.iter() {
@@ -70,7 +70,7 @@ mod python_tests {
 TEST_FN = \
 """
   fn test_case_ident_%s() {
-    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &'static [%s])
+    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &[%s])
   }"""
 
 SUCCESS_FN = \
@@ -104,7 +104,7 @@ def generate_test_case(ident, regexp, input_str,
   # matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
 
   if (len(groups) > 0):
-    groups_str  = "\"" + "\", \"".join(groups) + "\""
+    groups_str  = "~\"" + "\", ~\"".join(groups) + "\""
   else:
     groups_str = ""
 
