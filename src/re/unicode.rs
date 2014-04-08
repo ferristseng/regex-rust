@@ -16,11 +16,7 @@
 
 pub fn bsearch_range_table(c: char, r: &'static [(char,char)]) -> bool {
     use std::cmp::{Equal, Less, Greater};
-<<<<<<< Updated upstream
     use std::slice::ImmutableVector;
-=======
-    use std::slice::ImmutableVector; // Should be changed to std::slice::ImmutableVector for 0.10
->>>>>>> Stashed changes
     use std::option::None;
     r.bsearch(|&(lo,hi)| {
         if lo <= c && c <= hi { Equal }
