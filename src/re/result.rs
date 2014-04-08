@@ -4,10 +4,10 @@ use std::fmt;
 
 #[deriving(Clone)]
 pub struct Match {
-  start: uint,
-  end: uint,
-  input: ~str,
-  groups: ~[Option<CapturingGroup>]
+  pub start: uint,
+  pub end: uint,
+  pub input: ~str,
+  pub groups: ~[Option<CapturingGroup>]
 }
 
 impl Match {
