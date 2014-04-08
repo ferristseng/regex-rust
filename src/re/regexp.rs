@@ -123,11 +123,14 @@ impl UncompiledRegexp {
 #[cfg(test)]
 mod library_functions_test {
 	use super::*;
+	use parse::ParseFlags;
 
 	macro_rules! test_replace(
-		($re: expr, $input: expr, $replaceWith: expr, $expect: expr) => (
+		($re: expr, $input: expr, $flags: expr, $replaceWith: expr, $expect: expr) => (
 			{
-				let re = match UncompiledRegexp::new($re) {
+				let f = &mut ParseFlags::new();
+				f.setFlags($flags);
+				let re = match UncompiledRegexp::new($re, f) {
 					Ok(regex) => regex,
 					Err(e) => fail!(e)
 				};
@@ -140,9 +143,11 @@ mod library_functions_test {
 	)
 
 	macro_rules! test_replacen(
-		($re: expr, $input: expr, $replaceWith: expr, $expect: expr, $expectCount: expr) => (
+		($re: expr, $input: expr, $flags: expr, $replaceWith: expr, $expect: expr, $expectCount: expr) => (
 			{
-				let re = match UncompiledRegexp::new($re) {
+				let f = &mut ParseFlags::new();
+				f.setFlags($flags);
+				let re = match UncompiledRegexp::new($re, f) {
 					Ok(regex) => regex,
 					Err(e) => fail!(e)
 				};
@@ -160,9 +165,11 @@ mod library_functions_test {
 	)
 
 	macro_rules! test_find_all(
-		($re: expr, $input: expr, $expect: expr) => (
+		($re: expr, $input: expr, $flags: expr, $expect: expr) => (
 			{
-				let re = match UncompiledRegexp::new($re) {
+				let f = &mut ParseFlags::new();
+				f.setFlags($flags);
+				let re = match UncompiledRegexp::new($re, f) {
 					Ok(regex) => regex,
 					Err(e) => fail!(e)
 				};
@@ -184,153 +191,153 @@ mod library_functions_test {
 
 	#[test]
 	fn test_replace_01() {
-		test_replace!("a*ba*", "abaaacaabaaaccdab", "", "cccd");
+		test_replace!("a*ba*", "abaaacaabaaaccdab", ~"", "", "cccd");
 	}
 
 	#[test]
 	fn test_replace_02() {
-		test_replace!("a*ba{1,}", "abaaacaabaaacca", "", "ccca");
+		test_replace!("a*ba{1,}", "abaaacaabaaacca", ~"", "", "ccca");
 	}
 
 	#[test]
 	fn test_replace_03() {
-		test_replace!("a*ba{1,}", "abaaacaabaaacca", "aba", "abacabacca");
+		test_replace!("a*ba{1,}", "abaaacaabaaacca", ~"", "aba", "abacabacca");
 	}
 
 	#[test]
 	fn test_replace_04() {
-		test_replace!("a", "aaaaaaaaaaaa", "b", "bbbbbbbbbbbb");
+		test_replace!("a", "aaaaaaaaaaaa", ~"", "b", "bbbbbbbbbbbb");
 	}
 
 	#[test]
 	fn test_replace_05() {
-		test_replace!("a{1,}", "aaaaaaaaaaaa", "b", "b");
+		test_replace!("a{1,}", "aaaaaaaaaaaa", ~"", "b", "b");
 	}
 
 	#[test]
 	fn test_replace_06() {
-		test_replace!("a{1,}", "aaaaaaaaaaaa", "", "");
+		test_replace!("a{1,}", "aaaaaaaaaaaa", ~"", "", "");
 	}
 
 	#[test]
 	fn test_replace_07() {
-		test_replace!("", "aaaa", "b", "babababab");
+		test_replace!("", "aaaa", ~"", "b", "babababab");
 	}
 
 	#[test]
 	fn test_replace_08() {
-		test_replace!("a?bab", "abababab", "c", "cc");
+		test_replace!("a?bab", "abababab", ~"", "c", "cc");
 	}
 
 	#[test]
 	fn test_replace_09() {
-		test_replace!("a", "aa", "ccc", "cccccc");
+		test_replace!("a", "aa", ~"", "ccc", "cccccc");
 	}
 
 	#[test]
 	fn test_replace_10() {
-		test_replace!("b", "aa", "ccc", "aa");
+		test_replace!("b", "aa", ~"", "ccc", "aa");
 	}
 
 	#[test]
 	fn test_replacen_01() {
-		test_replacen!("a*ba*", "abaaacaabaaaccdab", "", "cccd", 3);
+		test_replacen!("a*ba*", "abaaacaabaaaccdab", ~"", "", "cccd", 3);
 	}
 
 	#[test]
 	fn test_replacen_02() {
-		test_replacen!("a*ba{1,}", "abaaacaabaaacca", "", "ccca", 2);
+		test_replacen!("a*ba{1,}", "abaaacaabaaacca", ~"", "", "ccca", 2);
 	}
 
 	#[test]
 	fn test_replacen_03() {
-		test_replacen!("a*ba{1,}", "abaaacaabaaacca", "aba", "abacabacca", 2);
+		test_replacen!("a*ba{1,}", "abaaacaabaaacca", ~"", "aba", "abacabacca", 2);
 	}
 
 	#[test]
 	fn test_replacen_04() {
-		test_replacen!("a", "aaaaaaaaaaaa", "b", "bbbbbbbbbbbb", 12);
+		test_replacen!("a", "aaaaaaaaaaaa", ~"", "b", "bbbbbbbbbbbb", 12);
 	}
 
 	#[test]
 	fn test_replacen_05() {
-		test_replacen!("a{1,}", "aaaaaaaaaaaa", "b", "b", 1);
+		test_replacen!("a{1,}", "aaaaaaaaaaaa", ~"", "b", "b", 1);
 	}
 
 	#[test]
 	fn test_replacen_06() {
-		test_replacen!("a{1,}", "aaaaaaaaaaaa", "", "", 1);
+		test_replacen!("a{1,}", "aaaaaaaaaaaa", ~"", "", "", 1);
 	}
 
 	#[test]
 	fn test_replacen_07() {
-		test_replacen!("", "aaaa", "b", "babababab", 5);
+		test_replacen!("", "aaaa", ~"", "b", "babababab", 5);
 	}
 
 	#[test]
 	fn test_replacen_08() {
-		test_replacen!("a?bab", "abababab", "c", "cc", 2);
+		test_replacen!("a?bab", "abababab", ~"", "c", "cc", 2);
 	}
 
 	#[test]
 	fn test_replacen_09() {
-		test_replacen!("a", "aa", "ccc", "cccccc", 2);
+		test_replacen!("a", "aa", ~"", "ccc", "cccccc", 2);
 	}
 
 	#[test]
 	fn test_replacen_10() {
-		test_replacen!("b", "aa", "ccc", "aa", 0);
+		test_replacen!("b", "aa", ~"", "ccc", "aa", 0);
 	}
 
 	#[test]
 	fn test_find_all_01() {
-		test_find_all!("a*ba*", "abaaacaabaaaccdab", &["abaaa", "aabaaa", "ab"]);
+		test_find_all!("a*ba*", "abaaacaabaaaccdab", ~"", &["abaaa", "aabaaa", "ab"]);
 	}
 
 	#[test]
 	fn test_find_all_02() {
-		test_find_all!("a*ba{1,}", "abaaacaabaaaccab", &["abaaa", "aabaaa"]);
+		test_find_all!("a*ba{1,}", "abaaacaabaaaccab", ~"", &["abaaa", "aabaaa"]);
 	}
 
 	#[test]
 	fn test_find_all_03() {
-		test_find_all!("a*ba{1,}", "abaaacaabaaaccab", &["abaaa", "aabaaa"]);
+		test_find_all!("a*ba{1,}", "abaaacaabaaaccab", ~"", &["abaaa", "aabaaa"]);
 	}
 
 	#[test]
 	fn test_find_all_04() {
-		test_find_all!("a", "aaaaaaaaaaaa", &["a", "a", "a", "a", "a", "a", "a",
+		test_find_all!("a", "aaaaaaaaaaaa", ~"", &["a", "a", "a", "a", "a", "a", "a",
 			"a", "a", "a", "a", "a"]);
 	}
 
 	#[test]
 	fn test_find_all_05() {
-		test_find_all!("a{1,}", "aaaaaaaaaaaa", &["aaaaaaaaaaaa"]);
+		test_find_all!("a{1,}", "aaaaaaaaaaaa", ~"", &["aaaaaaaaaaaa"]);
 	}
 
 	#[test]
 	fn test_find_all_06() {
-		test_find_all!("a{1,}", "aaabaaaabaaa", &["aaa", "aaaa", "aaa"]);
+		test_find_all!("a{1,}", "aaabaaaabaaa", ~"", &["aaa", "aaaa", "aaa"]);
 	}
 
 	#[test]
 	fn test_find_all_07() {
-		test_find_all!("", "aaaa", &["", "", "", ""]);
+		test_find_all!("", "aaaa", ~"", &["", "", "", ""]);
 	}
 
 	#[test]
 	fn test_find_all_08() {
-		test_find_all!("a?bab", "ababababbab", &["abab", "abab", "bab"]);
+		test_find_all!("a?bab", "ababababbab", ~"", &["abab", "abab", "bab"]);
 	}
 
 	#[test]
 	fn test_find_all_09() {
-		test_find_all!("a", "aa", &["a", "a"]);
+		test_find_all!("a", "aa", ~"", &["a", "a"]);
 	}
 
 	#[test]
 	fn test_find_all_10() {
-		test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdaabbbccccddddd", &["abcd",
+		test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdaabbbccccddddd", ~"", &["abcd",
 			"b", "abcd", "abc", "b", "ab", "abc", "bd", "abc", "bd", "aabbbccccddddd"]);
 	}
 }
@@ -339,35 +346,36 @@ mod library_functions_test {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use parse::ParseFlags;
 
 	#[test]
 	fn parse_alternation_ok_test() {
-		assert!(UncompiledRegexp::new("a|b").is_ok());
+		assert!(UncompiledRegexp::new("a|b", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_concatenation_ok_test() {
-		assert!(UncompiledRegexp::new("a(bc)d").is_ok());
+		assert!(UncompiledRegexp::new("a(bc)d", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_char_class_ok_test() {
-		assert!(UncompiledRegexp::new("[a-zABC!@#]]]").is_ok());
+		assert!(UncompiledRegexp::new("[a-zABC!@#]]]", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_capture_ok_test() {
-		assert!(UncompiledRegexp::new("(hel(ABC)ok)").is_ok());
+		assert!(UncompiledRegexp::new("(hel(ABC)ok)", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_capture_fail_test() {
-		assert!(UncompiledRegexp::new("(hel(ABC)ok").is_err());
+		assert!(UncompiledRegexp::new("(hel(ABC)ok", &mut ParseFlags::new()).is_err());
 	}
 
 	#[test]
 	fn search_group_fetch() {
-		match UncompiledRegexp::new("(?P<hello>d)") {
+		match UncompiledRegexp::new("(?P<hello>d)", &mut ParseFlags::new()) {
 			Ok(regex) => {
 				match regex.search("dhfs") {
 					Some(m) => {
