@@ -101,7 +101,7 @@ There is a huge paradigm shift in the Rust API in the new release. Below you wil
 
 Understand that you **must** now be on rustc version 0.10 or newer. Otherwise your compiler will have a *field day*....
 
-  * **Overriding implementations is now forbidden**. We have several To_Str overrides which now throw compile errors. All references to the to_str method are commented out. **[APPARENT]**
+  * **Overriding implementations is now forbidden**. We have several To_Str overrides which now throw compile errors. All references to the to_str method have now been rewritten to fmts which have an implementation for to_str. **[APPARENT]**
   * **All Struct fields are by default private**. Before we declared certain fields to be private, and others public. Now its reversed, there are pub qualifiers next to those that we need. The rest are private **[APPARENT]**
   * **Extra is now depreceated**. Yes you read right. Please check the 0.10 [Docs](http://static.rust-lang.org/doc/master/index.html). You will discover that much of std has been refactored. About a dozen other libraries have now apparantly been created from the pieces of Extra.
   * **Vector has been overhauled**. The old class is no more, most of the inherited vector classes are now split between str::vec and vec::Vec. Please be careful when using vectors and ensure you are using the right one. The general one is std::vec::Vec now.
