@@ -1,7 +1,8 @@
+use std::fmt;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, Literal, CharClass, CharClassStatic, UnicodeCharClass,
-            NegatedUnicodeCharClass, Alternation, Concatenation, Repetition,
+use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
+            NegatedCharClassTable, Alternation, Concatenation, Repetition,
             Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
             AssertEnd, LiteralString};
 use charclass::Range;
@@ -26,27 +27,28 @@ pub enum Instruction {
   InstNoop
 }
 
-impl ToStr for Instruction {
-  fn to_str(&self) -> ~str {
+impl fmt::Show for Instruction {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
-      InstLiteral(c)            => format!("InstLiteral {:c}", c),
-      InstRange(s, e)           => format!("InstRange {:c}-{:c}", s, e),
-      InstTableRange(t)         => format!("InstTableRange"),
-      InstNegatedTableRange(t)  => format!("InstNegatedTableRange"),
-      InstMatch                 => ~"InstMatch",
-      InstJump(i)               => format!("InstJump {:u}", i),
-      InstCaptureStart(id, _)   => format!("InstCaptureStart {:u}", id),
-      InstCaptureEnd(id)        => format!("InstCaptureEnd {:u}", id),
-      InstSplit(l, r)           => format!("InstSplit {:u} | {:u}", l, r),
-      InstAssertStart           => ~"InstLineStart",
-      InstAssertEnd             => ~"InstLineEnd",
-      InstWordBoundary          => ~"InstWordBoundary",
-      InstNonWordBoundary       => ~"InstNonWordBoundary",
-      InstProgress              => ~"InstProgress",
-      InstNoop                  => ~"InstNoop"
+      InstLiteral(c)            => write!(f.buf, "InstLiteral {:c}", c),
+      InstRange(s, e)           => write!(f.buf, "InstRange {:c}-{:c}", s, e),
+      InstTableRange(_)         => write!(f.buf, "InstTableRange"),
+      InstNegatedTableRange(_)  => write!(f.buf, "InstNegatedTableRange"),
+      InstMatch                 => write!(f.buf, "InstMatch"),
+      InstJump(i)               => write!(f.buf, "InstJump {:u}", i),
+      InstCaptureStart(id, _)   => write!(f.buf, "InstCaptureStart {:u}", id),
+      InstCaptureEnd(id)        => write!(f.buf, "InstCaptureEnd {:u}", id),
+      InstSplit(l, r)           => write!(f.buf, "InstSplit {:u} | {:u}", l, r),
+      InstAssertStart           => write!(f.buf, "InstLineStart"),
+      InstAssertEnd             => write!(f.buf, "InstLineEnd"),
+      InstWordBoundary          => write!(f.buf, "InstWordBoundary"),
+      InstNonWordBoundary       => write!(f.buf, "InstNonWordBoundary"),
+      InstProgress              => write!(f.buf, "InstProgress"),
+      InstNoop                  => write!(f.buf, "InstNoop")
     }
   }
 }
+
 
 #[inline]
 fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
@@ -55,7 +57,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
   let rsize = ssize + rlen * 3;
 
   for &(start, end) in ranges.iter() {
-    if (rlen >= 2) {
+    if rlen >= 2 {
       let split = InstSplit(ssize + 1, ssize + 3);
       stack.push(split);
 
@@ -63,7 +65,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
       rlen  -= 1;
     }
 
-    if (start == end) {
+    if start == end {
       stack.push(InstLiteral(start));
     } else {
       stack.push(InstRange(start, end));
@@ -83,7 +85,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
 /// *  nongreedy - Specifies which branch to prefer (left or right).
 #[inline]
 fn generate_repeat_split(left: uint, right: uint, nongreedy: bool) -> Instruction {
-  if (nongreedy) {
+  if nongreedy {
     InstSplit(left, right)
   } else {
     InstSplit(right, left)
@@ -177,10 +179,10 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     CharClassStatic(ranges) => {
       compile_charclass(ranges, stack);
     }
-    UnicodeCharClass(table) => {
+    CharClassTable(table) => {
       stack.push(InstTableRange(table));
     }
-    NegatedUnicodeCharClass(table) => {
+    NegatedCharClassTable(table) => {
       stack.push(InstNegatedTableRange(table));
     }
     Capture(ref expr, id, ref name) => {
@@ -252,9 +254,10 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
 fn debug_stack(stack: ~[Instruction]) {
   let mut count: uint = 0;
 
-  println("--COMPILE STACK--");
+  println!("--COMPILE STACK--");
   for e in stack.iter() {
-    println(format!("{:u}: {:s}", count, e.to_str()));
+    println!("{:u}: {:s}", count, e.to_str());
+
     count += 1;
   }
 }

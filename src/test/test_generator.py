@@ -23,21 +23,21 @@ macro_rules! run_tests(
       let expect_test = match res {
         $expect => true,
         _ => {
-          println(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: '{:s}'>",
-                  $ident, $re, $input, res.to_str()));
+          println!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: >",
+                  $ident, $re, $input);
           false
         }
       };
-      if (!expect_test) {
+      if !expect_test {
         assert!(expect_test);
         return
       }
-      if (res.is_some()) {
+      if res.is_some() {
         match res {
           Some(ma) => {
             assert_eq!(ma.matched(), $matched)
 
-            let groups: &'static[&'static str] = $groups;
+            let groups: &[~str] = $groups;
             let mut i = 0;
 
             for g in groups.iter() {
@@ -70,7 +70,7 @@ mod python_tests {
 TEST_FN = \
 """
   fn test_case_ident_%s() {
-    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &'static [%s])
+    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &[%s])
   }"""
 
 SUCCESS_FN = \
@@ -104,7 +104,7 @@ def generate_test_case(ident, regexp, input_str,
   # matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
 
   if (len(groups) > 0):
-    groups_str  = "\"" + "\", \"".join(groups) + "\""
+    groups_str  = "~\"" + "\", ~\"".join(groups) + "\""
   else:
     groups_str = ""
 
@@ -126,24 +126,6 @@ if __name__ == "__main__":
     buf += \
       generate_test_case(ident, test[0], test[1], test[2], test[3],
                          groups)
-  OUTPUT = OUTPUT[0:len(OUTPUT)-2] + """  #[test]
-  fn test_case_ident_custom_1() {
-      let re = match UncompiledRegexp::new("a*ba*") {
-        Ok(regex) => regex,
-        Err(e) => fail!(e)
-      };
-      let res = re.replace("abaaacaabaaaccdab", "");
-      println(res);
-  }\n\n"""
-  OUTPUT = OUTPUT[0:len(OUTPUT)-2] + """  #[test]
-  fn test_case_ident_custom_2() {
-      let re = match UncompiledRegexp::new("a*ba{1,}") {
-        Ok(regex) => regex,
-        Err(e) => fail!(e)
-      };
-      let res = re.replace("abaaacaabaaacca", "");
-      println(res);
-  }\n}\n"""
 
   FILE.write(OUTPUT % (date, buf))
 
