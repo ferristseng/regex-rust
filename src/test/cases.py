@@ -190,5 +190,10 @@ TESTS = [
   ("\\p{Greek}", "\U00010181", "", "\U00010181", MATCH),
   ("\\p{Greek}", "\u0374", "", "", NOMATCH),
   ("\\P{Greek}", "\U00010181", "", "", NOMATCH),
-  ("\\P{Greek}", "\u0374", "", "\u0374", MATCH)
+  ("\\P{Greek}", "\u0374", "", "\u0374", MATCH),
+
+  # Dotall flag test
+  ("a.b", "a\\nb", "", "", NOMATCH),
+  ("a.b", "a\\nb", "s", "a\\nb", MATCH),
+  (".", "\\n", "s", "\\n", MATCH)
 ]
