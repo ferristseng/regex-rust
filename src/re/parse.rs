@@ -184,7 +184,13 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
         'C' => {Ok(Literal(c))}, //TODO: A single byte (no matter the encoding)
         'Q' => {Ok(Literal(c))}, //TODO: Match literal text, terminated with \E
         'x' => {parse_hex_escape(p)},
-         _  => {Ok(Literal(c))}
+         _  => {
+           if(c >= '0' && c <= '7') {
+             parse_octal_escape(p, c)
+           } else {
+             Ok(Literal(c))
+           }
+         }
       }
     }
     None => Err(ParseIncompleteEscapeSeq)
@@ -207,7 +213,7 @@ fn parse_hex_escape(p: &mut State) -> Result<Expr, ParseCode> {
           count += 1;
 
           match extract_hex_value(p) {
-            Some(c) => {println!("Value is {:u}", c); literal.push(c)},
+            Some(c) => {literal.push(c)},
             _ => {return Err(ParseIncompleteEscapeSeq)}
           }
 
@@ -224,11 +230,8 @@ fn parse_hex_escape(p: &mut State) -> Result<Expr, ParseCode> {
           Some('}') => {
             p.next();
             if str::is_utf8(literal) {
-              println("Is UTF-8");
-              println!("And the value is: {}", str::from_utf8_owned(literal.clone()));
               return Ok(LiteralString(str::from_utf8_owned(literal)))
             } else {
-              println("Not UTF-8");
               return Err(ParseInvalidUTF8Encoding)
             }
           },
@@ -287,6 +290,49 @@ fn extract_hex_value(p: &mut State) -> Option<u8> {
     _ => {return None}
   }
   return Some(charValue);
+}
+
+/// Parses an octal escape of the form \123. Will also return the value
+/// for a single or two digit octal escape, the most digits that it can match
+/// (e.g. \457 will parse as \45 and not consume the character 7)
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
+/// * c - The first character in the octal escape
+#[inline]
+fn parse_octal_escape(p: &mut State, c : char) -> Result<Expr, ParseCode> {
+  // Value for the first character
+  let c1_val : u8 = (c as u8) - 48;
+  // Match the second character
+  match(p.current()) {
+    Some(c2) => {
+      // Check that it is in range and get its value
+      if(c2 >= '0' && c2 <= '7') {
+          p.next();
+          let c2_val : u8 = (c2 as u8) - 48;
+          // Match the third character
+          match(p.current()) {
+              Some(c3) => {
+                // Maximum valid value is 377
+                if(c3 >= '0' && c3 <= '7' && c <= '3') {
+                  p.next();
+                  return Ok(Literal((c1_val * 64 + c2_val * 8 + (c3 as u8 - 48)) as char))
+                } else {
+                  return Ok(Literal((c1_val * 8 + c2_val) as char))
+                }
+              }
+              _ => {
+                return Ok(Literal((c1_val * 8 + c2_val) as char))
+              }
+          }
+      } else {
+        // If the character is out of range, jsut return the first
+        return Ok(Literal(c1_val as char))
+      }
+    }
+    _ => {return Ok(Literal(c1_val as char))}
+  }
 }
 
 /// Parses a capturing group.

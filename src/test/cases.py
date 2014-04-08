@@ -207,6 +207,13 @@ TESTS = [
   ("\\x{000}", 'Test', '', PARSEERR),
   ("\\x{00000000}", 'Test', '', PARSEERR),
 
+  # Octal character code escape tests
+  ("\\61", '1', '1', MATCH),
+  ("\\061", '1', '1', MATCH),
+  ("\\175", '}', '}', MATCH),
+  ("\\615", '15', '15', MATCH),
+  ("\\615", '1', '1', NOMATCH),
+  ("\\77\\123+\\111*", '?SSSSS', '?SSSSS', MATCH),
 
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
