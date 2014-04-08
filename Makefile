@@ -18,7 +18,7 @@ TESTSOURCES = $(addprefix $(SRC)/$(TEST)/, $(TESTS))
 all: $(BUILD)/$(DYLIB) $(BUILD)/run $(BUILD)/test
 
 test: test_correctness
-    
+
 run: $(BUILD)/run
 	./build/run
 
@@ -33,9 +33,9 @@ check: $(LIBSOURCES)
 
 $(BUILD)/$(DYLIB): $(LIBSOURCES)
 	test -d $(BUILD) || mkdir $(BUILD)
-	rustc $(FLAGS) --lib --out-dir $(BUILD) $(SRC)/$(RE)/lib.rs
+	rustc $(FLAGS) --crate-type=lib --out-dir $(BUILD) $(SRC)/$(RE)/lib.rs
 
-$(BUILD)/test: $(LIBSOURCES) $(TESTSOURCES) 
+$(BUILD)/test: $(LIBSOURCES) $(TESTSOURCES)
 	test -d $(BUILD) || mkdir $(BUILD)
 	python $(SRC)/$(TEST)/test_generator.py
 	rustc $(FLAGS) --test -o $(BUILD)/test $(SRC)/$(RE)/lib.rs
@@ -46,4 +46,3 @@ $(BUILD)/run: $(BUILD) $(LIBSOURCES)
 
 clean:
 	rm -r build/
-

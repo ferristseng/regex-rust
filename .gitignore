@@ -19,3 +19,5 @@ bin
 build
 .rust
 **/**/__pycache__
+
+src/re/test.rs
