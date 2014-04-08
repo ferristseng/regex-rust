@@ -1,22 +1,28 @@
 use state::State;
 use std::char::MAX;
+use std::str;
 use error::ParseError::*;
-use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass, 
+use unicode::*;
+use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
-  NegatedWhitespaceClass};
+  NegatedWhitespaceClass, ascii};
 
-#[deriving(ToStr)]
+#[deriving(Show, Clone)]
+
 pub enum QuantifierPrefix {
   Greedy,
   NonGreedy
 }
 
-#[deriving(ToStr)]
+#[deriving(Show, Clone)]
+
 pub enum Expr {
   Empty,
   Literal(char),
   CharClass(~[Range]),
   CharClassStatic(&'static [Range]),
+  CharClassTable(&'static [(char,char)]),
+  NegatedCharClassTable(&'static [(char,char)]),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -28,16 +34,16 @@ pub enum Expr {
 }
 
 macro_rules! check_ok(
-  ($f: expr) => ( 
+  ($f: expr) => (
     match $f {
       Ok(Empty) => continue,
-      Ok(re) => re, 
+      Ok(re) => re,
       e => return e
     }
   );
 )
 
-/// The public parse function. Builds the initial `State` from the 
+/// The public parse function. Builds the initial `State` from the
 /// input string, and calls an underlying parse function.
 ///
 /// # Arguments
@@ -60,20 +66,26 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   // Replace these with static vectors
   let cc = match current {
-    Some('d') => NumericClass, 
-    Some('D') => NegatedNumericClass, 
-    Some('w') => AlphaClass, 
-    Some('W') => NegatedAlphaClass, 
-    Some('s') => WhitespaceClass, 
-    Some('S') => NegatedWhitespaceClass, 
+    Some('d') => NumericClass.clone(),
+    Some('D') => NegatedNumericClass.clone(),
+    Some('w') => AlphaClass.clone(),
+    Some('W') => NegatedAlphaClass.clone(),
+    Some('s') => WhitespaceClass.clone(),
+    Some('S') => NegatedWhitespaceClass.clone(),
+    Some('p') => {
+      p.next();
+      return parse_unicode_charclass(p, false);
+    }
+    Some('P') => {
+      p.next();
+      return parse_unicode_charclass(p, true);
+    }
     Some('b') => {
       p.next();
-      
       return Ok(AssertNonWordBoundary)
     }
     Some('B') => {
       p.next();
-
       return Ok(AssertWordBoundary)
     }
     Some(_) => return parse_escape_char(p),
@@ -82,9 +94,116 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   p.next();
 
-  println(cc.to_str());
+  println!("{:s}", cc.to_str());
+
 
   Ok(cc)
+}
+
+/// Parses a named Unicode character class
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
+/// * neg - Whether or not the character class should be negated
+#[inline]
+fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> {
+  match p.current() {
+    Some('{') => {    // Unicode character class with name longer than 1 character
+      let mut prop_name_buf: ~[char] = ~[];
+      loop {
+        p.next();
+        match p.current() {
+          Some('}') => {
+            p.next();
+            if prop_name_buf.len() == 0 {
+              return Err(ParseEmptyPropertyName)
+            } else {
+              let prop_name = str::from_chars(prop_name_buf);
+              let prop_table = match general_category::get_prop_table(prop_name) {
+                Some(table) => table,
+                None => {
+                  match script::get_prop_table(prop_name) {
+                    Some(table) => table,
+                    None => return Err(ParseInvalidUnicodeProperty)
+                  }
+                }
+              };
+              if neg {
+                return Ok(NegatedCharClassTable(prop_table))
+              } else {
+                return Ok(CharClassTable(prop_table))
+              }
+            }
+          }
+          Some(c) => {
+            prop_name_buf.push(c);
+          }
+          None => return Err(ParseExpectedClosingBrace)
+        }
+      }
+    }
+    Some(c) => {      // Unicode character class with 1 character name
+      p.next();
+      let prop_name = str::from_char(c);
+      let prop_table = match general_category::get_prop_table(prop_name) {
+        Some(table) => table,
+        None => {
+          match script::get_prop_table(prop_name) {
+            Some(table) => table,
+            None => return Err(ParseInvalidUnicodeProperty)
+          }
+        }
+      };
+      if neg {
+        return Ok(NegatedCharClassTable(prop_table))
+      } else {
+        return Ok(CharClassTable(prop_table))
+      }
+    }
+    None => return Err(ParseIncompleteEscapeSeq)
+  }
+}
+
+/// Parses a named ASCII character class
+///
+/// #Arguments
+///
+/// * p - The current state of parsing
+#[inline]
+fn parse_ascii_charclass(p: &mut State) -> Result<Expr, ParseCode> {
+  let neg = if p.current() == Some('^') {
+    p.next();
+    true
+  } else {
+    false
+  };
+
+  let mut prop_name_buf: ~[char] = ~[];
+  loop {
+    match p.current() {
+      Some(':') if p.peek() == Some(']') => {
+        p.consume(2);
+        return match ascii::get_prop_table(str::from_chars(prop_name_buf)) {
+          Some(t) => {
+            if neg {
+              Ok(NegatedCharClassTable(t))
+            } else {
+              Ok(CharClassTable(t))
+            }
+          }
+          None => Err(ParseInvalidAsciiCharClass)
+        }
+      }
+      Some(c) => {
+        p.next();
+        prop_name_buf.push(c);
+      }
+      None => {
+        return Err(ParseExpectedAsciiCharClassClose)
+      }
+    }
+  }
 }
 
 /// Parses an escaped character at a given state.
@@ -100,7 +219,7 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
 
       Ok(Literal(c))
     }
-    None => Err(ParseIncompleteEscapeSeq) 
+    None => Err(ParseIncompleteEscapeSeq)
   }
 }
 
@@ -113,9 +232,10 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
 fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   let mut capturing = true;
   let mut name: Option<~str> = None;
+  let mut name_buf: ~[char] = ~[];
 
   // Check for an extension denoted by a ?
-  // 
+  //
   // Currently supporting:
   //
   // * `?:` = No Capture
@@ -128,11 +248,11 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
           p.consume(2);
           capturing = false;
         }
-        // A Comment. Everything in the parenthases is 
+        // A Comment. Everything in the parenthases is
         // ignored
         Some('#') => {
           p.consume(2);
-          
+
           loop {
             match p.current() {
               Some(')') => {
@@ -150,8 +270,42 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
         }
         Some('P') => {
           p.consume(2);
+          match p.current() {
+            Some('<') => {
+              p.next();
+              loop {
+                match p.current() {
+                  Some('>') if name_buf.len() == 0 => {
+                    return Err(ParseEmptyGroupName);
+                  }
+                  Some('>') => {
+                    name = Some(str::from_chars(name_buf));
+                    p.next();
+                    break;
+                  }
+                  // TODO: restrict this to [a-zA-Z0-9_]
+                  Some(c) => {
+                    if c.is_digit_radix(36) || c == '_' {
+                      name_buf.push(c);
+                      p.next();
+                    } else if c == ')' {
+                      return Err(ParseExpectedClosingAngleBracket);
+                    } else {
+                      return Err(ParseExpectedAlphaNumeric);
+                    }
+                  }
+                  None => {
+                    return Err(ParseExpectedClosingAngleBracket);
+                  }
+                }
+              }
+            }
+            _ => {
+              return Err(ParseExpectedOpeningAngleBracket);
+            }
+          }
         }
-        _ => () 
+        _ => ()
       }
     }
     _ => ()
@@ -160,8 +314,8 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
   p.nparens += 1;
 
   let ncap = p.ncaptures;
-  
-  if (capturing) {
+
+  if capturing {
     p.ncaptures += 1;
   }
 
@@ -174,8 +328,8 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 
   p.nparens -= 1;
 
-  if (capturing) {
-    Ok(Capture(~expr, ncap, name)) 
+  if capturing {
+    Ok(Capture(~expr, ncap, name))
   } else {
     Ok(expr)
   }
@@ -183,24 +337,30 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 
 /// Parses a character class at a given state.
 ///
-/// # Issues
-///
-/// * Can't have nested char classes. Need a way to combine char classes.
+/// NOTE: Open square brackets within a character class have no
+/// special meaning, they are treated as ordinary characters.
+/// There is no such thing as nested character classes.
 ///
 /// # Arguments
 ///
 /// * p - The current state of parsing
 #[inline]
 fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
-  // we need to keep track of any [, ( in
-  // the input, because we can just ignore 
-  // them
-  let mut nbracket: uint = 0;
   let mut ranges = ~[];
+  let mut other_exprs = ~[];
+
+  // check to see if this is an ascii char class, not a general purpose one
+  match p.current() {
+    Some(':') => {
+      p.next();
+      return parse_ascii_charclass(p);
+    }
+    _ => { }
+  };
 
   // check to see if the first char following
-  // '[' is a '^', if so, it is a negated char 
-  // class 
+  // '[' is a '^', if so, it is a negated char
+  // class
   let negate = match p.current() {
     Some('^') => {
       p.next();
@@ -209,7 +369,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
     _ => false
   };
 
-  // if the first character in a char class is ], 
+  // if the first character in a char class is ],
   // it is treated as a literal
   match p.current() {
     Some(']') => {
@@ -221,45 +381,50 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
 
   loop {
     match p.current() {
-      Some('[') => {
-        p.next();
-        nbracket += 1;
-      },
       Some(']') => {
         p.next();
-        if (nbracket > 0) {
-          nbracket -= 1;
+        let cc = if negate {
+          new_negated_charclass(ranges)
         } else {
-          let cc = if (negate) {
-            new_negated_charclass(ranges)
-          } else {
-            new_charclass(ranges)
-          };
-          // Check to see if the created char class is 
-          // empty
-          if (match cc {
-            CharClass(ref r) => r.len() == 0,
-            _ => unreachable!() 
-          }) {
-            return Err(ParseEmptyCharClassRange)
-          }
-          return Ok(cc)
-        }
+          new_charclass(ranges)
+        };
+
+        // return CharClass and/or any internal special character classes
+        let other_exprs_result = new_multiple_alternation(other_exprs);
+        let expr_exists = match (&cc, &other_exprs_result) {
+          (&CharClass(ref r), &Some(_)) if r.len() > 0 => (true, true),
+          (&CharClass(ref r), &None) if r.len() > 0 => (true, false),
+          (_, &Some(_)) => (false, true),
+          (_, &None) => (false, false)
+        };
+
+        return match expr_exists {
+          (true, true) => Ok(Alternation(~cc, ~other_exprs_result.unwrap())),
+          (true, false) => Ok(cc),
+          (false, true) => Ok(other_exprs_result.unwrap()),
+          (false, false) => Err(ParseEmptyCharClassRange)
+        };
       }
       Some('\\') => {
         p.next();
-        match p.current() {
-          Some(c) => {
-            ranges.push((c, c));
-          }
-          None => return Err(ParseIncompleteEscapeSeq)
+        match parse_escape(p) {
+          Ok(expr) => other_exprs.push(expr),
+          err => return err
         }
-        p.next();
+      }
+      Some('[') if p.peek() == Some(':') => {  // ASCII character class
+        p.consume(2);
+        match parse_ascii_charclass(p) {
+          Ok(table) => {
+            other_exprs.push(table);
+          }
+          Err(e) => return Err(e)
+        }
       }
       Some(c) => {
         p.next();
-        
-        // check to see if its this is part of a 
+
+        // check to see if its this is part of a
         // range
         match p.current() {
           Some('-') => {
@@ -289,8 +454,64 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   Err(ParseExpectedClosingBracket)
 }
 
-/// Determines if there is a repetition operator at a given state and 
-/// tries to parse it.
+#[inline]
+fn new_multiple_alternation(components: &[Expr]) -> Option<Expr> {
+  match components.len() {
+    0 => None,
+    _ => Some(new_alternation_recursive(components))
+  }
+}
+
+fn new_alternation_recursive(components: &[Expr]) -> Expr {
+  match components.len() {
+    1 => components[0].clone(),
+    2 => Alternation(~components[0].clone(), ~components[1].clone()),
+    n => Alternation(~components[0].clone(), ~new_alternation_recursive(components.slice(1,n)))
+  }
+}
+
+/// Parses repetitions using the *, +, and ? operators and pushes them on the
+/// stack of parsed expressions
+///
+/// # Arguments
+///
+/// * p     - The current state of parsing
+/// * stack - The current stack of expressions parsed
+/// * c     - The repetition operator being parsed; either *, +, or ?
+#[inline]
+fn parse_repetition_op(p: &mut State, stack: &mut ~[Expr], c: char) -> Result<Expr, ParseCode> {
+  p.next();
+
+  // Look for a quantifier
+  let quantifier = match p.current() {
+    Some('?') => {
+      p.next();
+      NonGreedy
+    }
+    _ => Greedy
+  };
+
+  match stack.pop() {
+    None |
+    Some(Repetition(..)) |
+    Some(AssertStart) |
+    Some(AssertEnd) |
+    Some(AssertWordBoundary) |
+    Some(AssertNonWordBoundary) => {
+      return Err(ParseEmptyRepetition)
+    }
+    Some(expr) => {
+      match c {
+        '?' => return Ok(Repetition(~expr, 0, Some(1), quantifier)),
+        '+' => return Ok(Repetition(~expr, 1, None, quantifier)),
+        '*' => return Ok(Repetition(~expr, 0, None, quantifier)),
+        _   => unreachable!()
+      }
+    }
+  }
+}
+
+/// Finds the bounds on a bounded or unbounded repetition.
 ///
 /// # Arguments
 ///
@@ -302,7 +523,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
 /// * {a} - Bounded repetition
 /// * {a,} - Unbounded repetition
 #[inline]
-fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
+fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
   // these help parse numbers with more than
   // 1 digit
   let mut buf = ~"";
@@ -318,14 +539,14 @@ fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
     }
   }
 
-  if (len == 0) {
+  if len == 0 {
     return None
   }
 
-  // this is guaranteed to be a digit because 
+  // this is guaranteed to be a digit because
   // we only append it to the buffer if the char
   // is a digit
-  let start = from_str::<uint>(buf).unwrap(); 
+  let start = from_str::<uint>(buf).unwrap();
 
   buf.clear();
 
@@ -333,14 +554,14 @@ fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
   // if there is a ',', then there either is or isn't a bound
   // if there is a '}', there is an exact repetition
   match p.peekn(len) {
-    Some(',') => { 
+    Some(',') => {
       len += 1;
     }
     Some('}') => {
       p.consume(len + 1);
       return Some((start, Some(start)))
     }
-    _ => return None 
+    _ => return None
   }
 
   // If the next character is a '}', unbounded repetition
@@ -375,6 +596,55 @@ fn parse_repetition(p: &mut State) -> Option<(uint, Option<uint>)> {
   }
 }
 
+/// Determines if there is a repetition operator at a given state and
+/// tries to parse it.
+///
+/// # Arguments
+///
+/// * p      - The current state of parsing
+/// * stack  - The current stack of parsed expressions
+///
+/// # Syntax
+///
+/// * {a,b} - Bounded repetition
+/// * {a} - Bounded repetition
+/// * {a,} - Unbounded repetition
+#[inline]
+fn parse_bounded_repetition(p: &mut State, stack: &mut ~[Expr]) -> Result<Expr, ParseCode>{
+  p.next();
+  match extract_repetition_bounds(p) {
+    Some(rep) => {
+      let (start, end) = rep;
+
+      match end {
+        Some(e) if start > e => {
+          return Err(ParseEmptyRepetitionRange)
+        }
+        _ => ()
+      }
+
+      // Look for a quantifier
+      let quantifier = match p.current() {
+        Some('?') => {
+          p.next();
+          NonGreedy
+        },
+        _ => Greedy
+      };
+
+      match stack.pop() {
+        Some(expr) => {
+          return Ok(Repetition(~expr, start, end, quantifier));
+        }
+        None => {
+          return Err(ParseEmptyRepetition)
+        }
+      }
+    }
+    None => return Ok(Empty)
+  }
+}
+
 /// Parses a regular expression recursively.
 ///
 /// # Arguments
@@ -390,9 +660,9 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
         do_concat(&mut stack);
         let expr = check_ok!(parse_group(p));
         stack.push(expr);
-      } 
+      }
       Some(')') => {
-        if (p.hasUnmatchedParens()) {
+        if p.hasUnmatchedParens() {
           break;
         }
         return Err(ParseUnexpectedClosingParen);
@@ -405,81 +675,32 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
         match _parse_recursive(p) {
           Ok(expr) => {
-            let alt = stack.pop();
+            let alt = match stack.pop() {
+              Some(ans) => ans,
+              None => Empty //Should be unreachable
+            };
             stack.push(Alternation(~alt, ~expr));
           }
           e => return e
         };
 
-        if (p.hasUnmatchedParens()) {
+        if p.hasUnmatchedParens() {
           break;
         }
       }
 
       Some(c) if c == '*' || c == '?' || c == '+' => {
-        p.next();
-
-        // Look for a quantifier
-        let quantifier = match p.current() {
-          Some('?') => {
-            p.next();
-            NonGreedy
-          }
-          _ => Greedy
-        };
-        
-        match stack.pop_opt() {
-          None |
-          Some(Repetition(..)) |
-          Some(AssertStart) | 
-          Some(AssertEnd) | 
-          Some(AssertWordBoundary) |
-          Some(AssertNonWordBoundary) => {
-            return Err(ParseEmptyRepetition)
-          }
-          Some(expr) => {
-            match c {
-              '?' => stack.push(Repetition(~expr, 0, Some(1), quantifier)),
-              '+' => stack.push(Repetition(~expr, 1, None, quantifier)),
-              '*' => stack.push(Repetition(~expr, 0, None, quantifier)),
-              _   => unreachable!()
-            }
-          }
+        match parse_repetition_op(p, &mut stack, c) {
+          Ok(expr) => stack.push(expr),
+          e => return e
         }
       }
 
       Some('{') => {
-        p.next();
-        match parse_repetition(p) {
-          Some(rep) => {
-            let (start, end) = rep;
-
-            match end {
-              Some(e) if (start > e) => {
-                return Err(ParseEmptyRepetitionRange)
-              }
-              _ => ()
-            }
-
-            // Look for a quantifier
-            let quantifier = match p.current() {
-              Some('?') => {
-                p.next();
-                NonGreedy
-              },
-              _ => Greedy
-            };
-
-            match stack.pop_opt() {
-              Some(expr) => {
-                stack.push(Repetition(~expr, start, end, quantifier));
-              }
-              None => {
-                return Err(ParseEmptyRepetition)
-              }
-            }
-          }
-          None => ()
+        match parse_bounded_repetition(p, &mut stack) {
+          Ok(Empty) => (),
+          Ok(expr) => stack.push(expr),
+          e => return e
         }
       }
 
@@ -517,26 +738,26 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
   do_concat(&mut stack);
 
-  if (p.hasUnmatchedParens() && p.isEnd()) {
+  if p.hasUnmatchedParens() && p.isEnd() {
     Err(ParseExpectedClosingParen)
   } else {
-    match stack.pop_opt() {
+    match stack.pop() {
       Some(expr)  => Ok(expr),
       None        => Ok(Empty)
     }
   }
 }
 
-/// Concatenates all itemes on the stack if there are more 
+/// Concatenates all itemes on the stack if there are more
 /// than two.
 ///
 /// # Arguments
 ///
 /// * stack - The stack with items to concatenate
 fn do_concat(stack: &mut ~[Expr]) {
-  while (stack.len() > 1) {
-    let rgt = stack.pop();
-    let lft = stack.pop();
+  while stack.len() > 1 {
+    let rgt = match stack.pop() { Some(ans) => ans, None => Empty };
+    let lft = match stack.pop() { Some(ans) => ans, None => Empty };
 
     stack.push(Concatenation(~lft, ~rgt));
   }
@@ -548,9 +769,9 @@ fn do_concat(stack: &mut ~[Expr]) {
 ///
 /// * stack - The stack to print
 fn print_stack(stack: &mut ~[Expr]) {
-  println("--E-Stack--");
+  println!("--E-Stack--");
   for e in stack.iter() {
-    println(e.to_str());
+    println!("{:s}", e.to_str());
   }
 }
 
@@ -562,12 +783,13 @@ mod parse_tests {
   macro_rules! test_parse(
     ($input: expr, $expect: pat) => (
       {
-        let ok = match parse($input) {
+        let result = parse($input);
+        let ok = match result {
           $expect => true,
           _ => false
         };
         //ps.trace();
-        assert!(ok); 
+        assert!(ok, "Was not expecting {:s}", result.to_str());
       }
     );
   )
@@ -614,11 +836,116 @@ mod parse_tests {
 
   #[test]
   fn parse_no_repetition_target_specified_err() {
-    test_parse!("{10,}", Err(ParseEmptyRepetition)); 
+    test_parse!("{10,}", Err(ParseEmptyRepetition));
   }
 
   #[test]
   fn parse_backward_slash_err() {
     test_parse!("\\", Err(ParseIncompleteEscapeSeq));
+  }
+
+  #[test]
+  fn parse_named_group_ok() {
+    test_parse!("(?P<My_nAm3>regex)", Ok(_));
+  }
+
+  #[test]
+  fn parse_named_group_no_opening_angle_bracket_err() {
+    test_parse!("(?Psdf)", Err(ParseExpectedOpeningAngleBracket));
+  }
+
+  #[test]
+  fn parse_named_group_no_closing_angle_bracket_err() {
+    test_parse!("(?P<sdf)", Err(ParseExpectedClosingAngleBracket));
+  }
+
+  #[test]
+  fn parse_named_group_no_closing_angle_bracket_2_err() {
+    test_parse!("(?P<sdf", Err(ParseExpectedClosingAngleBracket));
+  }
+
+  #[test]
+  fn parse_named_group_empty_name_err() {
+    test_parse!("(?P<>sdfkj)", Err(ParseEmptyGroupName));
+  }
+
+  #[test]
+  fn parse_named_group_invalid_name_character_err() {
+    test_parse!("(?P<sdd$f>)", Err(ParseExpectedAlphaNumeric));
+  }
+
+  // #[test]
+  // fn parse_unicode_charclass_single_letter() {
+  //   test_parse!("\\pN", Ok(CharClassTable(~"N")));
+  // }
+
+  #[test]
+  fn parse_unicode_charclass_multiple_letter() {
+    test_parse!("\\p{Greek}", Ok(CharClassTable(_)));
+  }
+
+  // #[test]
+  // fn parse_unicode_charclass_single_letter_negated() {
+  //   test_parse!("\\PL", Ok(NegatedCharClassTable(_)));
+  // }
+
+  #[test]
+  fn parse_unicode_charclass_multiple_letter_negated() {
+    test_parse!("\\P{Latin}", Ok(NegatedCharClassTable(_)));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_empty_single_letter() {
+    test_parse!("\\p", Err(ParseIncompleteEscapeSeq));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_empty_multiple_letter() {
+    test_parse!("\\p{}", Err(ParseEmptyPropertyName));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_empty_unterminated() {
+    test_parse!("\\p{", Err(ParseExpectedClosingBrace));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_nonempty_unterminated() {
+    test_parse!("\\p{Gre", Err(ParseExpectedClosingBrace));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_multiple_nonexistent() {
+    test_parse!("\\pA", Err(ParseInvalidUnicodeProperty));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_single_nonexistent() {
+    test_parse!("\\pA", Err(ParseInvalidUnicodeProperty));
+  }
+
+  #[test]
+  fn parse_unicode_charclass_nested() {
+    test_parse!("[sdkfj\\p{Latin}]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
+  }
+
+  #[test]
+  fn parse_ascii_charclass() {
+    test_parse!("[:alpha:]", Ok(CharClassTable(_)));
+  }
+
+  #[test]
+  fn parse_ascii_charclass_nonexistent() {
+    test_parse!("[:alpsd:]", Err(ParseInvalidAsciiCharClass));
+  }
+
+  #[test]
+  fn parse_ascii_charclass_unterminated() {
+    test_parse!("[:alpha", Err(ParseExpectedAsciiCharClassClose));
+  }
+
+  #[test]
+  fn parse_ascii_charclass_nested() {
+    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
   }
 }

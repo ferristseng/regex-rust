@@ -1,13 +1,12 @@
-#[crate_id = "rustre#0.1.1"];
-#[feature(globs)];
-#[feature(macro_rules)];
+#![crate_id = "rustre#0.1.1"]
+#![feature(globs)]
+#![feature(macro_rules)]
 
-#[allow(dead_code)];
+#![allow(dead_code)]
 
-#[license = "MIT"];
-#[comment = "Regular Expression Engine in Rust"];
+#![license = "MIT"]
+#![comment = "Regular Expression Engine in Rust"]
 
-extern mod extra;
 
 pub use regexp::UncompiledRegexp;
 
@@ -18,6 +17,7 @@ mod parse;
 mod state;
 mod compile;
 mod charclass;
+mod unicode;
 
 pub mod result;
 pub mod regexp;

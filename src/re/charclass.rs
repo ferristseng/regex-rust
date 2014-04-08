@@ -9,43 +9,124 @@ pub static NumericClass: Expr = CharClassStatic([
   ('0', '9')
 ]);
 pub static AlphaClass: Expr = CharClassStatic([
-  ('a', 'z'), 
-  ('A', 'Z'), 
+  ('a', 'z'),
+  ('A', 'Z'),
   ('_', '_')
 ]);
 pub static WhitespaceClass: Expr = CharClassStatic([
-  (' ', ' '), 
-  ('\t', '\t'), 
-  ('\u000b', '\u000b'), 
-  ('\u000c', '\u000c'), 
-  ('\n', '\n'), 
+  (' ', ' '),
+  ('\t', '\t'),
+  ('\u000b', '\u000b'),
+  ('\u000c', '\u000c'),
+  ('\n', '\n'),
   ('\r', '\r')
 ]);
 pub static NegatedNumericClass: Expr = CharClassStatic([
   ('\u0000', '\u002F'), ('\u003A', MAX)
 ]);
 pub static NegatedAlphaClass: Expr = CharClassStatic([
-  ('\u0000', '\u0040'), 
-  ('\u005B', '\u005E'), 
-  ('\u0060', '\u0060'), 
+  ('\u0000', '\u0040'),
+  ('\u005B', '\u005E'),
+  ('\u0060', '\u0060'),
   ('\u007B', MAX)
 ]);
 pub static NegatedWhitespaceClass: Expr = CharClassStatic([
-  ('\u0000', '\u0008'), 
-  ('\u000e', '\u001f'), 
+  ('\u0000', '\u0008'),
+  ('\u000e', '\u001f'),
   ('\u0021', MAX)
 ]);
 
-/// Try to get the prev character in sequence from 
+pub mod ascii {
+  pub fn get_prop_table(prop: &str) -> Option<&'static [(char,char)]> {
+    match prop {
+      &"alnum" => Some(alnum_table),
+      &"alpha" => Some(alpha_table),
+      &"ascii" => Some(ascii_table),
+      &"blank" => Some(blank_table),
+      &"cntrl" => Some(cntrl_table),
+      &"digit" => Some(digit_table),
+      &"graph" => Some(graph_table),
+      &"lower" => Some(lower_table),
+      &"print" => Some(print_table),
+      &"punct" => Some(punct_table),
+      &"space" => Some(space_table),
+      &"upper" => Some(upper_table),
+      &"word" => Some(word_table),
+      &"xdigit" => Some(xdigit_table),
+      _ => None
+    }
+  }
+
+  pub static alnum_table : &'static [(char,char)] = &[
+    ('0', '9'), ('A', 'Z'), ('a', 'z')
+  ];
+
+  pub static alpha_table : &'static [(char,char)] = &[
+    ('A', 'Z'), ('a', 'z')
+  ];
+
+  pub static ascii_table : &'static [(char,char)] = &[
+    ('\x00', '\x7f')
+  ];
+
+  pub static blank_table : &'static [(char,char)] = &[
+    ('\t', '\t'), (' ', ' ')
+  ];
+
+  pub static cntrl_table : &'static [(char,char)] = &[
+    ('\x00', '\x1f'), ('\x7f', '\x7f')
+  ];
+
+  pub static digit_table : &'static [(char,char)] = &[
+    ('0', '9')
+  ];
+
+  pub static graph_table : &'static [(char,char)] = &[
+    ('\x21', '\x7E')
+  ];
+
+  pub static lower_table : &'static [(char,char)] = &[
+    ('a', 'z')
+  ];
+
+  pub static print_table : &'static [(char,char)] = &[
+    ('\x20', '\x7E')
+  ];
+
+  pub static punct_table : &'static [(char,char)] = &[
+    ('\x21', '\x2F'), ('\x3a', '\x40'),
+    ('\x5b', '\x60'), ('\x7b', '\x7e')
+  ];
+
+  pub static space_table : &'static [(char,char)] = &[
+    ('\x09', '\x0D')
+  ];
+
+  pub static upper_table : &'static [(char,char)] = &[
+    ('A', 'Z')
+  ];
+
+  pub static word_table : &'static [(char,char)] = &[
+    ('0', '9'), ('A', 'Z'),
+    ('a', 'z'), ('_', '_')
+  ];
+
+  pub static xdigit_table : &'static [(char,char)] = &[
+    ('0', '9'), ('A', 'Z'),
+    ('a', 'z')
+  ];
+}
+
+/// Try to get the prev character in sequence from
 /// the given one.
 fn prev_char(c: char) -> Option<char> {
   match from_u32(c as u32 - 1) {
     None => None,
-    r    => r   
+    r    => r
   }
 }
 
-/// Try to get the next character in sequence from 
+/// Try to get the next character in sequence from
 /// the given one.
 fn next_char(c: char) -> Option<char> {
   match from_u32(c as u32 + 1) {
@@ -56,17 +137,17 @@ fn next_char(c: char) -> Option<char> {
 
 /// Order character ranges.
 ///
-/// Character ranges with a greater end are preferred when 
+/// Character ranges with a greater end are preferred when
 /// equal.
 fn order_ranges(ranges: &mut ~[Range]) {
   ranges.sort_by(|range1, range2| {
     let &(start1, end1) = range1;
     let &(start2, end2) = range2;
 
-    if (start1 < start2) {
-      Less 
-    } else if (start1 == start2) {
-      if (end1 > end2) {
+    if start1 < start2 {
+      Less
+    } else if start1 == start2 {
+      if end1 > end2 {
         Less
       } else {
         Greater
@@ -77,8 +158,8 @@ fn order_ranges(ranges: &mut ~[Range]) {
   })
 }
 
-/// Construct a CharClass with a set of ranges. Remove 
-/// overlapping ranges preferring larger ranges (ex. Given [A-DA-C], 
+/// Construct a CharClass with a set of ranges. Remove
+/// overlapping ranges preferring larger ranges (ex. Given [A-DA-C],
 /// collapse to [A-D]).
 pub fn new_charclass(ranges: ~[Range]) -> Expr {
   let mut ranges = ranges;
@@ -88,30 +169,30 @@ pub fn new_charclass(ranges: ~[Range]) -> Expr {
   let mut new_ranges = ~[];
 
   for &(start, end) in ranges.iter() {
-    match new_ranges.pop_opt() {
+    match new_ranges.pop() {
       Some(range) => {
         let (s, e): (char, char) = range;
-        if (start > e) {
+        if start > e {
           new_ranges.push((s, e));
-          if (start <= end) {
+          if start <= end {
             new_ranges.push((start, end))
           }
-        } else if (start < e && end > e) {
+        } else if start < e && end > e {
           new_ranges.push((s, end))
-        } else if (start < e && end < e) {
+        } else if start < e && end < e {
           new_ranges.push((s, e))
         } else {
           new_ranges.push((s, e))
         }
       }
       None => {
-        if (start <= end) {  
+        if start <= end {
           new_ranges.push((start, end))
         }
       }
     }
   }
-  
+
   CharClass(new_ranges)
 }
 
@@ -121,20 +202,20 @@ pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
 
   order_ranges(&mut ranges);
 
-  let mut min: char = '\U00000000'; 
+  let mut min: char = '\U00000000';
 
   let mut new_ranges = ~[];
 
   for &(start, end) in ranges.iter() {
     match prev_char(start) {
       Some(e) => {
-        if (min <= e && end >= start) {
+        if min <= e && end >= start {
           new_ranges.push((min, e));
         }
       },
-      None => () 
+      None => ()
     };
-    if (min <= end) {
+    if min <= end {
       min = match next_char(end) {
         Some(c) => c,
         None => end
@@ -143,10 +224,10 @@ pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
   }
 
   // Patch the end
-  if (min != MAX) {
+  if min != MAX {
     new_ranges.push((min, MAX));
   }
-  
+
   CharClass(new_ranges)
 }
 
@@ -166,7 +247,7 @@ mod char_class_tests {
   #[test]
   fn char_class_good() {
     let cc = new_charclass(~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]);
-    assert_eq!(unravel_cc(cc), ~[('A', 'あ')]); 
+    assert_eq!(unravel_cc(cc), ~[('A', 'あ')]);
   }
 
   #[test]
@@ -184,7 +265,7 @@ mod char_class_tests {
   #[test]
   fn char_class_negate_multiple() {
     let cc = new_negated_charclass(~[('們', '我'), ('A', 'Z')]);
-    assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('[', '\u5010'), 
+    assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('[', '\u5010'),
                ('\u6212', MAX)]);
   }
 

@@ -1,62 +1,72 @@
-use std::vec;
-use std::util::swap;
+use std::fmt;
+use std::slice;
+use std::mem::swap;
 use compile::Instruction;
-use compile::{InstLiteral, InstRange, InstMatch, InstJump, 
-  InstCaptureStart, InstCaptureEnd, InstSplit, 
-  InstAssertStart, InstAssertEnd, InstWordBoundary,
-  InstNonWordBoundary, InstNoop};
-use result::{Match, CapturingGroup};
+use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
+  InstMatch, InstJump, InstCaptureStart, InstCaptureEnd, InstSplit,
+  InstAssertStart, InstAssertEnd, InstWordBoundary, InstNonWordBoundary,
+  InstNoop, InstProgress};
+use result::CapturingGroup;
+use unicode;
 
-/// This should be able to take compiled 
+/// This should be able to take compiled
 /// instructions and execute them (see compile.rs)
 pub trait ExecStrategy {
   fn run(&self, input: &str, start_index: uint) -> Option<Thread>;
 }
 
 #[deriving(Clone)]
-struct Thread {
-  pc: uint,
-  end: uint,
-  captures: ~[Option<CapturingGroup>]
+pub struct Thread {
+  pub pc: uint,
+  pub end: uint,
+  pub start_sp: uint,
+  pub captures: ~[Option<CapturingGroup>]
 }
 
 impl Thread {
-  fn new(pc: uint, end: uint) -> Thread {
-    Thread { 
-      pc: pc, 
+  fn new(pc: uint, end: uint, start_sp: uint) -> Thread {
+    Thread {
+      pc: pc,
       end: end,
+      start_sp: start_sp,
       captures: ~[]
     }
   }
 }
 
-impl ToStr for Thread {
-  fn to_str(&self) -> ~str {
-    format!("<Thread pc: {:u}, end: {:u}>", self.pc, self.end)
+impl fmt::Show for Thread {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f.buf, "<Thread pc: {:u}, end: {:u}, start_sp: {:u}>", self.pc, self.end, self.start_sp)
   }
 }
+
+// impl ToStr for Thread {
+//   fn to_str(&self) -> ~str {
+//     format!("<Thread pc: {:u}, end: {:u}, start_sp: {:u}>", self.pc, self.end, self.start_sp)
+//   }
+// }
 
 /// Pike VM implementation
 ///
 /// Supports everything except
 /// Assertions and Backreferences
 pub struct PikeVM<'a> {
-  priv inst:  &'a [Instruction],
-  priv ncaps: uint
+  inst:  &'a [Instruction],
+  ncaps: uint
 }
 
 impl<'a> PikeVM<'a> {
   pub fn new(inst: &'a [Instruction], ncaps: uint) -> PikeVM<'a> {
     PikeVM {
       inst: inst,
-      ncaps: ncaps 
+      ncaps: ncaps
     }
   }
 }
 
 impl<'a> PikeVM<'a> {
   #[inline]
-  fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread]) {
+  fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread], sp: uint) {
     loop {
       match self.inst[t.pc] {
         InstJump(addr) => {
@@ -65,21 +75,22 @@ impl<'a> PikeVM<'a> {
         InstSplit(laddr, raddr) => {
           let mut split = t.clone();
           split.pc = laddr;
+          split.start_sp = sp;
 
           t.pc = raddr;
 
-          self.addThread(split, tlist);
+          self.addThread(split, tlist, sp);
         }
-        InstCaptureStart(num, ref id) => {
+        InstCaptureStart(num, ref name) => {
           t.pc = t.pc + 1;
-          
+
           // Fill in spaces with None, if there is no
           // knowledge of a capture instruction
-          while (t.captures.len() < num + 1) {
+          while t.captures.len() < num + 1 {
             t.captures.push(None);
           }
 
-          t.captures[num] = Some(CapturingGroup::new(t.end, t.end, num));
+          t.captures[num] = Some(CapturingGroup::new(t.end, t.end, num, name));
         }
         InstCaptureEnd(num) => {
           t.pc = t.pc + 1;
@@ -93,6 +104,14 @@ impl<'a> PikeVM<'a> {
         }
         InstNoop => {
           t.pc = t.pc + 1;
+        }
+        InstProgress => {
+            if t.start_sp < sp {
+                t.pc = t.pc + 1;
+            } else {
+                //println!("Progess Instruction Failed {}", t.to_str());
+                return;
+            }
         }
         _ => break
       }
@@ -117,9 +136,9 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     let mut sp = 0;
     let mut found = None;
 
-    let mut clist: ~[Thread] = vec::with_capacity(self.inst.len());
-    let mut nlist: ~[Thread] = vec::with_capacity(self.inst.len());
-    
+    let mut clist: ~[Thread] = slice::with_capacity(self.inst.len());
+    let mut nlist: ~[Thread] = slice::with_capacity(self.inst.len());
+
     // To start from an index other than than the first character,
     // need to compute the number of bytes from the beginning to
     // wherever we want to start
@@ -127,7 +146,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
       let c = input.char_at(sp);
 
       // Wait until the start_index is hit
-      if (i == start_index) {
+      if i == start_index {
         break;
       }
 
@@ -135,8 +154,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
       // we can't just inc by 1
       sp += c.len_utf8_bytes();
     }
-
-    self.addThread(Thread::new(0, sp), &mut clist);
+    self.addThread(Thread::new(0, sp, sp), &mut clist, 0);
 
     // The main loop.
     //
@@ -149,75 +167,92 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
       sp += c.len_utf8_bytes();
 
-      //println(format!("-- Execution ({:c}|{:u}) --", c, sp));
+      //println!("-- Execution ({:c}|{:u}) --", c, sp);
 
-      while (clist.len() > 0) {
-        let mut t = clist.shift();;
-
+      while clist.len() > 0 {
+        let mut t = match clist.shift() {
+          Some(temp) => temp,
+          None => Thread::new(0,sp,sp) //Should be unreachable...
+        };
         match self.inst[t.pc] {
           InstLiteral(m) => {
-            if (c == m && i != input.char_len()) {
+            if c == m && i != input.char_len() {
               t.pc = t.pc + 1;
               t.end = sp;
 
-              self.addThread(t, &mut nlist);
+              self.addThread(t, &mut nlist, sp);
             }
           }
           InstRange(start, end) => {
-            if (c >= start && c <= end && i != input.char_len()) {
+            if c >= start && c <= end && i != input.char_len() {
               t.pc = t.pc + 1;
               t.end = sp;
 
-              self.addThread(t, &mut nlist);
+              self.addThread(t, &mut nlist, sp);
+            }
+          }
+          InstTableRange(table) => {
+            if unicode::bsearch_range_table(c, table) {
+              t.pc = t.pc + 1;
+              t.end = sp;
+
+              self.addThread(t, &mut nlist, sp);
+            }
+          }
+          InstNegatedTableRange(table) => {
+            if !unicode::bsearch_range_table(c, table) {
+              t.pc = t.pc + 1;
+              t.end = sp;
+
+              self.addThread(t, &mut nlist, sp);
             }
           }
           InstAssertStart => {
-            if (i == 0) {
+            if i == 0 {
               t.pc = t.pc + 1;
 
-              self.addThread(t, &mut clist);
+              self.addThread(t, &mut clist, sp);
             }
           }
           InstAssertEnd => {
             // Account for the extra character added onto each
             // input string
-            if (i == input.char_len() - 1) {
+            if i == input.char_len() - 1 {
               t.pc = t.pc + 1;
 
-              self.addThread(t, &mut clist);
+              self.addThread(t, &mut clist, sp);
             }
           }
           InstWordBoundary => {
-            if (i == 0 ||
-                i == input.char_len()) {
+            if i == 0 || i == input.char_len() {
               continue;
             }
-            if (i == start_index &&
-                !input.char_at_reverse(t.end).is_alphanumeric()) {
+            if i == start_index &&
+                !input.char_at_reverse(t.end).is_alphanumeric() {
               continue;
             }
-            if (!c.is_alphanumeric()) {
-              continue;
-            }
-            t.pc = t.pc + 1;
-            
-            self.addThread(t, &mut clist);
-          }
-          InstNonWordBoundary => {
-            if (i == start_index &&
-                i != 0 &&
-                input.char_at_reverse(t.end).is_alphanumeric()) {
-              continue;
-            }
-            if (i != input.char_len() &&
-                i != 0 &&
-                i != start_index &&
-                c.is_alphanumeric()) {
+            if !c.is_alphanumeric() {
               continue;
             }
             t.pc = t.pc + 1;
 
-            self.addThread(t, &mut clist);
+            self.addThread(t, &mut clist, sp);
+          }
+          InstNonWordBoundary => {
+            if i == start_index &&
+                i != 0 &&
+                input.char_at_reverse(t.end).is_alphanumeric() {
+              continue;
+            }
+            if i != input.char_len() &&
+                i != 0 &&
+                i != start_index &&
+                c.is_alphanumeric() {
+              continue;
+            }
+            t.pc = t.pc + 1;
+
+            self.addThread(t, &mut clist, sp);
           }
           InstMatch => {
             found = Some(t.clone());
@@ -236,7 +271,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     // groups length in the `Match`.
     match found {
       Some(ref mut ma) => {
-        if (ma.captures.len() < self.ncaps) {
+        if ma.captures.len() < self.ncaps {
           for _ in range(ma.captures.len(), self.ncaps) {
             ma.captures.push(None);
           }
