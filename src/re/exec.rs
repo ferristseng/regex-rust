@@ -17,6 +17,7 @@ pub trait ExecStrategy {
 
 #[deriving(Clone)]
 pub struct Thread {
+  pub sp: uint,
   pub pc: uint,
   pub end: uint,
   pub start_sp: uint,
@@ -24,8 +25,9 @@ pub struct Thread {
 }
 
 impl Thread {
-  fn new(pc: uint, end: uint, start_sp: uint) -> Thread {
+  fn new(sp: uint, pc: uint, end: uint, start_sp: uint) -> Thread {
     Thread {
+      sp: sp,
       pc: pc,
       end: end,
       start_sp: start_sp,
@@ -66,7 +68,7 @@ impl<'a> PikeVM<'a> {
 
 impl<'a> PikeVM<'a> {
   #[inline]
-  fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread], sp: uint) {
+  fn addThread(&self, mut t: Thread, tlist: &mut ~[Thread]) {
     loop {
       match self.inst[t.pc] {
         InstJump(addr) => {
@@ -75,11 +77,11 @@ impl<'a> PikeVM<'a> {
         InstSplit(laddr, raddr) => {
           let mut split = t.clone();
           split.pc = laddr;
-          split.start_sp = sp;
+          split.start_sp = t.sp;
 
           t.pc = raddr;
 
-          self.addThread(split, tlist, sp);
+          self.addThread(split, tlist);
         }
         InstCaptureStart(num, ref name) => {
           t.pc = t.pc + 1;
@@ -106,7 +108,7 @@ impl<'a> PikeVM<'a> {
           t.pc = t.pc + 1;
         }
         InstProgress => {
-            if t.start_sp < sp {
+            if t.start_sp < t.sp {
                 t.pc = t.pc + 1;
             } else {
                 //println!("Progess Instruction Failed {}", t.to_str());
@@ -133,7 +135,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     // `sp` is a reference to a byte position in the input string.
     // Anytime this is incremented, we have to be aware of the number of
     // bytes the character is.
-    let mut sp = 0;
+    let mut ssp = 0;
     let mut found = None;
 
     let mut clist: ~[Thread] = slice::with_capacity(self.inst.len());
@@ -143,7 +145,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     // need to compute the number of bytes from the beginning to
     // wherever we want to start
     for i in range(0, input.char_len()) {
-      let c = input.char_at(sp);
+      let c = input.char_at(ssp);
 
       // Wait until the start_index is hit
       if i == start_index {
@@ -152,9 +154,9 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
       // Some chars are different byte lengths, so
       // we can't just inc by 1
-      sp += c.len_utf8_bytes();
+      ssp += c.len_utf8_bytes();
     }
-    self.addThread(Thread::new(0, sp, sp), &mut clist, 0);
+    self.addThread(Thread::new(ssp, 0, ssp, ssp), &mut clist);
 
     // The main loop.
     //
@@ -163,55 +165,57 @@ impl<'a> ExecStrategy for PikeVM<'a> {
     // paths through the list of instructions. The only
     // time new threads are created, are when `InstSplit` instructions occur.
     for i in range(start_index, input.char_len()) {
-      let c = input.char_at(sp);
-
-      sp += c.len_utf8_bytes();
-
       //println!("-- Execution ({:c}|{:u}) --", c, sp);
 
       while clist.len() > 0 {
         let mut t = match clist.shift() {
           Some(temp) => temp,
-          None => Thread::new(0,sp,sp) //Should be unreachable...
+          None => Thread::new(0,0,0,0) //Should be unreachable...
         };
+        let c = input.char_at(t.sp);
+
         match self.inst[t.pc] {
           InstLiteral(m) => {
             if c == m && i != input.char_len() {
+              t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
-              t.end = sp;
+              t.end = t.sp;
 
-              self.addThread(t, &mut nlist, sp);
+              self.addThread(t, &mut nlist);
             }
           }
           InstRange(start, end) => {
             if c >= start && c <= end && i != input.char_len() {
+              t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
-              t.end = sp;
+              t.end = t.sp;
 
-              self.addThread(t, &mut nlist, sp);
+              self.addThread(t, &mut nlist);
             }
           }
           InstTableRange(table) => {
             if unicode::bsearch_range_table(c, table) {
+              t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
-              t.end = sp;
+              t.end = t.sp;
 
-              self.addThread(t, &mut nlist, sp);
+              self.addThread(t, &mut nlist);
             }
           }
           InstNegatedTableRange(table) => {
             if !unicode::bsearch_range_table(c, table) {
+              t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
-              t.end = sp;
+              t.end = t.sp;
 
-              self.addThread(t, &mut nlist, sp);
+              self.addThread(t, &mut nlist);
             }
           }
           InstAssertStart => {
             if i == 0 {
               t.pc = t.pc + 1;
 
-              self.addThread(t, &mut clist, sp);
+              self.addThread(t, &mut clist);
             }
           }
           InstAssertEnd => {
@@ -220,7 +224,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             if i == input.char_len() - 1 {
               t.pc = t.pc + 1;
 
-              self.addThread(t, &mut clist, sp);
+              self.addThread(t, &mut clist);
             }
           }
           InstWordBoundary => {
@@ -236,7 +240,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
             t.pc = t.pc + 1;
 
-            self.addThread(t, &mut clist, sp);
+            self.addThread(t, &mut clist);
           }
           InstNonWordBoundary => {
             if i == start_index &&
@@ -252,7 +256,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
             t.pc = t.pc + 1;
 
-            self.addThread(t, &mut clist, sp);
+            self.addThread(t, &mut clist);
           }
           InstMatch => {
             found = Some(t.clone());
