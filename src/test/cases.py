@@ -196,7 +196,17 @@ TESTS = [
   ("\\x54", 'T', 'T', MATCH),
   ("\\x79", '\x79', '\x79', MATCH),
   ("\\x00", '7', '', NOMATCH),
+  ("\\x2B", '+', '+', MATCH),
+  ("\\x2b", '+', '+', MATCH),
+  ("\\x4g", 'Test', '', PARSEERR),
   ("\\x32\\x45+\\x30*", '\x32\x45\x45\x45', '\x32\x45\x45\x45', MATCH),
+  ("\\x{54}", 'T', 'T', MATCH),
+  ("\\x{DbB0}", '\u06f0', '\u06f0', MATCH),
+  ("\\x{54}\\x{DbB0}+\\x{36}*", 'T\u06f0\u06f0\u06f0', 'T\u06f0\u06f0\u06f0', MATCH),
+  ("\\x{}", 'Test', '', PARSEERR),
+  ("\\x{000}", 'Test', '', PARSEERR),
+  ("\\x{00000000}", 'Test', '', PARSEERR),
+
 
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.

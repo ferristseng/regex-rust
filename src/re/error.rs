@@ -36,6 +36,7 @@ pub mod ParseError {
     ParseInvalidUnicodeProperty,
 
     ParseIncompleteEscapeSeq,
+    ParseInvalidUTF8Encoding,
 
     // char class errors
     ParseEmptyCharClassRange,
@@ -73,6 +74,7 @@ pub mod ParseError {
         ParseInvalidUnicodeProperty      => PARSE_ERR + "Invalid Unicode property provided",
         ParseIncompleteEscapeSeq         => PARSE_ERR + "Expected a character to escape",
         ParseEmptyCharClassRange         => PARSE_ERR + "Empty character class",
+        ParseInvalidUTF8Encoding         => PARSE_ERR + "Invalid UTF-8 encoding",
         ParseInternalError |
         ParseNotRepetition |
         ParseUnknownError           => PARSE_ERR + "Unknown error (probably a bug)",

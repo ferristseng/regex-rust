@@ -17,6 +17,7 @@ pub enum QuantifierPrefix {
 pub enum Expr {
   Empty,
   Literal(char),
+  LiteralString(~str),
   CharClass(~[Range]),
   CharClassStatic(&'static [Range]),
   UnicodeCharClass(&'static [(char,char)]),
@@ -195,7 +196,39 @@ fn parse_hex_escape(p: &mut State) -> Result<Expr, ParseCode> {
   match p.current() {
     Some('{') => {
         p.next();
-        return Ok(Literal('{')); // TODO: Implement the UTF-8 state machine for this
+        let mut literal : ~[u8] = ~[];
+        let mut count : uint = 0;
+        loop {
+          count += 1;
+
+          match extract_hex_value(p) {
+            Some(c) => {println!("Value is {:u}", c); literal.push(c)},
+            _ => {return Err(ParseIncompleteEscapeSeq)}
+          }
+
+          if(count == 3) {
+            break
+          }
+
+          match p.current() {
+            Some('}') => {break},
+            _ => {}
+          }
+        }
+        match p.current() {
+          Some('}') => {
+            p.next();
+            if str::is_utf8(literal) {
+              println("Is UTF-8");
+              println!("And the value is: {}", str::from_utf8_owned(literal.clone()));
+              return Ok(LiteralString(str::from_utf8_owned(literal)))
+            } else {
+              println("Not UTF-8");
+              return Err(ParseInvalidUTF8Encoding)
+            }
+          },
+          _ => {return Err(ParseExpectedClosingBrace)}
+        }
       },
     Some(c) => {
       match extract_hex_value(p) {
