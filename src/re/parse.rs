@@ -110,7 +110,7 @@ pub fn parse(t: &str, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
 ///
 /// * p - The current state of parsing
 #[inline]
-fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
+fn parse_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   let current = p.current();
 
   // Replace these with static vectors
@@ -123,11 +123,11 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
     Some('S') => NegatedWhitespaceClass.clone(),
     Some('p') => {
       p.next();
-      return parse_unicode_charclass(p, false);
+      return parse_unicode_charclass(p, f, false);
     }
     Some('P') => {
       p.next();
-      return parse_unicode_charclass(p, true);
+      return parse_unicode_charclass(p, f, true);
     }
     Some('b') => {
       p.next();
@@ -137,7 +137,7 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
       p.next();
       return Ok(AssertWordBoundary)
     }
-    Some(_) => return parse_escape_char(p),
+    Some(_) => return parse_escape_char(p, f),
     None => return Err(ParseIncompleteEscapeSeq)
   };
 
@@ -156,7 +156,7 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 /// * p - The current state of parsing
 /// * neg - Whether or not the character class should be negated
 #[inline]
-fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> {
+fn parse_unicode_charclass(p: &mut State, f: &mut ParseFlags, neg: bool) -> Result<Expr, ParseCode> {
   match p.current() {
     Some('{') => {    // Unicode character class with name longer than 1 character
       let mut prop_name_buf: ~[char] = ~[];
@@ -178,11 +178,21 @@ fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> 
                   }
                 }
               };
-              if neg {
-                return Ok(NegatedCharClassTable(prop_table))
+
+              if f.i {
+                let folded_ranges = charclass_casefold(prop_table);
+                if neg {
+                  return Ok(new_negated_charclass(folded_ranges));
+                } else {
+                  return Ok(new_charclass(folded_ranges));
+                }
               } else {
-                return Ok(CharClassTable(prop_table))
-              }
+                if neg {
+                  return Ok(NegatedCharClassTable(prop_table));
+                } else {
+                  return Ok(CharClassTable(prop_table));
+                }
+              };
             }
           }
           Some(c) => {
@@ -204,11 +214,21 @@ fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> 
           }
         }
       };
-      if neg {
-        return Ok(NegatedCharClassTable(prop_table))
+
+      if f.i {
+        let folded_ranges = charclass_casefold(prop_table);
+        if neg {
+          return Ok(new_negated_charclass(folded_ranges));
+        } else {
+          return Ok(new_charclass(folded_ranges));
+        }
       } else {
-        return Ok(CharClassTable(prop_table))
-      }
+        if neg {
+          return Ok(NegatedCharClassTable(prop_table));
+        } else {
+          return Ok(CharClassTable(prop_table));
+        }
+      };
     }
     None => return Err(ParseIncompleteEscapeSeq)
   }
@@ -220,7 +240,7 @@ fn parse_unicode_charclass(p: &mut State, neg: bool) -> Result<Expr, ParseCode> 
 ///
 /// * p - The current state of parsing
 #[inline]
-fn parse_ascii_charclass(p: &mut State) -> Result<Expr, ParseCode> {
+fn parse_ascii_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   let neg = if p.current() == Some('^') {
     p.next();
     true
@@ -261,7 +281,7 @@ fn parse_ascii_charclass(p: &mut State) -> Result<Expr, ParseCode> {
 ///
 /// * p - The current state of parsing
 #[inline]
-fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
+fn parse_escape_char(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   match p.current() {
     Some(c) => {
       p.next();
@@ -395,7 +415,7 @@ fn parse_group(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
 ///
 /// * p - The current state of parsing
 #[inline]
-fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
+fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   let mut ranges = ~[];
   let mut other_exprs = ~[];
 
@@ -403,7 +423,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
   match p.current() {
     Some(':') => {
       p.next();
-      return parse_ascii_charclass(p);
+      return parse_ascii_charclass(p, f);
     }
     _ => { }
   };
@@ -457,14 +477,14 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
       }
       Some('\\') => {
         p.next();
-        match parse_escape(p) {
+        match parse_escape(p, f) {
           Ok(expr) => other_exprs.push(expr),
           err => return err
         }
       }
       Some('[') if p.peek() == Some(':') => {  // ASCII character class
         p.consume(2);
-        match parse_ascii_charclass(p) {
+        match parse_ascii_charclass(p, f) {
           Ok(table) => {
             other_exprs.push(table);
           }
@@ -804,11 +824,11 @@ fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode
 
       Some('[') => {
         p.next();
-        stack.push(check_ok!(parse_charclass(p)));
+        stack.push(check_ok!(parse_charclass(p, f)));
       }
       Some('\\') => {
         p.next();
-        stack.push(check_ok!(parse_escape(p)));
+        stack.push(check_ok!(parse_escape(p, f)));
       }
       Some(c) => {
         p.next();
