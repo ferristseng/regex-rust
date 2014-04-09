@@ -1,6 +1,8 @@
 use state::State;
+use std::char;
 use std::char::MAX;
 use std::str;
+use std::slice;
 use error::ParseError::*;
 use unicode::*;
 use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
@@ -826,6 +828,69 @@ fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode
     match stack.pop() {
       Some(expr)  => Ok(expr),
       None        => Ok(Empty)
+    }
+  }
+}
+
+fn charclass_casefold(ranges: &[(char, char)]) -> ~[(char, char)] {
+  let mut folded_ranges = ~[];
+  for r in ranges.iter() {
+    for folded_r in range_casefold(*r).move_iter() {
+      folded_ranges.push(folded_r);
+    }
+  }
+
+  folded_ranges
+}
+
+fn range_casefold(r: (char, char)) -> ~[(char, char)] {
+  let mut folded_ranges = ~[];
+  let (start, end) = r;
+  let mut cur_char = start;
+  let mut cur_start = start;
+  let mut cur_end = end;
+  while cur_char <= end {
+    let casefold = char_casefold(cur_char);
+    for c in casefold.move_iter() {
+      if c < start || c > end {
+        if (c as uint) == (cur_end as uint) + 1 {
+          cur_end = c;
+        } else {
+          folded_ranges.push((cur_start, cur_end));
+          cur_start = c;
+          cur_end = c;
+        }
+      }
+    }
+    match char::from_u32(((cur_char as uint) + 1) as u32) {
+      Some(c) => {
+        cur_char = c
+      }
+      None => break
+    };
+  }
+  folded_ranges
+}
+
+/// Returns the characters in the casefold for a provided character
+///
+/// # Arguments
+///
+/// * c - The character to casefold
+fn char_casefold(c: char) -> ~[char] {
+  if c.is_uppercase() {
+    let lower = c.to_lowercase();
+    if lower == c {
+      ~[c]
+    } else {
+      ~[c, lower]
+    }
+  } else {
+    let upper = c.to_uppercase();
+    if upper == c {
+      ~[c]
+    } else {
+      ~[c, upper]
     }
   }
 }
