@@ -5,9 +5,7 @@ use std::str;
 use std::slice;
 use error::ParseError::*;
 use unicode::*;
-use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
-  NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
-  NegatedWhitespaceClass, ascii};
+use charclass::{Range, new_charclass, new_negated_charclass, perl, ascii};
 
 #[deriving(Show, Clone)]
 
@@ -115,12 +113,12 @@ fn parse_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
 
   // Replace these with static vectors
   let cc = match current {
-    Some('d') => NumericClass.clone(),
-    Some('D') => NegatedNumericClass.clone(),
-    Some('w') => AlphaClass.clone(),
-    Some('W') => NegatedAlphaClass.clone(),
-    Some('s') => WhitespaceClass.clone(),
-    Some('S') => NegatedWhitespaceClass.clone(),
+    Some('d') => CharClassTable(perl::get_escape_table('d').unwrap()),
+    Some('D') => NegatedCharClassTable(perl::get_escape_table('D').unwrap()),
+    Some('w') => CharClassTable(perl::get_escape_table('w').unwrap()),
+    Some('W') => NegatedCharClassTable(perl::get_escape_table('W').unwrap()),
+    Some('s') => CharClassTable(perl::get_escape_table('s').unwrap()),
+    Some('S') => NegatedCharClassTable(perl::get_escape_table('S').unwrap()),
     Some('p') => {
       p.next();
       return parse_unicode_charclass(p, f, false);

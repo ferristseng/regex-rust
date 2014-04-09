@@ -5,36 +5,35 @@ use std::cmp::{Less, Greater};
 pub type Range = (char, char);
 
 /// Static Character Classes
-pub static NumericClass: Expr = CharClassStatic([
-  ('0', '9')
-]);
-pub static AlphaClass: Expr = CharClassStatic([
-  ('a', 'z'),
-  ('A', 'Z'),
-  ('_', '_')
-]);
-pub static WhitespaceClass: Expr = CharClassStatic([
-  (' ', ' '),
-  ('\t', '\t'),
-  ('\u000b', '\u000b'),
-  ('\u000c', '\u000c'),
-  ('\n', '\n'),
-  ('\r', '\r')
-]);
-pub static NegatedNumericClass: Expr = CharClassStatic([
-  ('\u0000', '\u002F'), ('\u003A', MAX)
-]);
-pub static NegatedAlphaClass: Expr = CharClassStatic([
-  ('\u0000', '\u0040'),
-  ('\u005B', '\u005E'),
-  ('\u0060', '\u0060'),
-  ('\u007B', MAX)
-]);
-pub static NegatedWhitespaceClass: Expr = CharClassStatic([
-  ('\u0000', '\u0008'),
-  ('\u000e', '\u001f'),
-  ('\u0021', MAX)
-]);
+pub mod perl {
+  pub fn get_escape_table(escape_char: char) -> Option<&'static [(char, char)]> {
+    match escape_char {
+      'd' | 'D' => Some(digit_table),
+      'w' | 'W' => Some(word_table),
+      's' | 'S' => Some(whitespace_table),
+      _ => None
+    }
+  }
+
+  pub static digit_table : &'static [(char, char)] = &[
+    ('0', '9')
+  ];
+
+  pub static word_table : &'static [(char, char)] = &[
+    ('a', 'z'),
+    ('A', 'Z'),
+    ('_', '_')
+  ];
+
+  pub static whitespace_table : &'static [(char, char)] = &[
+    (' ', ' '),
+    ('\t', '\t'),
+    ('\u000b', '\u000b'),
+    ('\u000c', '\u000c'),
+    ('\n', '\n'),
+    ('\r', '\r')
+  ];
+}
 
 pub mod ascii {
   pub fn get_prop_table(prop: &str) -> Option<&'static [(char,char)]> {
