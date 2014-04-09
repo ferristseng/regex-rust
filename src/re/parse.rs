@@ -292,8 +292,7 @@ fn parse_escape_char(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCod
   match p.current() {
     Some(c) => {
       p.next();
-
-      Ok(Literal(c))
+      Ok(parse_literal(c, f))
     }
     None => Err(ParseIncompleteEscapeSeq)
   }
@@ -409,6 +408,14 @@ fn parse_group(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
     Ok(Capture(~expr, ncap, name))
   } else {
     Ok(expr)
+  }
+}
+
+fn parse_literal(c: char, f: &mut ParseFlags) -> Expr {
+  if f.i {
+    CharClass(range_casefold((c, c)))
+  } else {
+    Literal(c)
   }
 }
 
@@ -839,7 +846,7 @@ fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode
       }
       Some(c) => {
         p.next();
-        stack.push(Literal(c));
+        stack.push(parse_literal(c, f));
       }
       None => break // end of string
     }

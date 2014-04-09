@@ -237,5 +237,19 @@ TESTS = [
   ("[:lower:]", "A", "i", "A", MATCH),
   ("[:lower:]", "a", "", "a", MATCH),
   ("[:lower:]", "a", "i", "a", MATCH),
-  ("[:lower:]", "0", "i", "", NOMATCH)
+  ("[:lower:]", "0", "i", "", NOMATCH),
+
+  # Case insensitive character literals
+  ("abc", "AbC", "", "", NOMATCH),
+  ("abc", "AbC", "i", "AbC", MATCH),
+
+  # Case insensitive escape characters
+  ("\\e", "sdfE", "", "", NOMATCH),
+  ("\\e", "sdfE", "i", "E", MATCH),
+  ("\\e", "sdfe", "", "e", MATCH),
+  ("\\e", "sdfe", "i", "e", MATCH),
+  ("\\E", "sdfe", "", "", NOMATCH),
+  ("\\E", "sdfe", "i", "e", MATCH),
+  ("\\E", "sdfE", "", "E", MATCH),
+  ("\\E", "sdfE", "i", "E", MATCH)
 ]
