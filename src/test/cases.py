@@ -213,5 +213,29 @@ TESTS = [
   ("a{1,3}", "aaaa", "", "aaa", MATCH),
   ("a{1,3}", "aaaa", "U", "a", MATCH),
   ("a{1,3}?", "aaaa", "", "a", MATCH),
-  ("a{1,3}?", "aaaa", "U", "aaa", MATCH)
+  ("a{1,3}?", "aaaa", "U", "aaa", MATCH),
+
+  # Case insensitive Unicode character classes
+  ("\\p{Lu}", "a", "", "", NOMATCH),
+  ("\\p{Lu}", "a", "i", "a", MATCH),
+  ("\\p{Lu}", "A", "", "A", MATCH),
+  ("\\p{Lu}", "A", "i", "A", MATCH),
+  ("\\p{Lu}", "0", "i", "", NOMATCH),
+  ("\\p{Ll}", "A", "", "", NOMATCH),
+  ("\\p{Ll}", "A", "i", "A", MATCH),
+  ("\\p{Ll}", "a", "", "a", MATCH),
+  ("\\p{Ll}", "a", "i", "a", MATCH),
+  ("\\p{Ll}", "0", "i", "", NOMATCH),
+
+  # Case insensitive ASCII character classes
+  ("[:upper:]", "a", "", "", NOMATCH),
+  ("[:upper:]", "a", "i", "a", MATCH),
+  ("[:upper:]", "A", "", "A", MATCH),
+  ("[:upper:]", "A", "i", "A", MATCH),
+  ("[:upper:]", "0", "i", "", NOMATCH),
+  ("[:lower:]", "A", "", "", NOMATCH),
+  ("[:lower:]", "A", "i", "A", MATCH),
+  ("[:lower:]", "a", "", "a", MATCH),
+  ("[:lower:]", "a", "i", "a", MATCH),
+  ("[:lower:]", "0", "i", "", NOMATCH)
 ]

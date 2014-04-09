@@ -255,10 +255,19 @@ fn parse_ascii_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, Pars
         p.consume(2);
         return match ascii::get_prop_table(str::from_chars(prop_name_buf)) {
           Some(t) => {
-            if neg {
-              Ok(NegatedCharClassTable(t))
+            if f.i {
+              let folded_ranges = charclass_casefold(t);
+              if neg {
+                Ok(new_negated_charclass(folded_ranges))
+              } else {
+                Ok(new_charclass(folded_ranges))
+              }
             } else {
-              Ok(CharClassTable(t))
+              if neg {
+                Ok(NegatedCharClassTable(t))
+              } else {
+                Ok(CharClassTable(t))
+              }
             }
           }
           None => Err(ParseInvalidAsciiCharClass)
@@ -889,6 +898,7 @@ fn range_casefold(r: (char, char)) -> ~[(char, char)] {
       None => break
     };
   }
+  folded_ranges.push((cur_start, cur_end));
   folded_ranges
 }
 
