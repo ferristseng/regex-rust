@@ -932,4 +932,104 @@ mod python_tests {
     run_tests!("a{1,3}?", "aaaa", ~"U", ~"aaa", "172", Some(_), &[])
   }
 
+  #[test]
+  fn test_case_ident_173() {
+    run_tests!("\\p{Lu}", "a", ~"", ~"", "173", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_174() {
+    run_tests!("\\p{Lu}", "a", ~"i", ~"a", "174", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_175() {
+    run_tests!("\\p{Lu}", "A", ~"", ~"A", "175", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_176() {
+    run_tests!("\\p{Lu}", "A", ~"i", ~"A", "176", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_177() {
+    run_tests!("\\p{Lu}", "0", ~"i", ~"", "177", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_178() {
+    run_tests!("\\p{Ll}", "A", ~"", ~"", "178", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_179() {
+    run_tests!("\\p{Ll}", "A", ~"i", ~"A", "179", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_180() {
+    run_tests!("\\p{Ll}", "a", ~"", ~"a", "180", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_181() {
+    run_tests!("\\p{Ll}", "a", ~"i", ~"a", "181", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_182() {
+    run_tests!("\\p{Ll}", "0", ~"i", ~"", "182", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_183() {
+    run_tests!("[:upper:]", "a", ~"", ~"", "183", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_184() {
+    run_tests!("[:upper:]", "a", ~"i", ~"a", "184", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_185() {
+    run_tests!("[:upper:]", "A", ~"", ~"A", "185", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_186() {
+    run_tests!("[:upper:]", "A", ~"i", ~"A", "186", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_187() {
+    run_tests!("[:upper:]", "0", ~"i", ~"", "187", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_188() {
+    run_tests!("[:lower:]", "A", ~"", ~"", "188", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_189() {
+    run_tests!("[:lower:]", "A", ~"i", ~"A", "189", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_190() {
+    run_tests!("[:lower:]", "a", ~"", ~"a", "190", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_191() {
+    run_tests!("[:lower:]", "a", ~"i", ~"a", "191", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_192() {
+    run_tests!("[:lower:]", "0", ~"i", ~"", "192", None, &[])
+  }
+
 }
