@@ -57,7 +57,7 @@ impl UncompiledRegexp {
 		None
 	}
 
-	pub fn split(&self, input: &str) -> ~[~str] { // This is lengthier than it should be; I'll keep working to improve it
+	pub fn split(&self, input: &str) -> ~[~str] { // This is lengthier than it should be; I'll keep working to improve it.
 		let mut start_indices = ~[];
 		let mut match_lengths = ~[];
 		let mut matches: ~[Match] = ~[];
@@ -75,7 +75,7 @@ impl UncompiledRegexp {
 		}
 
 		let mut start = 0;
-		for i in range(0, len + 1) {	// Run starting at each character
+		for i in range(0, len + 1) { // Run starting at each character
 				match strat.run(input, start) { // run only matches one thing...
 					Some(t) => {
 						let nextPos = t.end;
