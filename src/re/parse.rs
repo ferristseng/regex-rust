@@ -7,13 +7,15 @@ use charclass::{Range, new_charclass, new_negated_charclass, AlphaClass,
   NumericClass, WhitespaceClass, NegatedAlphaClass, NegatedNumericClass,
   NegatedWhitespaceClass, ascii};
 
-#[deriving(ToStr, Clone)]
+#[deriving(Show, Clone)]
+
 pub enum QuantifierPrefix {
   Greedy,
   NonGreedy
 }
 
-#[deriving(ToStr, Clone)]
+#[deriving(Show, Clone)]
+
 pub enum Expr {
   Empty,
   Literal(char),
@@ -64,12 +66,12 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   // Replace these with static vectors
   let cc = match current {
-    Some('d') => NumericClass,
-    Some('D') => NegatedNumericClass,
-    Some('w') => AlphaClass,
-    Some('W') => NegatedAlphaClass,
-    Some('s') => WhitespaceClass,
-    Some('S') => NegatedWhitespaceClass,
+    Some('d') => NumericClass.clone(),
+    Some('D') => NegatedNumericClass.clone(),
+    Some('w') => AlphaClass.clone(),
+    Some('W') => NegatedAlphaClass.clone(),
+    Some('s') => WhitespaceClass.clone(),
+    Some('S') => NegatedWhitespaceClass.clone(),
     Some('p') => {
       p.next();
       return parse_unicode_charclass(p, false);
@@ -92,7 +94,8 @@ fn parse_escape(p: &mut State) -> Result<Expr, ParseCode> {
 
   p.next();
 
-  println(cc.to_str());
+  println!("{:s}", cc.to_str());
+
 
   Ok(cc)
 }
@@ -312,7 +315,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 
   let ncap = p.ncaptures;
 
-  if (capturing) {
+  if capturing {
     p.ncaptures += 1;
   }
 
@@ -325,7 +328,7 @@ fn parse_group(p: &mut State) -> Result<Expr, ParseCode> {
 
   p.nparens -= 1;
 
-  if (capturing) {
+  if capturing {
     Ok(Capture(~expr, ncap, name))
   } else {
     Ok(expr)
@@ -380,7 +383,7 @@ fn parse_charclass(p: &mut State) -> Result<Expr, ParseCode> {
     match p.current() {
       Some(']') => {
         p.next();
-        let cc = if (negate) {
+        let cc = if negate {
           new_negated_charclass(ranges)
         } else {
           new_charclass(ranges)
@@ -488,7 +491,7 @@ fn parse_repetition_op(p: &mut State, stack: &mut ~[Expr], c: char) -> Result<Ex
     _ => Greedy
   };
 
-  match stack.pop_opt() {
+  match stack.pop() {
     None |
     Some(Repetition(..)) |
     Some(AssertStart) |
@@ -536,7 +539,7 @@ fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
     }
   }
 
-  if (len == 0) {
+  if len == 0 {
     return None
   }
 
@@ -614,7 +617,7 @@ fn parse_bounded_repetition(p: &mut State, stack: &mut ~[Expr]) -> Result<Expr, 
       let (start, end) = rep;
 
       match end {
-        Some(e) if (start > e) => {
+        Some(e) if start > e => {
           return Err(ParseEmptyRepetitionRange)
         }
         _ => ()
@@ -629,7 +632,7 @@ fn parse_bounded_repetition(p: &mut State, stack: &mut ~[Expr]) -> Result<Expr, 
         _ => Greedy
       };
 
-      match stack.pop_opt() {
+      match stack.pop() {
         Some(expr) => {
           return Ok(Repetition(~expr, start, end, quantifier));
         }
@@ -659,7 +662,7 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
         stack.push(expr);
       }
       Some(')') => {
-        if (p.hasUnmatchedParens()) {
+        if p.hasUnmatchedParens() {
           break;
         }
         return Err(ParseUnexpectedClosingParen);
@@ -672,13 +675,16 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
         match _parse_recursive(p) {
           Ok(expr) => {
-            let alt = stack.pop();
+            let alt = match stack.pop() {
+              Some(ans) => ans,
+              None => Empty //Should be unreachable
+            };
             stack.push(Alternation(~alt, ~expr));
           }
           e => return e
         };
 
-        if (p.hasUnmatchedParens()) {
+        if p.hasUnmatchedParens() {
           break;
         }
       }
@@ -732,10 +738,10 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 
   do_concat(&mut stack);
 
-  if (p.hasUnmatchedParens() && p.isEnd()) {
+  if p.hasUnmatchedParens() && p.isEnd() {
     Err(ParseExpectedClosingParen)
   } else {
-    match stack.pop_opt() {
+    match stack.pop() {
       Some(expr)  => Ok(expr),
       None        => Ok(Empty)
     }
@@ -749,9 +755,9 @@ fn _parse_recursive(p: &mut State) -> Result<Expr, ParseCode> {
 ///
 /// * stack - The stack with items to concatenate
 fn do_concat(stack: &mut ~[Expr]) {
-  while (stack.len() > 1) {
-    let rgt = stack.pop();
-    let lft = stack.pop();
+  while stack.len() > 1 {
+    let rgt = match stack.pop() { Some(ans) => ans, None => Empty };
+    let lft = match stack.pop() { Some(ans) => ans, None => Empty };
 
     stack.push(Concatenation(~lft, ~rgt));
   }
@@ -763,9 +769,9 @@ fn do_concat(stack: &mut ~[Expr]) {
 ///
 /// * stack - The stack to print
 fn print_stack(stack: &mut ~[Expr]) {
-  println("--E-Stack--");
+  println!("--E-Stack--");
   for e in stack.iter() {
-    println(e.to_str());
+    println!("{:s}", e.to_str());
   }
 }
 

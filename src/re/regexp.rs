@@ -4,6 +4,7 @@ use result::Match;
 use parse::parse;
 use compile::compile_recursive;
 use error::ParseError::*;
+use std::slice::Items;
 
 /// Uncompiled regular expression. 
 pub struct UncompiledRegexp {
@@ -134,10 +135,6 @@ impl UncompiledRegexp {
 
 		return matches;
 	}
-
-	// pub fn find_iter(&self, input: &str) -> Option<Match> {
-	// 
-	// }
 
 	pub fn replace(&self, input: &str, replaceWith: &str) -> ~str {
 		match self.replacen(input, replaceWith) {
