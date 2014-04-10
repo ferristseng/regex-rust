@@ -14,5 +14,13 @@ int main(){
   auto diff = end - start;
   cout << chrono::duration <double, nano> (diff).count() << " ns" << endl;
 
+  start = chrono::steady_clock::now();
+
+  system("./benches/cpp_bench");
+  end = chrono::steady_clock::now();
+
+  diff = end - start;
+  cout << chrono::duration <double, nano> (diff).count() << " ns" << endl;
+
 
 }

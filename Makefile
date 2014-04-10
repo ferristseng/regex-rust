@@ -52,8 +52,10 @@ $(BUILD)/bench: $(BUILD)
 	test -d $(BUILD)/benches || mkdir $(BUILD)/benches
 
 	python $(BENCH)/generators/rust_bench_generator.py
+	python $(BENCH)/generators/cpp_bench_generator.py
 
 	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_bench.rs  -L ./$(BUILD)
+	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/benches/cpp_bench -Weverything $(BENCH)/benches/cpp_bench.cpp
 
 	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/run_benchmark -Weverything $(BENCH)/benchmark.cpp
 
