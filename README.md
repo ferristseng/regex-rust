@@ -107,4 +107,34 @@ Understand that you **must** now be on rustc version 0.10 or newer. Otherwise yo
   * **Vector has been overhauled**. The old class is no more, most of the inherited vector classes are now split between str::vec and vec::Vec. Please be careful when using vectors and ensure you are using the right one. The general one is std::vec::Vec now.
   * **Most functions return Options now in std**. This is especially important. Vector for instance will return an Option now for functions like shift() or pop(). There used to be shift_opt() that did the same thing but now its the only way to get a value back. So you have to check to make sure you handle the Option. **Note** Brian finds this extremely annoying.
 
-## Benchmark support
+## External Library Compilation
+Now that the codebase is running on 0.10 and 0.11, using our library externally is a breeze. Not that documentation made it easy to find, but below you will find all that you need!
+
+To turn our codebase into a Rust Library .rlib, execute the following. This is already done in our makefile. This is for your reference only.
+
+```bash
+rustc --crate-type=lib path/to/lib.rs
+```
+
+Please note that lib.rs is incredibly important. It names our library for other rust files to include.
+
+To use our newly compiled library, execute the following:
+
+```bash
+rustc /path/to/file_compiling.rs -L ./path/to/our_library.rlib
+```
+
+In your file_compiling.rs file, indicate use by extern crate rustre;
+
+## Benchmarking
+Our benchmarking suite is designed to be user flexible. There are two compilations essentially. There is a cases.py file in the benchmark directory that is similar to the one found in the test directory. Benchmarking tests performance, so there is no checking if its correct or not. The format of the file will change over the writing of this document...
+
+The first stage of compilation will compile all of the test cases into each of the benchmarks to be run. Then the second stage will compile each benchmark into the build directory. In the second stage, the benchmark C++ application will be compiled and placed in the build directory as **run_benchmark**.
+
+###Benchmarking Languages Supported:
+
+  * Rust
+
+###Benchmarks Performed:
+  1. Generic Parse/Execute Loop
+    * In this first benchmark, each program is compiled with all test cases and will loop a certain number of times as decided by the cases file. Each test case in each loop will create a new Regex and thus will compile each and every time. This is a generic first forray to test general performance for worst cases/bad programmers.
