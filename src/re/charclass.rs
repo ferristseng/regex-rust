@@ -160,7 +160,7 @@ fn order_ranges(ranges: &mut ~[Range]) {
 /// Construct a CharClass with a set of ranges. Remove
 /// overlapping ranges preferring larger ranges (ex. Given [A-DA-C],
 /// collapse to [A-D]).
-pub fn new_charclass(ranges: ~[Range]) -> Expr {
+pub fn new_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
   let mut ranges = ranges;
 
   order_ranges(&mut ranges);
@@ -192,11 +192,11 @@ pub fn new_charclass(ranges: ~[Range]) -> Expr {
     }
   }
 
-  CharClass(new_ranges)
+  new_ranges
 }
 
 /// Construct a CharClass with a set of ranges, and negate them.
-pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
+pub fn new_negated_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
   let mut ranges = ranges;
 
   order_ranges(&mut ranges);
@@ -227,7 +227,7 @@ pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
     new_ranges.push((min, MAX));
   }
 
-  CharClass(new_ranges)
+  new_ranges
 }
 
 #[cfg(test)]
@@ -245,61 +245,61 @@ mod char_class_tests {
 
   #[test]
   fn char_class_good() {
-    let cc = new_charclass(~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'あ')]);
   }
 
   #[test]
   fn char_class_empty() {
-    let cc = new_charclass(~[('Z', 'A')]);
+    let cc = CharClass(new_charclass_ranges(~[('Z', 'A')]));
     assert_eq!(unravel_cc(cc), ~[]);
   }
 
   #[test]
   fn char_class_negate() {
-    let cc = new_negated_charclass(~[('A', '\uFA08')]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('A', '\uFA08')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('\uFA09', MAX)]);
   }
 
   #[test]
   fn char_class_negate_multiple() {
-    let cc = new_negated_charclass(~[('們', '我'), ('A', 'Z')]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('們', '我'), ('A', 'Z')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('[', '\u5010'),
                ('\u6212', MAX)]);
   }
 
   #[test]
   fn char_class_negate_overlap() {
-    let cc = new_negated_charclass(~[('a', 'c'), ('c', 'c')]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('a', 'c'), ('c', 'c')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '`'), ('d', MAX)]);
   }
 
   #[test]
   fn char_class_negate_bounds() {
-    let cc = new_negated_charclass(~[('\u0000', MAX)]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('\u0000', MAX)]));
     assert_eq!(unravel_cc(cc), ~[]);
   }
 
   #[test]
   fn char_class_overlapping_ranges() {
-    let cc = new_charclass(~[('A', 'D'), ('B', 'C')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('B', 'C')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
   }
 
   #[test]
   fn char_class_repeated_ranges() {
-    let cc = new_charclass(~[('A', 'D'), ('A', 'D')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('A', 'D')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
   }
 
   #[test]
   fn char_class_overlapping_ranges2() {
-    let cc = new_charclass(~[('A', 'D'), ('B', 'E')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('B', 'E')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'E')]);
   }
 
   fn char_class_negate_sequential() {
-    let cc = new_charclass(~[('a', 'a'), ('b', 'b'), ('c', 'c')]);
+    let cc = CharClass(new_charclass_ranges(~[('a', 'a'), ('b', 'b'), ('c', 'c')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '`'), ('d', MAX)]);
   }
 }

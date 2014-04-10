@@ -226,6 +226,16 @@ TESTS = [
   ("\\p{Ll}", "a", "", "a", MATCH),
   ("\\p{Ll}", "a", "i", "a", MATCH),
   ("\\p{Ll}", "0", "i", "", NOMATCH),
+  ("\\P{Lu}", "a", "", "a", MATCH),
+  ("\\P{Lu}", "a", "i", "a", MATCH),
+  ("\\P{Lu}", "A", "", "", NOMATCH),
+  ("\\P{Lu}", "A", "i", "A", MATCH),
+  ("\\P{Lu}", "0", "i", "0", MATCH),
+  ("\\P{Ll}", "A", "", "A", MATCH),
+  ("\\P{Ll}", "A", "i", "A", MATCH),
+  ("\\P{Ll}", "a", "", "", NOMATCH),
+  ("\\P{Ll}", "a", "i", "a", MATCH),
+  ("\\P{Ll}", "0", "i", "0", MATCH),
 
   # Case insensitive ASCII character classes
   ("[:upper:]", "a", "", "", NOMATCH),
@@ -238,6 +248,16 @@ TESTS = [
   ("[:lower:]", "a", "", "a", MATCH),
   ("[:lower:]", "a", "i", "a", MATCH),
   ("[:lower:]", "0", "i", "", NOMATCH),
+  ("[:^upper:]", "a", "", "a", MATCH),
+  ("[:^upper:]", "a", "i", "a", MATCH),
+  ("[:^upper:]", "A", "", "", NOMATCH),
+  ("[:^upper:]", "A", "i", "A", MATCH),
+  ("[:^upper:]", "0", "i", "0", MATCH),
+  ("[:^lower:]", "A", "", "A", MATCH),
+  ("[:^lower:]", "A", "i", "A", MATCH),
+  ("[:^lower:]", "a", "", "", NOMATCH),
+  ("[:^lower:]", "a", "i", "a", MATCH),
+  ("[:^lower:]", "0", "i", "0", MATCH),
 
   # Case insensitive character literals
   ("abc", "AbC", "", "", NOMATCH),
@@ -251,5 +271,18 @@ TESTS = [
   ("\\E", "sdfe", "", "", NOMATCH),
   ("\\E", "sdfe", "i", "e", MATCH),
   ("\\E", "sdfE", "", "E", MATCH),
-  ("\\E", "sdfE", "i", "E", MATCH)
+  ("\\E", "sdfE", "i", "E", MATCH),
+
+  # Character class insensitive escape characters
+  ("[a-ce]", "B", "", "", NOMATCH),
+  ("[a-ce]", "B", "i", "B", MATCH),
+  ("[a-ce]", "b", "", "b", MATCH),
+  ("[a-ce]", "b", "i", "b", MATCH),
+  ("[a-ce]", "d", "i", "", NOMATCH),
+  ("[^a-ce]", "B", "", "B", MATCH),
+  ("[^a-ce]", "B", "i", "B", MATCH),
+  ("[^a-ce]", "b", "", "", NOMATCH),
+  ("[^a-ce]", "b", "i", "b", MATCH),
+  ("[^a-ce]", "d", "i", "d", MATCH),
+
 ]
