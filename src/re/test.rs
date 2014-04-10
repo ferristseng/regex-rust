@@ -59,7 +59,7 @@ mod python_tests {
   use parse::ParseFlags;
 
   // Tests start here
-  
+
   #[test]
   fn test_case_ident_000() {
     run_tests!("[^^]+", "abc", ~"", ~"abc", "000", Some(_), &[])
@@ -1511,8 +1511,8 @@ mod python_tests {
   #[test]
   fn test_case_ident_287() {
     run_tests!("\\v\\f*\\n\\t+\\r", "
-		", ~"", ~"
-		", "287", Some(_), &[])
+", ~"", ~"
+", "287", Some(_), &[])
   }
 
   #[test]

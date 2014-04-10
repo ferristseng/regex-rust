@@ -139,3 +139,5 @@ The first stage of compilation will compile all of the test cases into each of t
 ###Benchmarks Performed:
   1. Generic Parse/Execute Loop
     * In this first benchmark, each program is compiled with all test cases and will loop a certain number of times as decided by the cases file. Each test case in each loop will create a new Regex and thus will compile each and every time. This is a generic first forray to test general performance for worst cases/bad programmers.
+  2. Search Execution Loop
+    * This benchmark is designed to test pure parsing performance. So really our VM versus other VMs. Right now it only will compile one regex and run against our test cases for a number of loops. 

@@ -54,11 +54,14 @@ $(BUILD)/bench: $(BUILD)
 	python $(BENCH)/generators/rust_bench_generator.py
 	python $(BENCH)/generators/cpp_bench_generator.py
 
-	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_bench.rs  -L ./$(BUILD)
-	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/benches/cpp_bench -Weverything $(BENCH)/benches/cpp_bench.cpp
+	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_gen_bench.rs  -L ./$(BUILD)
+	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_search_bench.rs  -L ./$(BUILD)
+	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/benches/cpp_gen_bench -Weverything $(BENCH)/benches/cpp_gen_bench.cpp
+	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/benches/cpp_search_bench -Weverything $(BENCH)/benches/cpp_search_bench.cpp
 
 	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/run_benchmark -Weverything $(BENCH)/benchmark.cpp
 
 
 clean:
 	rm -r build/
+	rm -r benchmark/benches/
