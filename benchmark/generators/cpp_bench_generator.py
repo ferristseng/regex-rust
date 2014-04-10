@@ -1,7 +1,8 @@
 from cases import *
 from datetime import datetime
 
-FILE = open('benchmark/benches/cpp_bench.cpp', 'w')
+FILE = open('benchmark/benches/cpp_gen_bench.cpp', 'w')
+FILE2 = open('benchmark/benches/cpp_search_bench.cpp', 'w')
 
 OUTPUT = """
 // This is an auto-generated test file
@@ -35,14 +36,44 @@ TEST_FN = \
 """
       execute(\"%s\", \"%s\");"""
 
+OUTPUT2 = """
+// This is an auto-generated test file
+// Gnerated by benchmark/rust_bench_generator.py
+//
+// Last Modified: %s
+
+#include <regex>
+
+using namespace std;
+
+int main(){
+  regex test(\"%s\");
+
+  for (int i = 0; i < %s; i++) {
+
+    %s
+
+  }
+}
+"""
+
+TEST_FN2 = \
+"""
+      regex_match(\"%s\", test);"""
+
 if __name__ == "__main__":
   date = datetime.today().strftime("%B %d %Y %I:%M%p")
   buf = ""
+  buf2 = ""
 
-  for (i, test) in enumerate(TESTS):
+  for (i, test) in enumerate(TEST_GEN):
     buf += TEST_FN % (test[0], test[1])
 
   FILE.write(OUTPUT % (date, NO_LOOPS, buf))
+  print("Successfully generated test file: benchmark/benches/cpp_gen_bench.rs")
 
+  for (i, test) in enumerate(TEST_SRCH):
+    buf2 += TEST_FN2 % (test)
 
-  print("Successfully generated test file: benchmark/benches/cpp_bench.rs")
+  FILE2.write(OUTPUT2 % (date, SRCH_REG, NO_LOOPS, buf2))
+  print("Successfully generated test file: benchmark/benches/cpp_search_bench.rs")

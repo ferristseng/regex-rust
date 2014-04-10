@@ -8,7 +8,7 @@ NO_LOOPS = 10000
 
 # These are the tests we generate functions for
 # (re, input)
-TESTS = [
+TEST_GEN = [
   ("^abc", "abcc"),
   # ("\\P{Greek}", "\u0374", "\u0374", MATCH)
   ("^abc", "hslc"),
@@ -31,4 +31,11 @@ TESTS = [
   ("abc", "xabcy"),
   ("abc", "ababc"),
   ("ab*c", "abc")
+]
+
+SRCH_REG = "^abc"
+TEST_SRCH = [
+  ("abcc"),
+  ("defzx"),
+  ("almocb")
 ]
