@@ -4,7 +4,6 @@ use result::Match;
 use parse::parse;
 use compile::compile_recursive;
 use error::ParseError::*;
-use std::slice::Items;
 
 /// Uncompiled regular expression. 
 pub struct UncompiledRegexp {
@@ -75,7 +74,7 @@ impl UncompiledRegexp {
 		}
 
 		let mut start = 0;
-		for i in range(0, len + 1) { // Run starting at each character
+		for _ in range(0, len + 1) { // Run starting at each character
 				match strat.run(input, start) { // run only matches one thing...
 					Some(t) => {
 						let nextPos = t.end;
@@ -89,8 +88,8 @@ impl UncompiledRegexp {
 				}
 		}
 
-		if (start_indices.len() == 1 ) { // If 1 match
-			if (start_indices[0] == 0) { // Matched at start of input
+		if start_indices.len() == 1 { // If 1 match
+			if start_indices[0] == 0 { // Matched at start of input
 				let res = format!("{:s}", input.slice_from(start_indices[0] + match_lengths[0]-1));
 				result.push(res);
 				return result;
@@ -102,7 +101,7 @@ impl UncompiledRegexp {
 		} 
 
 		for i in range(0, start_indices.len()) { // If more than 1 match
-			if (i == start_indices.len()-1) { // If reached end of input
+			if i == start_indices.len()-1 { // If reached end of input
 				let res = format!("{:s}", input.slice_from(start_indices[i] + match_lengths[i] - 1));
 				result.push(res);
 			} else {
