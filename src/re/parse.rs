@@ -35,6 +35,7 @@ pub enum Expr {
   AssertEndMultiline
 }
 
+#[deriving(Clone)]
 pub struct ParseFlags {
   i: bool,
   m: bool,
@@ -309,6 +310,7 @@ fn parse_escape_char(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCod
 /// * f - The current parse flags
 #[inline]
 fn parse_group(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
+  let scoped_flags = &mut f.clone();
   let mut capturing = true;
   let mut name: Option<~str> = None;
   let mut name_buf: ~[char] = ~[];
@@ -384,7 +386,55 @@ fn parse_group(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
             }
           }
         }
-        _ => ()
+        Some(_) => {  // Flags specified in group
+          p.next();
+          capturing = false;
+          let mut set_val = true;
+
+          loop {
+            match p.current() {
+              Some('i') => {
+                scoped_flags.i = set_val;
+                p.next();
+              }
+              Some('m') => {
+                scoped_flags.m = set_val;
+                p.next();
+              }
+              Some('s') => {
+                scoped_flags.s = set_val;
+                p.next();
+              }
+              Some('U') => {
+                scoped_flags.U = set_val;
+                p.next();
+              }
+              Some('-') => {
+                set_val = false;
+                p.next();
+              }
+              Some(':') => {
+                p.next();
+                break;
+              }
+              Some(')') => {
+                f.i = scoped_flags.i;
+                f.m = scoped_flags.m;
+                f.s = scoped_flags.s;
+                f.U = scoped_flags.U;
+                p.next();
+                return Ok(Empty);
+              }
+              Some(c) => {
+                return Err(ParseInvalidFlag(c));
+              }
+              None => {
+                return Err(ParseExpectedClosingParen);
+              }
+            }
+          }
+        }
+        None => return Err(ParseExpectedClosingParen)
       }
     }
     _ => ()
@@ -398,7 +448,7 @@ fn parse_group(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
     p.ncaptures += 1;
   }
 
-  let expr = match _parse_recursive(p, f) {
+  let expr = match _parse_recursive(p, scoped_flags) {
     Ok(re) => re,
     e => return e
   };
@@ -1142,5 +1192,10 @@ mod parse_tests {
   #[test]
   fn parse_ascii_charclass_nested() {
     test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
+  }
+
+  #[test]
+  fn parse_nested_flags() {
+    test_parse!("(?i:a)", Ok(CharClass(_)));
   }
 }

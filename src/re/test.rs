@@ -1232,4 +1232,154 @@ mod python_tests {
     run_tests!("[^a-ce]", "d", ~"i", ~"d", "232", Some(_), &[])
   }
 
+  #[test]
+  fn test_case_ident_233() {
+    run_tests!("[^a-f\\d]", "e", ~"", ~"", "233", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_234() {
+    run_tests!("[^a-f\\d]", "3", ~"", ~"", "234", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_235() {
+    run_tests!("[^0-3\\D]", "2", ~"", ~"", "235", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_236() {
+    run_tests!("[^0-3\\D]", "4", ~"", ~"4", "236", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_237() {
+    run_tests!("[^a-f\\p{Greek}]", "\u03c3", ~"", ~"", "237", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_238() {
+    run_tests!("[^a-f\\p{Greek}]", "3", ~"", ~"3", "238", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_239() {
+    run_tests!("[^a-f\\P{Greek}]", "\u03c3", ~"", ~"\u03c3", "239", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_240() {
+    run_tests!("[^a-f\\P{Greek}]", "c", ~"", ~"", "240", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_241() {
+    run_tests!("(?i:a)a", "AA", ~"", ~"", "241", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_242() {
+    run_tests!("(?i:a)a", "Aa", ~"", ~"Aa", "242", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_243() {
+    run_tests!("(?i:a)a", "aa", ~"", ~"aa", "243", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_244() {
+    run_tests!("(?i:a)a", "aA", ~"", ~"", "244", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_245() {
+    run_tests!("(?m:^)a$", "\na\n", ~"", ~"", "245", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_246() {
+    run_tests!("(?m:^)a$", "\na", ~"", ~"a", "246", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_247() {
+    run_tests!("(?m:^)a$", "a\n", ~"", ~"", "247", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_248() {
+    run_tests!("(?m:^)a$", "a", ~"", ~"a", "248", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_249() {
+    run_tests!("(?s:.).", "\na", ~"", ~"\na", "249", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_250() {
+    run_tests!("(?s:.).", "\n\n", ~"", ~"", "250", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_251() {
+    run_tests!("(?U:a{1,3})", "aaa", ~"", ~"a", "251", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_252() {
+    run_tests!("((?i)a)a", "AA", ~"", ~"", "252", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_253() {
+    run_tests!("((?i)a)a", "Aa", ~"", ~"Aa", "253", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_254() {
+    run_tests!("((?i)a)a", "aa", ~"", ~"aa", "254", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_255() {
+    run_tests!("((?i)a)a", "aA", ~"", ~"", "255", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_256() {
+    run_tests!("((?m)^)a$", "\na\n", ~"", ~"", "256", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_257() {
+    run_tests!("((?m)^)a$", "\na", ~"", ~"a", "257", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_258() {
+    run_tests!("((?m)^)a$", "a\n", ~"", ~"", "258", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_259() {
+    run_tests!("((?m)^)a$", "a", ~"", ~"a", "259", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_260() {
+    run_tests!("((?s).).", "\na", ~"", ~"\na", "260", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_261() {
+    run_tests!("((?s).).", "\n\n", ~"", ~"", "261", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_262() {
+    run_tests!("((?U)a{1,3})", "aaa", ~"", ~"a", "262", Some(_), &[])
+  }
+
 }
