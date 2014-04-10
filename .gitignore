@@ -20,4 +20,5 @@ build
 .rust
 **/**/__pycache__
 
+benchmark/benches
 src/re/test.rs
