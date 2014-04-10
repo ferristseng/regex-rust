@@ -134,6 +134,7 @@ The first stage of compilation will compile all of the test cases into each of t
 ###Benchmarking Languages Supported:
 
   * Rust
+  * C++11 Built in Regex library
 
 ###Benchmarks Performed:
   1. Generic Parse/Execute Loop

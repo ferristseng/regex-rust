@@ -17,7 +17,7 @@ extern crate rustre;
   fn execute (reg: ~str, text: ~str) -> () {
     let re = match rustre::regexp::UncompiledRegexp::new(reg) {
       Ok(regex) => regex,
-      Err(e) => fail!(e)
+      Err(e) => fail!(reg)
     };
 
     re.search(text);
