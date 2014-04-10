@@ -56,9 +56,61 @@ impl UncompiledRegexp {
 		None
 	}
 
-	// pub fn split(&self, input: &str) -> Option<Match> {
-	//
-	// }
+	pub fn split(&self, input: &str) -> ~[~str] { // This is lengthier than it should be; I'll keep working to improve it.
+		let mut start_indices = ~[];
+		let mut match_lengths = ~[];
+		let mut matches: ~[Match] = ~[];
+		let mut result: ~[~str] = ~[];
+		let len = input.len();
+		let strat = PikeVM::new(self.prog, 0); 
+
+		matches = self.find_all(input); // Check whether input contains the regex
+		for i in range(0, matches.len()) {
+			let m = matches[i].input.slice(matches[i].start, matches[i].end);
+			if m.is_empty() {
+				result.push(input.to_owned());
+				return result;
+			}
+		}
+
+		let mut start = 0;
+		for _ in range(0, len + 1) { // Run starting at each character
+				match strat.run(input, start) { // run only matches one thing...
+					Some(t) => {
+						let nextPos = t.end;
+						start_indices.push(start);
+						match_lengths.push(t.end - start + 1);
+						start = nextPos;
+					}
+					None => {
+						start += 1;
+					}
+				}
+		}
+
+		if start_indices.len() == 1 { // If 1 match
+			if start_indices[0] == 0 { // Matched at start of input
+				let res = format!("{:s}", input.slice_from(start_indices[0] + match_lengths[0]-1));
+				result.push(res);
+				return result;
+			} else { // At end of input
+				let res = format!("{:s}", input.slice_to(start_indices[0]));
+				result.push(res);
+				return result;
+			}
+		} 
+
+		for i in range(0, start_indices.len()) { // If more than 1 match
+			if i == start_indices.len()-1 { // If reached end of input
+				let res = format!("{:s}", input.slice_from(start_indices[i] + match_lengths[i] - 1));
+				result.push(res);
+			} else {
+				let res = format!("{:s}", input.slice(start_indices[i] + match_lengths[i] - 1, start_indices[i+1]));
+				result.push(res);
+			}
+		}
+		return result;
+	}
 
 	pub fn find_all(&self, input: &str) -> ~[Match] {
 		let mut matches : ~[Match] = ~[];
@@ -82,10 +134,6 @@ impl UncompiledRegexp {
 
 		return matches;
 	}
-
-	// pub fn find_iter(&self, input: &str) -> Option<Match> {
-	// 
-	// }
 
 	pub fn replace(&self, input: &str, replaceWith: &str) -> ~str {
 		match self.replacen(input, replaceWith) {
@@ -175,6 +223,29 @@ mod library_functions_test {
 					let res = result[i].input.slice(result[i].start, result[i].end);
 					if res != item {
 						fail!(format!("Find-all on regexp '{:s}' yielded '{:s}' at element {:u} of results list, not expected result of '{:s}'\n", $re, res, i, item.clone()));
+					}
+					i = i + 1;
+				}
+			}
+		);
+	)
+
+	macro_rules! test_split(
+		($re: expr, $input: expr, $expect: expr) => (
+			{
+				let re = match UncompiledRegexp::new($re) {
+					Ok(regex) => regex,
+					Err(e) => fail!(e)
+				};
+				let result = re.split($input);
+				let mut i = 0;
+				for &item in $expect.iter() {
+					if i >= result.len() {
+						fail!(format!("Results list only has {:u} elements, expected to have {:u}\n", i, $expect.len()));
+					}
+					let res = result[i].clone();
+					if res != item.to_owned() {
+						fail!(format!("Split on regexp '{:s}' yielded '{:s}' at element {:u} of results list, not expected result of '{:s}'\n", $re, res, i, item.clone()));
 					}
 					i = i + 1;
 				}
@@ -333,6 +404,38 @@ mod library_functions_test {
 		test_find_all!("a*b*c*d*", "abcdbabcdabcbababcbdabcbdaabbbccccddddd", &["abcd", 
 			"b", "abcd", "abc", "b", "ab", "abc", "bd", "abc", "bd", "aabbbccccddddd"]);
 	}
+
+	#[test]
+	fn test_split_01() {
+		test_split!("x*", "abab", &["abab"]);
+	}
+
+	#[test]
+	fn test_split_02() {
+		test_split!("c", "abc", &["ab"]);
+	}
+
+	#[test]
+	fn test_split_03() {
+		test_split!("c", "cab", &["ab"]);
+	}
+
+	#[test]
+	fn test_split_04() {
+		test_split!("a{1,}", "aaaaaabc", &["bc"]);
+	}
+	
+	#[test]
+	fn test_split_05() {
+		test_split!("a{1,}", "aaaaaabaab", &["b", "b"]); 
+	}
+
+	#[test]
+	fn test_split_06() {
+		test_split!("a{1,}", "aaaaaabaaaa", &["b"]);
+	}
+
+
 }
 
 
