@@ -984,102 +984,252 @@ mod python_tests {
 
   #[test]
   fn test_case_ident_183() {
-    run_tests!("[:upper:]", "a", ~"", ~"", "183", None, &[])
+    run_tests!("\\P{Lu}", "a", ~"", ~"a", "183", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_184() {
-    run_tests!("[:upper:]", "a", ~"i", ~"a", "184", Some(_), &[])
+    run_tests!("\\P{Lu}", "a", ~"i", ~"a", "184", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_185() {
-    run_tests!("[:upper:]", "A", ~"", ~"A", "185", Some(_), &[])
+    run_tests!("\\P{Lu}", "A", ~"", ~"", "185", None, &[])
   }
 
   #[test]
   fn test_case_ident_186() {
-    run_tests!("[:upper:]", "A", ~"i", ~"A", "186", Some(_), &[])
+    run_tests!("\\P{Lu}", "A", ~"i", ~"A", "186", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_187() {
-    run_tests!("[:upper:]", "0", ~"i", ~"", "187", None, &[])
+    run_tests!("\\P{Lu}", "0", ~"i", ~"0", "187", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_188() {
-    run_tests!("[:lower:]", "A", ~"", ~"", "188", None, &[])
+    run_tests!("\\P{Ll}", "A", ~"", ~"A", "188", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_189() {
-    run_tests!("[:lower:]", "A", ~"i", ~"A", "189", Some(_), &[])
+    run_tests!("\\P{Ll}", "A", ~"i", ~"A", "189", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_190() {
-    run_tests!("[:lower:]", "a", ~"", ~"a", "190", Some(_), &[])
+    run_tests!("\\P{Ll}", "a", ~"", ~"", "190", None, &[])
   }
 
   #[test]
   fn test_case_ident_191() {
-    run_tests!("[:lower:]", "a", ~"i", ~"a", "191", Some(_), &[])
+    run_tests!("\\P{Ll}", "a", ~"i", ~"a", "191", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_192() {
-    run_tests!("[:lower:]", "0", ~"i", ~"", "192", None, &[])
+    run_tests!("\\P{Ll}", "0", ~"i", ~"0", "192", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_193() {
-    run_tests!("abc", "AbC", ~"", ~"", "193", None, &[])
+    run_tests!("[:upper:]", "a", ~"", ~"", "193", None, &[])
   }
 
   #[test]
   fn test_case_ident_194() {
-    run_tests!("abc", "AbC", ~"i", ~"AbC", "194", Some(_), &[])
+    run_tests!("[:upper:]", "a", ~"i", ~"a", "194", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_195() {
-    run_tests!("\\e", "sdfE", ~"", ~"", "195", None, &[])
+    run_tests!("[:upper:]", "A", ~"", ~"A", "195", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_196() {
-    run_tests!("\\e", "sdfE", ~"i", ~"E", "196", Some(_), &[])
+    run_tests!("[:upper:]", "A", ~"i", ~"A", "196", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_197() {
-    run_tests!("\\e", "sdfe", ~"", ~"e", "197", Some(_), &[])
+    run_tests!("[:upper:]", "0", ~"i", ~"", "197", None, &[])
   }
 
   #[test]
   fn test_case_ident_198() {
-    run_tests!("\\e", "sdfe", ~"i", ~"e", "198", Some(_), &[])
+    run_tests!("[:lower:]", "A", ~"", ~"", "198", None, &[])
   }
 
   #[test]
   fn test_case_ident_199() {
-    run_tests!("\\E", "sdfe", ~"", ~"", "199", None, &[])
+    run_tests!("[:lower:]", "A", ~"i", ~"A", "199", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_200() {
-    run_tests!("\\E", "sdfe", ~"i", ~"e", "200", Some(_), &[])
+    run_tests!("[:lower:]", "a", ~"", ~"a", "200", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_201() {
-    run_tests!("\\E", "sdfE", ~"", ~"E", "201", Some(_), &[])
+    run_tests!("[:lower:]", "a", ~"i", ~"a", "201", Some(_), &[])
   }
 
   #[test]
   fn test_case_ident_202() {
-    run_tests!("\\E", "sdfE", ~"i", ~"E", "202", Some(_), &[])
+    run_tests!("[:lower:]", "0", ~"i", ~"", "202", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_203() {
+    run_tests!("[:^upper:]", "a", ~"", ~"a", "203", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_204() {
+    run_tests!("[:^upper:]", "a", ~"i", ~"a", "204", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_205() {
+    run_tests!("[:^upper:]", "A", ~"", ~"", "205", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_206() {
+    run_tests!("[:^upper:]", "A", ~"i", ~"A", "206", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_207() {
+    run_tests!("[:^upper:]", "0", ~"i", ~"0", "207", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_208() {
+    run_tests!("[:^lower:]", "A", ~"", ~"A", "208", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_209() {
+    run_tests!("[:^lower:]", "A", ~"i", ~"A", "209", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_210() {
+    run_tests!("[:^lower:]", "a", ~"", ~"", "210", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_211() {
+    run_tests!("[:^lower:]", "a", ~"i", ~"a", "211", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_212() {
+    run_tests!("[:^lower:]", "0", ~"i", ~"0", "212", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_213() {
+    run_tests!("abc", "AbC", ~"", ~"", "213", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_214() {
+    run_tests!("abc", "AbC", ~"i", ~"AbC", "214", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_215() {
+    run_tests!("\\e", "sdfE", ~"", ~"", "215", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_216() {
+    run_tests!("\\e", "sdfE", ~"i", ~"E", "216", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_217() {
+    run_tests!("\\e", "sdfe", ~"", ~"e", "217", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_218() {
+    run_tests!("\\e", "sdfe", ~"i", ~"e", "218", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_219() {
+    run_tests!("\\E", "sdfe", ~"", ~"", "219", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_220() {
+    run_tests!("\\E", "sdfe", ~"i", ~"e", "220", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_221() {
+    run_tests!("\\E", "sdfE", ~"", ~"E", "221", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_222() {
+    run_tests!("\\E", "sdfE", ~"i", ~"E", "222", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_223() {
+    run_tests!("[a-ce]", "B", ~"", ~"", "223", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_224() {
+    run_tests!("[a-ce]", "B", ~"i", ~"B", "224", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_225() {
+    run_tests!("[a-ce]", "b", ~"", ~"b", "225", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_226() {
+    run_tests!("[a-ce]", "b", ~"i", ~"b", "226", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_227() {
+    run_tests!("[a-ce]", "d", ~"i", ~"", "227", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_228() {
+    run_tests!("[^a-ce]", "B", ~"", ~"B", "228", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_229() {
+    run_tests!("[^a-ce]", "B", ~"i", ~"B", "229", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_230() {
+    run_tests!("[^a-ce]", "b", ~"", ~"", "230", None, &[])
+  }
+
+  #[test]
+  fn test_case_ident_231() {
+    run_tests!("[^a-ce]", "b", ~"i", ~"b", "231", Some(_), &[])
+  }
+
+  #[test]
+  fn test_case_ident_232() {
+    run_tests!("[^a-ce]", "d", ~"i", ~"d", "232", Some(_), &[])
   }
 
 }

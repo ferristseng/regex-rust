@@ -5,7 +5,7 @@ use std::str;
 use std::slice;
 use error::ParseError::*;
 use unicode::*;
-use charclass::{Range, new_charclass, new_negated_charclass, perl, ascii};
+use charclass::{Range, new_charclass_ranges, new_negated_charclass_ranges, perl, ascii};
 
 #[deriving(Show, Clone)]
 
@@ -178,11 +178,12 @@ fn parse_unicode_charclass(p: &mut State, f: &mut ParseFlags, neg: bool) -> Resu
               };
 
               if f.i {
-                let folded_ranges = charclass_casefold(prop_table);
                 if neg {
-                  return Ok(new_negated_charclass(folded_ranges));
+                  return Ok(CharClass(charclass_casefold(
+                    new_negated_charclass_ranges(prop_table.to_owned()))));
                 } else {
-                  return Ok(new_charclass(folded_ranges));
+                  return Ok(CharClass(charclass_casefold(
+                    new_charclass_ranges(prop_table.to_owned()))));
                 }
               } else {
                 if neg {
@@ -214,11 +215,12 @@ fn parse_unicode_charclass(p: &mut State, f: &mut ParseFlags, neg: bool) -> Resu
       };
 
       if f.i {
-        let folded_ranges = charclass_casefold(prop_table);
         if neg {
-          return Ok(new_negated_charclass(folded_ranges));
+          return Ok(CharClass(charclass_casefold(
+            new_negated_charclass_ranges(prop_table.to_owned()))));
         } else {
-          return Ok(new_charclass(folded_ranges));
+          return Ok(CharClass(charclass_casefold(
+            new_charclass_ranges(prop_table.to_owned()))));
         }
       } else {
         if neg {
@@ -254,11 +256,12 @@ fn parse_ascii_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, Pars
         return match ascii::get_prop_table(str::from_chars(prop_name_buf)) {
           Some(t) => {
             if f.i {
-              let folded_ranges = charclass_casefold(t);
               if neg {
-                Ok(new_negated_charclass(folded_ranges))
+                Ok(CharClass(charclass_casefold(
+                  new_negated_charclass_ranges(t.to_owned()))))
               } else {
-                Ok(new_charclass(folded_ranges))
+                Ok(CharClass(charclass_casefold(
+                  new_charclass_ranges(t.to_owned()))))
               }
             } else {
               if neg {
@@ -359,7 +362,7 @@ fn parse_group(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
                     p.next();
                     break;
                   }
-                  // TODO: restrict this to [a-zA-Z0-9_]
+                  // Restricts name to [a-zA-Z0-9_]
                   Some(c) => {
                     if c.is_digit_radix(36) || c == '_' {
                       name_buf.push(c);
@@ -467,10 +470,20 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
     match p.current() {
       Some(']') => {
         p.next();
-        let cc = if negate {
-          new_negated_charclass(ranges)
+        let cc = if f.i {
+          if negate {
+            CharClass(charclass_casefold(
+              new_negated_charclass_ranges(ranges)))
+          } else {
+            CharClass(charclass_casefold(
+              new_charclass_ranges(ranges)))
+          }
         } else {
-          new_charclass(ranges)
+          if negate {
+            CharClass(new_negated_charclass_ranges(ranges))
+          } else {
+            CharClass(new_charclass_ranges(ranges))
+          }
         };
 
         // return CharClass and/or any internal special character classes
@@ -491,7 +504,7 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
       }
       Some('\\') => {
         p.next();
-        match parse_escape(p, f) {
+        match parse_escape(p, &mut ParseFlags::new()) {
           Ok(expr) => other_exprs.push(expr),
           err => return err
         }
