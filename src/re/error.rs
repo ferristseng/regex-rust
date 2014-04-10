@@ -38,6 +38,7 @@ pub mod ParseError {
     ParseInvalidAsciiCharClass,
 
     ParseIncompleteEscapeSeq,
+    ParseInvalidUTF8Encoding,
 
     // char class errors
     ParseEmptyCharClassRange,
@@ -77,6 +78,7 @@ pub mod ParseError {
         ParseInvalidAsciiCharClass       => write!(f.buf, "Parse Error: Invalid ASCII character class name provided"),
         ParseIncompleteEscapeSeq         => write!(f.buf, "Parse Error: Expected a character to escape"),
         ParseEmptyCharClassRange         => write!(f.buf, "Parse Error: Empty character class"),
+        ParseInvalidUTF8Encoding         => write!(f.buf, "Parse Error: Invalid UTF-8 encoding"),
         ParseInternalError |
         ParseNotRepetition |
         ParseUnknownError           => write!(f.buf, "Parse Error: Unknown error (probably a bug)"),

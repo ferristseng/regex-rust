@@ -190,5 +190,47 @@ TESTS = [
   ("\\p{Greek}", "\U00010181", "\U00010181", MATCH),
   ("\\p{Greek}", "\u0374", "", NOMATCH),
   ("\\P{Greek}", "\U00010181", "", NOMATCH),
-  ("\\P{Greek}", "\u0374", "\u0374", MATCH)
+  ("\\P{Greek}", "\u0374", "\u0374", MATCH),
+
+  # Hex character code escape tests
+  ("\\x54", 'T', 'T', MATCH),
+  ("\\x79", '\x79', '\x79', MATCH),
+  ("\\x00", '7', '', NOMATCH),
+  ("\\x2B", '+', '+', MATCH),
+  ("\\x2b", '+', '+', MATCH),
+  ("\\x4g", 'Test', '', PARSEERR),
+  ("\\x32\\x45+\\x30*", '\x32\x45\x45\x45', '\x32\x45\x45\x45', MATCH),
+  ("\\x{54}", 'T', 'T', MATCH),
+  ("\\x{DbB0}", '\u06f0', '\u06f0', MATCH),
+  ("\\x{54}\\x{DbB0}+\\x{36}*", 'T\u06f0\u06f0\u06f0', 'T\u06f0\u06f0\u06f0', MATCH),
+  ("\\x{}", 'Test', '', PARSEERR),
+  ("\\x{000}", 'Test', '', PARSEERR),
+  ("\\x{00000000}", 'Test', '', PARSEERR),
+
+  # Octal character code escape tests
+  ("\\61", '1', '1', MATCH),
+  ("\\061", '1', '1', MATCH),
+  ("\\175", '}', '}', MATCH),
+  ("\\615", '15', '15', MATCH),
+  ("\\615", '1', '1', NOMATCH),
+  ("\\77\\123+\\111*", '?SSSSS', '?SSSSS', MATCH),
+
+  # Special character escape tests
+  ("\\v", '\v', '\v', MATCH),
+  ("\\f", '\f', '\f', MATCH),
+  ("\\n", '\n', '\n', MATCH),
+  ("\\t", '\t', '\t', MATCH),
+  ("\\r", '\r', '\r', MATCH),
+  ("\\v\\f*\\n\\t+\\r", '\v\f\f\n\t\t\r', '\v\f\f\n\t\t\r', MATCH),
+  ("\\T", '\t', '\t', NOMATCH),
+
+  # Literal string escape tests
+  ("\\QThis is the string!\\E", 'This is the string!', 'This is the string!', MATCH),
+  ("\\Q((a)*)*\\E", '((a)*)*', '((a)*)*', MATCH),
+  ("(\\Q({[\\E)*", '({[({[({[({[({[', '({[({[({[({[({[', MATCH),
+  ("\\Q\\E", '', '', MATCH),
+
+  # These tests are mostly for find_all
+  ("a*b", "abaabaaab", "ab", MATCH), # Should match 9.
+  ("(ab)+", "abbbbbbbab", "ab", MATCH) # Should match 2.
 ]
