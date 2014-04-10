@@ -11,5 +11,24 @@ NO_LOOPS = 10000
 TESTS = [
   ("^abc", "abcc"),
   # ("\\P{Greek}", "\u0374", "\u0374", MATCH)
-  ("^abc", "hslc")
+  ("^abc", "hslc"),
+  ("[^^]+", "abc"),
+  ("[^^]+", "^"),
+  ("[^al-obc]+", "kpd"),
+  ("[^al-obc]+", "abc"),
+  ("[al-obc]+", "almocb"),
+  ("[al-obc]+", "defzx"),
+  ("a(?:b|c|d)(.)", "ace"),
+  ("a(?:b|c|d)*(.)", "ace"),
+  ("a(?:b|c|d)+?(.)", "ace"),
+  #("[-+]?[0-9]*\\.?[0-9]+", "3.14"),
+  #("<TAG\\b[^>]*>(.*?)</TAG>", "one<TAG>two</TAG>three"),
+  # (")", ""),
+  # ("", ""),
+  ("abc", "abc"),
+  ("abc", "xbc"),
+  ("abc", "axc"),
+  ("abc", "xabcy"),
+  ("abc", "ababc"),
+  ("ab*c", "abc")
 ]
