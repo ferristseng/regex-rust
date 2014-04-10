@@ -285,4 +285,13 @@ TESTS = [
   ("[^a-ce]", "b", "i", "b", MATCH),
   ("[^a-ce]", "d", "i", "d", MATCH),
 
+  # Mixing character ranges with built-in character classes in negated character class (bug)
+  ("[^a-f\\d]", "e", "", "", NOMATCH),
+  ("[^a-f\\d]", "3", "", "", NOMATCH),
+  ("[^0-3\\D]", "2", "", "", NOMATCH),
+  ("[^0-3\\D]", "4", "", "4", MATCH),
+  ("[^a-f\\p{Greek}]", "\u03c3", "", "", NOMATCH),
+  ("[^a-f\\p{Greek}]", "3", "", "3", MATCH),
+  ("[^a-f\\P{Greek}]", "\u03c3", "", "\u03c3", MATCH),
+  ("[^a-f\\P{Greek}]", "c", "", "", NOMATCH),
 ]
