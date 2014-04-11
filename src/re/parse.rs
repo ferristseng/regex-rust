@@ -19,6 +19,7 @@ pub enum QuantifierPrefix {
 pub enum Expr {
   Empty,
   Literal(char),
+  LiteralString(~str),
   CharClass(~[Range]),
   CharClassStatic(&'static [Range]),
   CharClassTable(&'static [(char,char)]),
@@ -135,6 +136,32 @@ fn parse_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
     Some('B') => {
       p.next();
       return Ok(AssertWordBoundary)
+    }
+    Some('Q') => {
+      p.next();
+      let mut literal : ~str = ~"";
+      loop {
+        match p.current() {
+          Some('\\') => {
+            p.next();
+            match p.current() {
+              Some('E') => {
+                p.next();
+                return Ok(LiteralString(literal));
+              },
+              Some(c) => {
+                literal.push_char('\\');
+              },
+              _ => {return Err(ParseIncompleteEscapeSeq)}
+            }
+          },
+          Some(c) => {
+            p.next();
+            literal.push_char(c);
+          },
+          _ => return Err(ParseIncompleteEscapeSeq)
+        }
+      }
     }
     Some(_) => return parse_escape_char(p, f),
     None => return Err(ParseIncompleteEscapeSeq)
@@ -296,9 +323,196 @@ fn parse_escape_char(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCod
   match p.current() {
     Some(c) => {
       p.next();
-      Ok(parse_literal(c, f))
+      match c {
+        'n' => {Ok(parse_literal('\n', f))},
+        'r' => {Ok(parse_literal('\r', f))},
+        't' => {Ok(parse_literal('\t', f))},
+        'f' => {Ok(parse_literal('\x0C', f))},
+        'v' => {Ok(parse_literal('\x0B', f))},
+        'A' => {Ok(parse_literal('\x02', f))},
+        'z' => {Ok(parse_literal('\x03', f))},
+        'C' => {Ok(parse_literal(c, f))}, //TODO: A single byte (no matter the encoding)
+        'x' => {parse_hex_escape(p, f)},
+         _  => {
+           if c >= '0' && c <= '7' {
+             parse_octal_escape(p, f, c)
+           } else {
+             Ok(parse_literal(c, f))
+           }
+         }
+      }
     }
     None => Err(ParseIncompleteEscapeSeq)
+  }
+}
+
+/// Parses an escaped hex character of the form \xff or \x{ffffff}
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
+#[inline]
+fn parse_hex_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
+  match p.current() {
+    Some('{') => {
+        p.next();
+        let mut literal : ~[u8] = ~[];
+        let mut count : uint = 0;
+        loop {
+          count += 1;
+
+          match extract_hex_value(p) {
+            Some(c) => {literal.push(c)},
+            _ => {return Err(ParseIncompleteEscapeSeq)}
+          }
+
+          if count == 3 {
+            break
+          }
+
+          match p.current() {
+            Some('}') => {break},
+            _ => {}
+          }
+        }
+        match p.current() {
+          Some('}') => {
+            p.next();
+            if str::is_utf8(literal) {
+              match str::from_utf8_owned(literal) {
+                Some(s) => {
+                  if f.i {
+                    let mut stack = ~[];
+                    for c in s.chars() {
+                      stack.push(CharClass(range_casefold((c, c))));
+                    }
+                    do_concat(&mut stack);
+                    return match stack.pop() {
+                      Some(expr) => Ok(expr),
+                      None => Ok(Empty)
+                    }
+                  } else {
+                    return Ok(LiteralString(s));
+                  }
+                },
+                _ => {return Err(ParseInvalidUTF8Encoding)}
+              }
+            } else {
+              return Err(ParseInvalidUTF8Encoding)
+            }
+          },
+          _ => {return Err(ParseExpectedClosingBrace)}
+        }
+      },
+    Some(c) => {
+      match extract_hex_value(p) {
+        Some(c) => {
+            return Ok(Literal(c as char));
+          },
+        _ => {return Err(ParseIncompleteEscapeSeq)}
+      }
+    },
+    _ => {return Err(ParseIncompleteEscapeSeq)}
+    }
+}
+
+/// Consumes two characters of the parse state and returns their value when
+/// converted from hex to a uint. Returns None if hex is invalid
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
+#[inline]
+fn extract_hex_value(p: &mut State) -> Option<u8> {
+  let mut charValue : u8 = 0;
+  match p.current() {
+    Some(c) => {
+      if c >= '0' && c <= '9' {
+        charValue += ((c as u8) - 48) * (16 as u8);
+      } else if c >= 'A' && c <= 'F' {
+        charValue += ((c as u8) - 55) * (16 as u8);
+      } else if c >= 'a' && c <= 'f' {
+        charValue += ((c as u8) - 87) * (16 as u8);
+      } else {
+        return None;
+      }
+      p.next();
+    }
+    _ => {return None}
+  }
+  match p.current() {
+    Some(c) => {
+      if c >= '0' && c <= '9' {
+        charValue += (c as u8) - 48;
+      } else if c >= 'A' && c <= 'F' {
+        charValue += (c as u8) - 55;
+      } else if c >= 'a' && c <= 'f' {
+        charValue += (c as u8) - 87;
+      } else {
+        return None;
+      }
+      p.next();
+    }
+    _ => {return None}
+  }
+  return Some(charValue);
+}
+
+/// Parses an octal escape of the form \123. Will also return the value
+/// for a single or two digit octal escape, the most digits that it can match
+/// (e.g. \457 will parse as \45 and not consume the character 7)
+///
+/// # Arguments
+///
+/// * p - The current state of parsing
+/// * c - The first character in the octal escape
+#[inline]
+fn parse_octal_escape(p: &mut State, f: &mut ParseFlags, c : char) -> Result<Expr, ParseCode> {
+  // Value for the first character
+  let c1_val : u8 = (c as u8) - 48;
+  // Match the second character
+  match p.current() {
+    Some(c2) => {
+      // Check that it is in range and get its value
+      if c2 >= '0' && c2 <= '7' {
+          p.next();
+          let c2_val : u8 = (c2 as u8) - 48;
+          // Match the third character
+          match p.current() {
+              Some(c3) => {
+                // Maximum valid value is 377
+                if c3 >= '0' && c3 <= '7' && c <= '3' {
+                  p.next();
+                  let c_final = (c1_val * 64 + c2_val * 8 + (c3 as u8 - 48)) as char;
+                  if f.i {
+                    return Ok(CharClass(range_casefold((c_final, c_final))))
+                  } else {
+                    return Ok(Literal(c_final))
+                  }
+                } else {
+                  let c_final = (c1_val * 8 + c2_val) as char;
+                  if f.i {
+                    return Ok(CharClass(range_casefold((c_final, c_final))))
+                  } else {
+                    return Ok(Literal(c_final))
+                  }
+                }
+              }
+              _ => {
+                let c_final = (c1_val * 8 + c2_val) as char;
+                if f.i {
+                  return Ok(CharClass(range_casefold((c_final, c_final))))
+                } else {
+                  return Ok(Literal(c_final))
+                }
+              }
+          }
+      } else {
+        // If the character is out of range, jsut return the first
+        return Ok(Literal(c1_val as char))
+      }
+    }
+    _ => {return Ok(Literal(c1_val as char))}
   }
 }
 

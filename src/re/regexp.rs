@@ -240,7 +240,7 @@ mod library_functions_test {
 	macro_rules! test_split(
 		($re: expr, $input: expr, $expect: expr) => (
 			{
-				let re = match UncompiledRegexp::new($re) {
+				let re = match UncompiledRegexp::new($re, &mut ParseFlags::new()) {
 					Ok(regex) => regex,
 					Err(e) => fail!(e)
 				};

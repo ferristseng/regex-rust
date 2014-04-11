@@ -4,8 +4,9 @@ use parse::{Greedy, NonGreedy};
 use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
             NegatedCharClassTable, Alternation, Concatenation, Repetition,
             Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
-            AssertStartMultiline, AssertEnd, AssertEndMultiline };
+            AssertStartMultiline, AssertEnd, AssertEndMultiline, LiteralString };
 use charclass::Range;
+use std::str::CharRange;
 
 #[deriving(Clone)]
 pub enum Instruction {
@@ -135,6 +136,15 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
   match *expr {
     Literal(c) => {
       stack.push(InstLiteral(c));
+    }
+    LiteralString(ref s) => {
+      // Iteration taken from Rust documentation
+      let mut i : uint = 0;
+      while i < s.len() {
+        let CharRange {ch, next} = s.char_range_at(i);
+        stack.push(InstLiteral(ch));
+        i = next;
+      }
     }
     Alternation(ref lft, ref rgt) => {
       // Compile to:
