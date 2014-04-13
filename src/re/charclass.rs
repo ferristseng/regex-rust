@@ -1,4 +1,4 @@
-use parse::{Expr, CharClass, CharClassStatic};
+use parse::{Expr, CharClass};
 use std::char::{from_u32, MAX};
 use std::cmp::{Less, Greater};
 

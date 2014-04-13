@@ -1,10 +1,10 @@
 use std::fmt;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
-            NegatedCharClassTable, Alternation, Concatenation, Repetition,
-            Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
-            AssertStartMultiline, AssertEnd, AssertEndMultiline, LiteralString };
+use parse::{Empty, Literal, CharClass, RangeTable, NegatedRangeTable,
+            Alternation, Concatenation, Repetition, Capture, AssertWordBoundary,
+            AssertNonWordBoundary, AssertStart, AssertStartMultiline, AssertEnd,
+            AssertEndMultiline, LiteralString };
 use charclass::Range;
 use std::str::CharRange;
 
@@ -180,13 +180,10 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     CharClass(ref ranges) => {
       compile_charclass(*ranges, stack);
     }
-    CharClassStatic(ranges) => {
-      compile_charclass(ranges, stack);
-    }
-    CharClassTable(table) => {
+    RangeTable(table) => {
       stack.push(InstTableRange(table));
     }
-    NegatedCharClassTable(table) => {
+    NegatedRangeTable(table) => {
       stack.push(InstNegatedTableRange(table));
     }
     Capture(ref expr, id, ref name) => {

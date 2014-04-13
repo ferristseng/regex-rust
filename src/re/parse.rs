@@ -21,9 +21,8 @@ pub enum Expr {
   Literal(char),
   LiteralString(~str),
   CharClass(~[Range]),
-  CharClassStatic(&'static [Range]),
-  CharClassTable(&'static [(char,char)]),
-  NegatedCharClassTable(&'static [(char,char)]),
+  RangeTable(&'static [(char,char)]),
+  NegatedRangeTable(&'static [(char,char)]),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -115,12 +114,12 @@ fn parse_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
 
   // Replace these with static vectors
   let cc = match current {
-    Some('d') => CharClassTable(perl::get_escape_table('d').unwrap()),
-    Some('D') => NegatedCharClassTable(perl::get_escape_table('D').unwrap()),
-    Some('w') => CharClassTable(perl::get_escape_table('w').unwrap()),
-    Some('W') => NegatedCharClassTable(perl::get_escape_table('W').unwrap()),
-    Some('s') => CharClassTable(perl::get_escape_table('s').unwrap()),
-    Some('S') => NegatedCharClassTable(perl::get_escape_table('S').unwrap()),
+    Some('d') => RangeTable(perl::get_escape_table('d').unwrap()),
+    Some('D') => NegatedRangeTable(perl::get_escape_table('D').unwrap()),
+    Some('w') => RangeTable(perl::get_escape_table('w').unwrap()),
+    Some('W') => NegatedRangeTable(perl::get_escape_table('W').unwrap()),
+    Some('s') => RangeTable(perl::get_escape_table('s').unwrap()),
+    Some('S') => NegatedRangeTable(perl::get_escape_table('S').unwrap()),
     Some('p') => {
       p.next();
       return parse_unicode_charclass(p, f, false);
@@ -215,9 +214,9 @@ fn parse_unicode_charclass(p: &mut State, f: &mut ParseFlags, neg: bool) -> Resu
                 }
               } else {
                 if neg {
-                  return Ok(NegatedCharClassTable(prop_table));
+                  return Ok(NegatedRangeTable(prop_table));
                 } else {
-                  return Ok(CharClassTable(prop_table));
+                  return Ok(RangeTable(prop_table));
                 }
               };
             }
@@ -252,9 +251,9 @@ fn parse_unicode_charclass(p: &mut State, f: &mut ParseFlags, neg: bool) -> Resu
         }
       } else {
         if neg {
-          return Ok(NegatedCharClassTable(prop_table));
+          return Ok(NegatedRangeTable(prop_table));
         } else {
-          return Ok(CharClassTable(prop_table));
+          return Ok(RangeTable(prop_table));
         }
       };
     }
@@ -293,9 +292,9 @@ fn parse_ascii_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, Pars
               }
             } else {
               if neg {
-                Ok(NegatedCharClassTable(t))
+                Ok(NegatedRangeTable(t))
               } else {
-                Ok(CharClassTable(t))
+                Ok(RangeTable(t))
               }
             }
           }
@@ -1335,22 +1334,22 @@ mod parse_tests {
 
   // #[test]
   // fn parse_unicode_charclass_single_letter() {
-  //   test_parse!("\\pN", Ok(CharClassTable(~"N")));
+  //   test_parse!("\\pN", Ok(RangeTable(~"N")));
   // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter() {
-    test_parse!("\\p{Greek}", Ok(CharClassTable(_)));
+    test_parse!("\\p{Greek}", Ok(RangeTable(_)));
   }
 
   // #[test]
   // fn parse_unicode_charclass_single_letter_negated() {
-  //   test_parse!("\\PL", Ok(NegatedCharClassTable(_)));
+  //   test_parse!("\\PL", Ok(NegatedRangeTable(_)));
   // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter_negated() {
-    test_parse!("\\P{Latin}", Ok(NegatedCharClassTable(_)));
+    test_parse!("\\P{Latin}", Ok(NegatedRangeTable(_)));
   }
 
   #[test]
@@ -1385,12 +1384,12 @@ mod parse_tests {
 
   #[test]
   fn parse_unicode_charclass_nested() {
-    test_parse!("[sdkfj\\p{Latin}]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
+    test_parse!("[sdkfj\\p{Latin}]", Ok(Alternation(~CharClass(_), ~RangeTable(_))));
   }
 
   #[test]
   fn parse_ascii_charclass() {
-    test_parse!("[:alpha:]", Ok(CharClassTable(_)));
+    test_parse!("[:alpha:]", Ok(RangeTable(_)));
   }
 
   #[test]
@@ -1405,7 +1404,7 @@ mod parse_tests {
 
   #[test]
   fn parse_ascii_charclass_nested() {
-    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
+    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~RangeTable(_))));
   }
 
   #[test]
