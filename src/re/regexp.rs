@@ -152,7 +152,9 @@ impl UncompiledRegexp {
 		while len != 0{
 			match strat.run(replaced, start) {
 				Some(t) => {
-					replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replaceWith, replaced.slice_from(t.end));
+					let mat = Match::new(start, t.end, input, t.captures);
+					let replStr = self.formReplaceString(mat.clone(), replaceWith);
+					replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
 					start += replaceWith.len() + emptyPatternAdd;
 					repCount += 1;
 				}
@@ -166,6 +168,80 @@ impl UncompiledRegexp {
 		(replaced, repCount)
 	}
 
+	fn formReplaceString<'a>(&self, mat : Match, replWith : &'a str) -> &'a str{
+		let groupEscapeStr = r"\";
+
+		let i = replWith.find_str(groupEscapeStr);
+		let mut done = ~"";
+		let mut replStr = replWith;
+		while i != None {
+			let start = i.unwrap();
+			done = done + replStr.slice_to(start + 1);
+			replStr = replStr.slice_from(start + 1);
+
+			if replStr.len() == 0 {break;}
+			let group = replStr.char_at(0)=='g';
+			if group {
+				if 1 == replStr.len() {
+					// error, undefined group
+				}
+				let delimited = replStr.char_at(1) == '<';
+				if delimited {
+					let groupEnd = replStr.find('>');
+					if groupEnd == None {
+						// error, unterminated group name
+					}
+					let groupName = replStr.slice(2, groupEnd.unwrap());
+					let groupMatch = mat.group_by_name(groupName);
+					match groupMatch {
+						Some(res) => {
+							done = done + res;
+							replStr = replStr.slice_from(groupEnd.unwrap() + 1);
+						}
+						None => {
+							// error, group name not found
+						}
+					}
+				}
+				let valid = (replStr.char_at(1) <= '9' && replStr.char_at(1) >= '0');
+				if valid {
+					let mut numLength = 1;
+					loop {
+						if replStr.char_at(1 + numLength) <= '9' && replStr.char_at(1 + numLength) >= '0' {
+							numLength = numLength + 1;
+						}
+						else {
+							break;
+						}
+					}
+					let groupNum = from_str::<uint>(replStr.slice(1, numLength + 1));
+					let groupMatch = mat.group(groupNum.unwrap());
+					match groupMatch {
+						Some(res) => {
+							done = done + res;
+							replStr = replStr.slice_from(numLength + 1);
+						}
+						None => {
+							// error, invalid group number
+						}
+					}
+				}
+				else {
+					// error, invalid group spec
+				}
+			}
+			else {
+				done = done + replStr.slice_to(1);
+				if replStr.len() > 1 {
+					replStr = replStr.slice_from(1);
+				}
+				else {
+					break;
+				}
+			}
+		}
+		return replStr;
+	}
 }
 
 #[cfg(test)]
