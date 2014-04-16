@@ -145,7 +145,7 @@ impl UncompiledRegexp {
 		let len = input.len();
 		let strat = PikeVM::new(self.prog, 0);
 		let mut replaced = input.to_owned();
-		println!("Before (in lib): {:s}", replaced.clone());
+		println!("Before any replacing: {:s}", replaced.clone());
 		let mut start = 0;
 		let emptyPatternAdd = if self.prog.len()==1 {1} else {0};
 		let mut repCount = 0;
@@ -153,13 +153,14 @@ impl UncompiledRegexp {
 		while len != 0{
 			match strat.run(replaced, start) {
 				Some(t) => {
-					let mat = Match::new(start, t.end, input, t.captures);
-					println!("mat: {:s}", mat.clone().matched());
+					let mat = Match::new(start, t.end, replaced, t.captures);
+					println!("Match to replace(match object): {:s}\nMatch to replace(substring): {:s}", mat.clone().matched(), replaced.clone().slice(start, mat.clone().end));
 					let replStr = self.formReplaceString(mat.clone(), replaceWith);
-					println!("{:s}\t{:s}\t{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
+					println!("Before match(tab)replaceWith(tab)After replace: {:s}\t{:s}\t{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
 					replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
-					println!("In lib: {:s}", replaced.clone());
-					start += replaceWith.len() + emptyPatternAdd;
+					println!("After replace: {:s}", replaced.clone());
+					start += replStr.len() + emptyPatternAdd;
+					if start < replaced.len() {println!("Remaining input string left to match on: {:s}", replaced.clone().slice_from(start));}
 					repCount += 1;
 				}
 				None => {
@@ -180,8 +181,7 @@ impl UncompiledRegexp {
 		let mut replStr = replWith;
 		while i != None {
 			let start = i.unwrap();
-			println!("{:s}", "hi");
-			done = done + replStr.slice_to(start + 1);
+			done = done + replStr.slice_to(start);
 			replStr = replStr.slice_from(start + 1);
 
 			if replStr.len() == 0 {break;}
@@ -225,11 +225,11 @@ impl UncompiledRegexp {
 						}
 					}
 					let groupNum = from_str::<uint>(replStr.slice_to(numLength));
-					println!("{:u}", groupNum.clone().unwrap());
 					let groupMatch = mat.group(groupNum.unwrap()-1);
-			println!("{:s}", groupMatch.clone().unwrap());
+					println!("Return from calling Match.group(): {:s}", groupMatch.clone().unwrap());
 					match groupMatch {
 						Some(res) => {
+							println!("Replace string before adding to it: {:s}", done.clone());
 							done = done + res;
 							replStr = replStr.slice_from(numLength);
 						}
@@ -250,6 +250,7 @@ impl UncompiledRegexp {
 			}
 			i = replStr.find_str(groupEscapeStr);
 		}
+		done = done + replStr;
 		return done;
 	}
 }
@@ -398,7 +399,17 @@ mod library_functions_test {
 
 	#[test]
 	fn test_replace_11() {
-		test_replace!("(abab)c", "ababcababc", r"\1", "abababab");
+		test_replace!("(abab)c", "ababcababc", ~"", r"\1", "abababab");
+	}
+
+	#[test]
+	fn test_replace_12() {
+		test_replace!("(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\11", "k");
+	}
+
+	#[test]
+	fn test_replace_13() {
+		test_replace!("(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\11win", "kwin");
 	}
 
 	#[test]
