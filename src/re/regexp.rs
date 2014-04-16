@@ -145,6 +145,7 @@ impl UncompiledRegexp {
 		let len = input.len();
 		let strat = PikeVM::new(self.prog, 0); 
 		let mut replaced = input.to_owned();
+		println!("Before (in lib): {:s}", replaced.clone());
 		let mut start = 0;
 		let emptyPatternAdd = if self.prog.len()==1 {1} else {0};
 		let mut repCount = 0;
@@ -153,8 +154,11 @@ impl UncompiledRegexp {
 			match strat.run(replaced, start) {
 				Some(t) => {
 					let mat = Match::new(start, t.end, input, t.captures);
+					println!("mat: {:s}", mat.clone().matched());
 					let replStr = self.formReplaceString(mat.clone(), replaceWith);
+					println!("{:s}\t{:s}\t{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
 					replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
+					println!("In lib: {:s}", replaced.clone());
 					start += replaceWith.len() + emptyPatternAdd;
 					repCount += 1;
 				}
@@ -168,14 +172,15 @@ impl UncompiledRegexp {
 		(replaced, repCount)
 	}
 
-	fn formReplaceString<'a>(&self, mat : Match, replWith : &'a str) -> &'a str{
+	fn formReplaceString<'a>(&self, mat : Match, replWith : &'a str) -> ~str{
 		let groupEscapeStr = r"\";
 
-		let i = replWith.find_str(groupEscapeStr);
+		let mut i = replWith.find_str(groupEscapeStr);
 		let mut done = ~"";
 		let mut replStr = replWith;
 		while i != None {
 			let start = i.unwrap();
+			println!("{:s}", "hi");
 			done = done + replStr.slice_to(start + 1);
 			replStr = replStr.slice_from(start + 1);
 
@@ -203,23 +208,30 @@ impl UncompiledRegexp {
 						}
 					}
 				}
-				let valid = (replStr.char_at(1) <= '9' && replStr.char_at(1) >= '0');
+				else {
+					// error, invalid group spec
+				}
+			}
+			else {
+				let valid = (replStr.char_at(0) <= '9' && replStr.char_at(0) >= '0');
 				if valid {
 					let mut numLength = 1;
 					loop {
-						if replStr.char_at(1 + numLength) <= '9' && replStr.char_at(1 + numLength) >= '0' {
+						if numLength < replStr.len() && replStr.char_at(numLength) <= '9' && replStr.char_at(numLength) >= '0' {
 							numLength = numLength + 1;
 						}
 						else {
 							break;
 						}
 					}
-					let groupNum = from_str::<uint>(replStr.slice(1, numLength + 1));
-					let groupMatch = mat.group(groupNum.unwrap());
+					let groupNum = from_str::<uint>(replStr.slice_to(numLength));
+					println!("{:u}", groupNum.clone().unwrap());
+					let groupMatch = mat.group(groupNum.unwrap()-1);
+			println!("{:s}", groupMatch.clone().unwrap());
 					match groupMatch {
 						Some(res) => {
 							done = done + res;
-							replStr = replStr.slice_from(numLength + 1);
+							replStr = replStr.slice_from(numLength);
 						}
 						None => {
 							// error, invalid group number
@@ -227,20 +239,18 @@ impl UncompiledRegexp {
 					}
 				}
 				else {
-					// error, invalid group spec
+					done = done + replStr.slice_to(1);
+					if replStr.len() > 1 {
+						replStr = replStr.slice_from(1);
+					}
+					else {
+						break;
+					}
 				}
 			}
-			else {
-				done = done + replStr.slice_to(1);
-				if replStr.len() > 1 {
-					replStr = replStr.slice_from(1);
-				}
-				else {
-					break;
-				}
-			}
+			i = replStr.find_str(groupEscapeStr);
 		}
-		return replStr;
+		return done;
 	}
 }
 
@@ -377,6 +387,11 @@ mod library_functions_test {
 	#[test]
 	fn test_replace_10() {
 		test_replace!("b", "aa", "ccc", "aa");
+	}
+
+	#[test]
+	fn test_replace_11() {
+		test_replace!("(abab)c", "ababcababc", r"\1", "abababab");
 	}
 
 	#[test]
