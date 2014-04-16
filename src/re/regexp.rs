@@ -10,6 +10,14 @@ pub struct UncompiledRegexp {
 	prog: ~[Instruction]
 }
 
+// Error enum for replace function
+enum ReplStringSpecError {
+	UndefinedGroupName,
+	GroupNumberOutOfBounds,
+	UnterminatedGroupName,
+	MalformedGroupSpec
+}
+
 /// Constructors
 impl UncompiledRegexp {
 	pub fn new(s: &str, f: &mut ParseFlags) -> Result<UncompiledRegexp, ParseCode> {
@@ -142,38 +150,31 @@ impl UncompiledRegexp {
 	}
 
 	pub fn replacen(&self, input: &str, replaceWith: &str) -> (~str, uint) {
-		let len = input.len();
 		let strat = PikeVM::new(self.prog, 0);
 		let mut replaced = input.to_owned();
-		println!("Before any replacing: {:s}", replaced.clone());
 		let mut start = 0;
 		let emptyPatternAdd = if self.prog.len()==1 {1} else {0};
 		let mut repCount = 0;
 
-		while len != 0{
+		while start <= replaced.len(){
 			match strat.run(replaced, start) {
 				Some(t) => {
 					let mat = Match::new(start, t.end, replaced, t.captures);
-					println!("Match to replace(match object): {:s}\nMatch to replace(substring): {:s}", mat.clone().matched(), replaced.clone().slice(start, mat.clone().end));
 					let replStr = self.formReplaceString(mat.clone(), replaceWith);
-					println!("Before match(tab)replaceWith(tab)After replace: {:s}\t{:s}\t{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
 					replaced = format!("{:s}{:s}{:s}", replaced.slice_to(start), replStr, replaced.slice_from(mat.end));
-					println!("After replace: {:s}", replaced.clone());
 					start += replStr.len() + emptyPatternAdd;
-					if start < replaced.len() {println!("Remaining input string left to match on: {:s}", replaced.clone().slice_from(start));}
 					repCount += 1;
 				}
 				None => {
 					start += 1;
 				}
 			}
-			if start > replaced.len() {break}
 		}
 
 		(replaced, repCount)
 	}
 
-	fn formReplaceString<'a>(&self, mat : Match, replWith : &'a str) -> ~str{
+	fn formReplaceString(&self, mat : Match, replWith : &str) -> ~str{
 		let groupEscapeStr = r"\";
 
 		let mut i = replWith.find_str(groupEscapeStr);
@@ -197,7 +198,11 @@ impl UncompiledRegexp {
 						// error, unterminated group name
 					}
 					let groupName = replStr.slice(2, groupEnd.unwrap());
-					let groupMatch = mat.group_by_name(groupName);
+					let groupNameNum = from_str::<uint>(groupName);
+					let groupMatch = match groupNameNum {
+							Some(num) => mat.group(num),
+							None => mat.group_by_name(groupName)
+					};
 					match groupMatch {
 						Some(res) => {
 							done = done + res;
@@ -213,7 +218,7 @@ impl UncompiledRegexp {
 				}
 			}
 			else {
-				let valid = (replStr.char_at(0) <= '9' && replStr.char_at(0) >= '0');
+				let valid = replStr.char_at(0) <= '9' && replStr.char_at(0) >= '0';
 				if valid {
 					let mut numLength = 1;
 					loop {
@@ -225,11 +230,9 @@ impl UncompiledRegexp {
 						}
 					}
 					let groupNum = from_str::<uint>(replStr.slice_to(numLength));
-					let groupMatch = mat.group(groupNum.unwrap()-1);
-					println!("Return from calling Match.group(): {:s}", groupMatch.clone().unwrap());
+					let groupMatch = mat.group(groupNum.unwrap());
 					match groupMatch {
 						Some(res) => {
-							println!("Replace string before adding to it: {:s}", done.clone());
 							done = done + res;
 							replStr = replStr.slice_from(numLength);
 						}
@@ -410,6 +413,31 @@ mod library_functions_test {
 	#[test]
 	fn test_replace_13() {
 		test_replace!("(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\11win", "kwin");
+	}
+
+	#[test]
+	fn test_replace_14() {
+		test_replace!("(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "", ~"", r"\11win", "");
+	}
+
+	#[test]
+	fn test_replace_15() {
+		test_replace!("(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "", ~"", r"\11win", "");
+	}
+
+	#[test]
+	fn test_replace_16() {
+		test_replace!("(?P<named>a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\g<named>", "a");
+	}
+
+	#[test]
+	fn test_replace_17() {
+		test_replace!("(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\g<2>", "b");
+	}
+
+	#[test]
+	fn test_replace_18() {
+		test_replace!("(a)(b)c", "abc", ~"", r"\\g<1>\g<1>", r"\g<1>a");
 	}
 
 	#[test]
