@@ -36,6 +36,7 @@ pub mod ParseError {
 
     ParseInvalidUnicodeProperty,
     ParseInvalidAsciiCharClass,
+    ParseInvalidFlag(char),
 
     ParseIncompleteEscapeSeq,
     ParseInvalidUTF8Encoding,
@@ -76,6 +77,7 @@ pub mod ParseError {
         ParseUnexpectedCharacter         => write!(f.buf, "Parse Error: Unexpected character in input"),
         ParseInvalidUnicodeProperty      => write!(f.buf, "Parse Error: Invalid Unicode property provided"),
         ParseInvalidAsciiCharClass       => write!(f.buf, "Parse Error: Invalid ASCII character class name provided"),
+        ParseInvalidFlag(c)              => write!(f.buf, "Parse Error: Invalid parse flag: {:c}", c),
         ParseIncompleteEscapeSeq         => write!(f.buf, "Parse Error: Expected a character to escape"),
         ParseEmptyCharClassRange         => write!(f.buf, "Parse Error: Empty character class"),
         ParseInvalidUTF8Encoding         => write!(f.buf, "Parse Error: Invalid UTF-8 encoding"),

@@ -5,36 +5,35 @@ use std::cmp::{Less, Greater};
 pub type Range = (char, char);
 
 /// Static Character Classes
-pub static NumericClass: Expr = CharClassStatic([
-  ('0', '9')
-]);
-pub static AlphaClass: Expr = CharClassStatic([
-  ('a', 'z'),
-  ('A', 'Z'),
-  ('_', '_')
-]);
-pub static WhitespaceClass: Expr = CharClassStatic([
-  (' ', ' '),
-  ('\t', '\t'),
-  ('\u000b', '\u000b'),
-  ('\u000c', '\u000c'),
-  ('\n', '\n'),
-  ('\r', '\r')
-]);
-pub static NegatedNumericClass: Expr = CharClassStatic([
-  ('\u0000', '\u002F'), ('\u003A', MAX)
-]);
-pub static NegatedAlphaClass: Expr = CharClassStatic([
-  ('\u0000', '\u0040'),
-  ('\u005B', '\u005E'),
-  ('\u0060', '\u0060'),
-  ('\u007B', MAX)
-]);
-pub static NegatedWhitespaceClass: Expr = CharClassStatic([
-  ('\u0000', '\u0008'),
-  ('\u000e', '\u001f'),
-  ('\u0021', MAX)
-]);
+pub mod perl {
+  pub fn get_escape_table(escape_char: char) -> Option<&'static [(char, char)]> {
+    match escape_char {
+      'd' | 'D' => Some(digit_table),
+      'w' | 'W' => Some(word_table),
+      's' | 'S' => Some(whitespace_table),
+      _ => None
+    }
+  }
+
+  pub static digit_table : &'static [(char, char)] = &[
+    ('0', '9')
+  ];
+
+  pub static word_table : &'static [(char, char)] = &[
+    ('a', 'z'),
+    ('A', 'Z'),
+    ('_', '_')
+  ];
+
+  pub static whitespace_table : &'static [(char, char)] = &[
+    (' ', ' '),
+    ('\t', '\t'),
+    ('\u000b', '\u000b'),
+    ('\u000c', '\u000c'),
+    ('\n', '\n'),
+    ('\r', '\r')
+  ];
+}
 
 pub mod ascii {
   pub fn get_prop_table(prop: &str) -> Option<&'static [(char,char)]> {
@@ -161,7 +160,7 @@ fn order_ranges(ranges: &mut ~[Range]) {
 /// Construct a CharClass with a set of ranges. Remove
 /// overlapping ranges preferring larger ranges (ex. Given [A-DA-C],
 /// collapse to [A-D]).
-pub fn new_charclass(ranges: ~[Range]) -> Expr {
+pub fn new_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
   let mut ranges = ranges;
 
   order_ranges(&mut ranges);
@@ -193,11 +192,11 @@ pub fn new_charclass(ranges: ~[Range]) -> Expr {
     }
   }
 
-  CharClass(new_ranges)
+  new_ranges
 }
 
 /// Construct a CharClass with a set of ranges, and negate them.
-pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
+pub fn new_negated_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
   let mut ranges = ranges;
 
   order_ranges(&mut ranges);
@@ -228,7 +227,7 @@ pub fn new_negated_charclass(ranges: ~[Range]) -> Expr {
     new_ranges.push((min, MAX));
   }
 
-  CharClass(new_ranges)
+  new_ranges
 }
 
 #[cfg(test)]
@@ -246,61 +245,61 @@ mod char_class_tests {
 
   #[test]
   fn char_class_good() {
-    let cc = new_charclass(~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'あ')]);
   }
 
   #[test]
   fn char_class_empty() {
-    let cc = new_charclass(~[('Z', 'A')]);
+    let cc = CharClass(new_charclass_ranges(~[('Z', 'A')]));
     assert_eq!(unravel_cc(cc), ~[]);
   }
 
   #[test]
   fn char_class_negate() {
-    let cc = new_negated_charclass(~[('A', '\uFA08')]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('A', '\uFA08')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('\uFA09', MAX)]);
   }
 
   #[test]
   fn char_class_negate_multiple() {
-    let cc = new_negated_charclass(~[('們', '我'), ('A', 'Z')]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('們', '我'), ('A', 'Z')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('[', '\u5010'),
                ('\u6212', MAX)]);
   }
 
   #[test]
   fn char_class_negate_overlap() {
-    let cc = new_negated_charclass(~[('a', 'c'), ('c', 'c')]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('a', 'c'), ('c', 'c')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '`'), ('d', MAX)]);
   }
 
   #[test]
   fn char_class_negate_bounds() {
-    let cc = new_negated_charclass(~[('\u0000', MAX)]);
+    let cc = CharClass(new_negated_charclass_ranges(~[('\u0000', MAX)]));
     assert_eq!(unravel_cc(cc), ~[]);
   }
 
   #[test]
   fn char_class_overlapping_ranges() {
-    let cc = new_charclass(~[('A', 'D'), ('B', 'C')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('B', 'C')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
   }
 
   #[test]
   fn char_class_repeated_ranges() {
-    let cc = new_charclass(~[('A', 'D'), ('A', 'D')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('A', 'D')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
   }
 
   #[test]
   fn char_class_overlapping_ranges2() {
-    let cc = new_charclass(~[('A', 'D'), ('B', 'E')]);
+    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('B', 'E')]));
     assert_eq!(unravel_cc(cc), ~[('A', 'E')]);
   }
 
   fn char_class_negate_sequential() {
-    let cc = new_charclass(~[('a', 'a'), ('b', 'b'), ('c', 'c')]);
+    let cc = CharClass(new_charclass_ranges(~[('a', 'a'), ('b', 'b'), ('c', 'c')]));
     assert_eq!(unravel_cc(cc), ~[('\u0000', '`'), ('d', MAX)]);
   }
 }
