@@ -157,44 +157,6 @@ fn order_ranges(ranges: &mut ~[Range]) {
   })
 }
 
-// /// Construct a CharClass with a set of ranges. Remove
-// /// overlapping ranges preferring larger ranges (ex. Given [A-DA-C],
-// /// collapse to [A-D]).
-// pub fn new_charclass(ranges: ~[Range]) -> ~[Range] {
-//   let mut ranges = ranges;
-//
-//   order_ranges(&mut ranges);
-//
-//   let mut new_ranges = ~[];
-//
-//   for &(start, end) in ranges.iter() {
-//     match new_ranges.pop() {
-//       Some(range) => {
-//         let (s, e): (char, char) = range;
-//         if start > e {
-//           new_ranges.push((s, e));
-//           if start <= end {
-//             new_ranges.push((start, end))
-//           }
-//         } else if start < e && end > e {
-//           new_ranges.push((s, end))
-//         } else if start < e && end < e {
-//           new_ranges.push((s, e))
-//         } else {
-//           new_ranges.push((s, e))
-//         }
-//       }
-//       None => {
-//         if start <= end {
-//           new_ranges.push((start, end))
-//         }
-//       }
-//     }
-//   }
-//
-//   new_ranges
-// }
-
 /// Construct a CharClass with a set of ranges, and negate them.
 pub fn new_negated_charclass(exprs: ~[Expr]) -> ~[Expr] {
   let mut ranges = ~[];
@@ -279,18 +241,6 @@ mod char_class_tests {
   }
 
   #[test]
-  // fn char_class_good() {
-  //   let cc = CharClass(new_charclass(~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]));
-  //   assert_eq!(unravel_cc(cc), ~[('A', 'あ')]);
-  // }
-  //
-  // #[test]
-  // fn char_class_empty() {
-  //   let cc = CharClass(new_charclass(~[('Z', 'A')]));
-  //   assert_eq!(unravel_cc(cc), ~[]);
-  // }
-
-  #[test]
   fn char_class_negate() {
     let cc = CharClass(new_negated_charclass(~[RangeExpr('A', '\uFA08')]));
     assert_eq!(unravel_cc(cc), ~[RangeExpr('\u0000', '@'), RangeExpr('\uFA09', MAX)]);
@@ -314,27 +264,4 @@ mod char_class_tests {
     let cc = CharClass(new_negated_charclass(~[RangeExpr('\u0000', MAX)]));
     assert_eq!(unravel_cc(cc), ~[]);
   }
-
-  // #[test]
-  // fn char_class_overlapping_ranges() {
-  //   let cc = CharClass(new_charclass(~[('A', 'D'), ('B', 'C')]));
-  //   assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
-  // }
-  //
-  // #[test]
-  // fn char_class_repeated_ranges() {
-  //   let cc = CharClass(new_charclass(~[('A', 'D'), ('A', 'D')]));
-  //   assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
-  // }
-  //
-  // #[test]
-  // fn char_class_overlapping_ranges2() {
-  //   let cc = CharClass(new_charclass(~[('A', 'D'), ('B', 'E')]));
-  //   assert_eq!(unravel_cc(cc), ~[('A', 'E')]);
-  // }
-  //
-  // fn char_class_negate_sequential() {
-  //   let cc = CharClass(new_charclass(~[('a', 'a'), ('b', 'b'), ('c', 'c')]));
-  //   assert_eq!(unravel_cc(cc), ~[('\u0000', '`'), ('d', MAX)]);
-  // }
 }
