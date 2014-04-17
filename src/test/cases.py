@@ -357,6 +357,10 @@ TESTS = [
   ("(\\Q({[\\E)*", '({[({[({[({[({[', "", '({[({[({[({[({[', MATCH),
   ("\\Q\\E", '', "", '', MATCH),
 
+  # Single byte escape tests
+  ("\\C", 'a', '', 'a', MATCH),
+  ("\\C\\C", '\u06f0', '', '\u06f0', MATCH),
+
   # These tests are mostly for find_all
   ("a*b", "abaabaaab", "", "ab", MATCH), # Should match 9.
   ("(ab)+", "abbbbbbbab", "", "ab", MATCH) # Should match 2.

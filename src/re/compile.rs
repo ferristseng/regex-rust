@@ -4,13 +4,14 @@ use parse::{Greedy, NonGreedy};
 use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
             NegatedCharClassTable, Alternation, Concatenation, Repetition,
             Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
-            AssertStartMultiline, AssertEnd, AssertEndMultiline, LiteralString };
+            AssertStartMultiline, AssertEnd, AssertEndMultiline, LiteralString, SingleByte };
 use charclass::Range;
 use std::str::CharRange;
 
 #[deriving(Clone)]
 pub enum Instruction {
   InstLiteral(char),
+  InstSingleByte,
   InstRange(char, char),
   InstTableRange(&'static [(char,char)]),
   InstNegatedTableRange(&'static [(char,char)]),
@@ -33,6 +34,7 @@ impl fmt::Show for Instruction {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
       InstLiteral(c)            => write!(f.buf, "InstLiteral {:c}", c),
+      InstSingleByte            => write!(f.buf, "InstSingleByte"),
       InstRange(s, e)           => write!(f.buf, "InstRange {:c}-{:c}", s, e),
       InstTableRange(_)         => write!(f.buf, "InstTableRange"),
       InstNegatedTableRange(_)  => write!(f.buf, "InstNegatedTableRange"),
@@ -136,6 +138,9 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
   match *expr {
     Literal(c) => {
       stack.push(InstLiteral(c));
+    }
+    SingleByte => {
+      stack.push(InstSingleByte);
     }
     LiteralString(ref s) => {
       // Iteration taken from Rust documentation
