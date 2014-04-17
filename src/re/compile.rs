@@ -1,7 +1,7 @@
 use std::fmt;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, Literal, CharClass, RangeTable, NegatedRangeTable,
+use parse::{Empty, Literal, CharClass, RangeExpr, RangeTable, NegatedRangeTable,
             Alternation, Concatenation, Repetition, Capture, AssertWordBoundary,
             AssertNonWordBoundary, AssertStart, AssertStartMultiline, AssertEnd,
             AssertEndMultiline, LiteralString };
@@ -55,12 +55,12 @@ impl fmt::Show for Instruction {
 
 
 #[inline]
-fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
+fn compile_charclass(ranges: &[Expr], stack: &mut ~[Instruction]) {
   let mut ssize = stack.len();
   let mut rlen = ranges.len();
   let rsize = ssize + rlen * 3;
 
-  for &(start, end) in ranges.iter() {
+  for range in ranges.iter() {
     if rlen >= 2 {
       let split = InstSplit(ssize + 1, ssize + 3);
       stack.push(split);
@@ -69,11 +69,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
       rlen  -= 1;
     }
 
-    if start == end {
-      stack.push(InstLiteral(start));
-    } else {
-      stack.push(InstRange(start, end));
-    }
+    _compile_recursive(range, stack);
 
     stack.push(InstJump(rsize - 1));
   }
@@ -179,6 +175,13 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     }
     CharClass(ref ranges) => {
       compile_charclass(*ranges, stack);
+    }
+    RangeExpr(start, end) => {
+      if start == end {
+        stack.push(InstLiteral(start));
+      } else {
+        stack.push(InstRange(start, end));
+      }
     }
     RangeTable(table) => {
       stack.push(InstTableRange(table));
