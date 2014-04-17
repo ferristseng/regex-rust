@@ -4,7 +4,7 @@ use parse::{Greedy, NonGreedy};
 use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
             NegatedCharClassTable, Alternation, Concatenation, Repetition,
             Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
-            AssertEnd, LiteralString, SingleByte};
+            AssertStartMultiline, AssertEnd, AssertEndMultiline, LiteralString, SingleByte };
 use charclass::Range;
 use std::str::CharRange;
 
@@ -21,7 +21,9 @@ pub enum Instruction {
   InstCaptureEnd(uint),
   InstSplit(uint, uint),
   InstAssertStart,
+  InstAssertStartMultiline,
   InstAssertEnd,
+  InstAssertEndMultiline,
   InstWordBoundary,
   InstNonWordBoundary,
   InstProgress,
@@ -41,8 +43,10 @@ impl fmt::Show for Instruction {
       InstCaptureStart(id, _)   => write!(f.buf, "InstCaptureStart {:u}", id),
       InstCaptureEnd(id)        => write!(f.buf, "InstCaptureEnd {:u}", id),
       InstSplit(l, r)           => write!(f.buf, "InstSplit {:u} | {:u}", l, r),
-      InstAssertStart           => write!(f.buf, "InstLineStart"),
-      InstAssertEnd             => write!(f.buf, "InstLineEnd"),
+      InstAssertStart           => write!(f.buf, "InstInputStart"),
+      InstAssertStartMultiline  => write!(f.buf, "InstLineStart"),
+      InstAssertEnd             => write!(f.buf, "InstInputEnd"),
+      InstAssertEndMultiline    => write!(f.buf, "InstLineEnd"),
       InstWordBoundary          => write!(f.buf, "InstWordBoundary"),
       InstNonWordBoundary       => write!(f.buf, "InstNonWordBoundary"),
       InstProgress              => write!(f.buf, "InstProgress"),
@@ -247,8 +251,14 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     AssertStart => {
       stack.push(InstAssertStart);
     }
+    AssertStartMultiline => {
+      stack.push(InstAssertStartMultiline);
+    }
     AssertEnd => {
       stack.push(InstAssertEnd);
+    }
+    AssertEndMultiline => {
+      stack.push(InstAssertEndMultiline);
     }
     Empty => ()
   }

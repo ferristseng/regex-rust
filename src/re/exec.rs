@@ -4,8 +4,8 @@ use std::mem::swap;
 use compile::Instruction;
 use compile::{InstLiteral, InstRange, InstTableRange, InstNegatedTableRange,
   InstMatch, InstJump, InstCaptureStart, InstCaptureEnd, InstSplit,
-  InstAssertStart, InstAssertEnd, InstWordBoundary, InstNonWordBoundary,
-  InstNoop, InstProgress, InstSingleByte};
+  InstAssertStart, InstAssertStartMultiline, InstAssertEnd, InstAssertEndMultiline,
+  InstWordBoundary, InstNonWordBoundary, InstNoop, InstProgress, InstSingleByte};
 use result::CapturingGroup;
 use unicode;
 
@@ -234,10 +234,25 @@ impl<'a> ExecStrategy for PikeVM<'a> {
               self.addThread(t, &mut clist);
             }
           }
+          InstAssertStartMultiline => {
+            if i == 0 || input.char_at_reverse(t.end) == '\n' {
+              t.pc = t.pc + 1;
+
+              self.addThread(t, &mut clist);
+            }
+          }
           InstAssertEnd => {
             // Account for the extra character added onto each
             // input string
             if i == input.char_len() - 1 {
+              t.pc = t.pc + 1;
+
+              self.addThread(t, &mut clist);
+            }
+          }
+          InstAssertEndMultiline => {
+            let c = input.char_at(t.sp);
+            if i == input.char_len() - 1 || c == '\n' {
               t.pc = t.pc + 1;
 
               self.addThread(t, &mut clist);
