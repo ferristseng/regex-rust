@@ -457,6 +457,26 @@ mod library_functions_test {
 		test_replace("(a)(b)c", "abc", ~"", r"\\g<1>\g<1>", Ok(~r"\g<1>a"));
 	}
 
+	#[test]
+	fn test_replace_19() {
+		test_replace("(a)(b)c", "abc", ~"", r"\3\g<1>", Err(super::GroupNumberOutOfBounds));
+	}
+
+	#[test]
+	fn test_replace_20() {
+		test_replace("(a)(b)c", "abc", ~"", r"\g<name>", Err(super::UndefinedGroupName));
+	}
+
+	#[test]
+	fn test_replace_21() {
+		test_replace("(a)(b)c", "abc", ~"", r"\g", Err(super::MalformedGroupSpec));
+	}
+
+	#[test]
+	fn test_replace_22() {
+		test_replace("(a)(b)c", "abc", ~"", r"\g<asda", Err(super::MalformedGroupSpec));
+	}
+
 //	#[test]
 //	fn test_replacen_01() {
 //		test_replacen!("a*ba*", "abaaacaabaaaccdab", ~"", "", "cccd", 3);
