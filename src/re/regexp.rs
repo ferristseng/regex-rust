@@ -11,7 +11,7 @@ pub struct UncompiledRegexp {
 }
 
 // Error enum for replace function
-enum ReplStringSpecError {
+pub enum ReplStringSpecError {
 	UndefinedGroupName,
 	GroupNumberOutOfBounds,
 	MalformedGroupSpec
@@ -283,41 +283,41 @@ mod library_functions_test {
 	use parse::ParseFlags;
 
 	fn test_replace (re: &str, input: &str, flags: ~str, replaceWith: &str, expect: Result<~str, ReplStringSpecError>) {
-				let f = &mut ParseFlags::new();
-				f.setFlags(flags);
-				let reg = match UncompiledRegexp::new(re, f) {
-					Ok(regex) => regex,
-					Err(e) => fail!(e)
-				};
-				let result = reg.replace(input, replaceWith);
-				let printResult = match result {Ok(exp)=>exp, Err(error)=>ReplStringSpecError::getName(error)};
-				let printExpect = match expect {Ok(exp)=>exp, Err(error)=>ReplStringSpecError::getName(error)};
-				if printResult != printExpect {
-					fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s}, not expected result of {:s}\n", re, input, replaceWith, printResult, printExpect));
-				}
+		let f = &mut ParseFlags::new();
+		f.setFlags(flags);
+		let reg = match UncompiledRegexp::new(re, f) {
+			Ok(regex) => regex,
+			Err(e) => fail!(e)
+		};
+		let result = reg.replace(input, replaceWith);
+		let printResult = match result {Ok(exp)=>exp, Err(error)=>ReplStringSpecError::getName(error)};
+		let printExpect = match expect {Ok(exp)=>exp, Err(error)=>ReplStringSpecError::getName(error)};
+		if printResult != printExpect {
+			fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s}, not expected result of {:s}\n", re, input, replaceWith, printResult, printExpect));
+		}
 	}
 
-	macro_rules! test_replacen(
-		($re: expr, $input: expr, $flags: expr, $replaceWith: expr, $expect: expr, $expectCount: expr) => (
-			{
-				let f = &mut ParseFlags::new();
-				f.setFlags($flags);
-				let re = match UncompiledRegexp::new($re, f) {
-					Ok(regex) => regex,
-					Err(e) => fail!(e)
-				};
-				let result = re.replacen($input, $replaceWith);
-				match result {
-					(answer, repCount) => {
-						if answer != ~$expect || repCount != $expectCount {
-							fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s} with {:u} replaces, not expected result of {:s} with {:d} replaces\n",
-								$re, $input, $replaceWith, answer, repCount, $expect, $expectCount));
-						}
+	fn test_replacen (re: &str, input: &str, flags: ~str, replaceWith: &str, expect: Result<(~str, uint), ReplStringSpecError>) {
+		let f = &mut ParseFlags::new();
+		f.setFlags(flags);
+		let reg = match UncompiledRegexp::new(re, f) {
+			Ok(regex) => regex,
+			Err(e) => fail!(e)
+		};
+		let result = reg.replacen(input, replaceWith);
+		let printResult = match result {Ok((exp, num))=>(exp, num), Err(error)=>(ReplStringSpecError::getName(error), 0)};
+		let printExpect = match expect {Ok((exp, num))=>(exp, num), Err(error)=>(ReplStringSpecError::getName(error), 0)};
+		if printResult != printExpect {
+			match printResult {
+				(resS, resN) => {
+					match printExpect {
+						(expS, expN) => fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s} with {:u} replaces, not expected result of {:s} with {:u} replaces\n", 
+							re, input, replaceWith, resS, resN, expS, expN))
 					}
 				}
 			}
-		);
-	)
+		}
+	}
 
 	macro_rules! test_find_all(
 		($re: expr, $input: expr, $flags: expr, $expect: expr) => (
@@ -439,12 +439,12 @@ mod library_functions_test {
 
 	#[test]
 	fn test_replace_15() {
-		test_replace("(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "", ~"", r"\11win", Ok(~""));
+		test_replace("(?P<named>a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\g<named>", Ok(~"a"));
 	}
 
 	#[test]
 	fn test_replace_16() {
-		test_replace("(?P<named>a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\g<named>", Ok(~"a"));
+		test_replace("(?P<named>a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)", "abcdefghijk", ~"", r"\g<1>", Ok(~"a"));
 	}
 
 	#[test]
@@ -477,55 +477,55 @@ mod library_functions_test {
 		test_replace("(a)(b)c", "abc", ~"", r"\g<asda", Err(super::MalformedGroupSpec));
 	}
 
-//	#[test]
-//	fn test_replacen_01() {
-//		test_replacen!("a*ba*", "abaaacaabaaaccdab", ~"", "", "cccd", 3);
-//	}
-//
-//	#[test]
-//	fn test_replacen_02() {
-//		test_replacen!("a*ba{1,}", "abaaacaabaaacca", ~"", "", "ccca", 2);
-//	}
-//
-//	#[test]
-//	fn test_replacen_03() {
-//		test_replacen!("a*ba{1,}", "abaaacaabaaacca", ~"", "aba", "abacabacca", 2);
-//	}
-//
-//	#[test]
-//	fn test_replacen_04() {
-//		test_replacen!("a", "aaaaaaaaaaaa", ~"", "b", "bbbbbbbbbbbb", 12);
-//	}
-//
-//	#[test]
-//	fn test_replacen_05() {
-//		test_replacen!("a{1,}", "aaaaaaaaaaaa", ~"", "b", "b", 1);
-//	}
-//
-//	#[test]
-//	fn test_replacen_06() {
-//		test_replacen!("a{1,}", "aaaaaaaaaaaa", ~"", "", "", 1);
-//	}
-//
-//	#[test]
-//	fn test_replacen_07() {
-//		test_replacen!("", "aaaa", ~"", "b", "babababab", 5);
-//	}
-//
-//	#[test]
-//	fn test_replacen_08() {
-//		test_replacen!("a?bab", "abababab", ~"", "c", "cc", 2);
-//	}
-//
-//	#[test]
-//	fn test_replacen_09() {
-//		test_replacen!("a", "aa", ~"", "ccc", "cccccc", 2);
-//	}
-//
-//	#[test]
-//	fn test_replacen_10() {
-//		test_replacen!("b", "aa", ~"", "ccc", "aa", 0);
-//	}
+	#[test]
+	fn test_replacen_01() {
+		test_replacen("a*ba*", "abaaacaabaaaccdab", ~"", "", Ok((~"cccd", 3)));
+	}
+
+	#[test]
+	fn test_replacen_02() {
+		test_replacen("a*ba{1,}", "abaaacaabaaacca", ~"", "", Ok((~"ccca", 2)));
+	}
+
+	#[test]
+	fn test_replacen_03() {
+		test_replacen("a*ba{1,}", "abaaacaabaaacca", ~"", "aba", Ok((~"abacabacca", 2)));
+	}
+
+	#[test]
+	fn test_replacen_04() {
+		test_replacen("a", "aaaaaaaaaaaa", ~"", "b", Ok((~"bbbbbbbbbbbb", 12)));
+	}
+
+	#[test]
+	fn test_replacen_05() {
+		test_replacen("a{1,}", "aaaaaaaaaaaa", ~"", "b", Ok((~"b", 1)));
+	}
+
+	#[test]
+	fn test_replacen_06() {
+		test_replacen("a{1,}", "aaaaaaaaaaaa", ~"", "", Ok((~"", 1)));
+	}
+
+	#[test]
+	fn test_replacen_07() {
+		test_replacen("", "aaaa", ~"", "b", Ok((~"babababab", 5)));
+	}
+
+	#[test]
+	fn test_replacen_08() {
+		test_replacen("a?bab", "abababab", ~"", "c", Ok((~"cc", 2)));
+	}
+
+	#[test]
+	fn test_replacen_09() {
+		test_replacen("a", "aa", ~"", "ccc", Ok((~"cccccc", 2)));
+	}
+
+	#[test]
+	fn test_replacen_10() {
+		test_replacen("b", "aa", ~"", "ccc", Ok((~"aa", 0)));
+	}
 
 	#[test]
 	fn test_find_all_01() {
