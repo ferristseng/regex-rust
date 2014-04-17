@@ -160,23 +160,29 @@ impl<'a> ExecStrategy for PikeVM<'a> {
 
     // The main loop.
     //
-    // For each character in the input, loop through threads (starting with
+    // For each byte in the input, loop through threads (starting with
     // one dummy thread) that represent different traversal
     // paths through the list of instructions. The only
     // time new threads are created, are when `InstSplit` instructions occur.
-    for i in range(start_index, input.char_len()) {
+    let v: ~[char] = input.chars().collect();
+    for i in range(start_index, input.len()) {
       //println!("-- Execution ({:c}|{:u}) --", c, sp);
 
-      while clist.len() > 0 {
+      while clist.len() > 0 && ssp < input.len() {
         let mut t = match clist.shift() {
           Some(temp) => temp,
           None => Thread::new(0,0,0,0) //Should be unreachable...
         };
-        let c = input.char_at(t.sp);
 
+        // Only execute threads with sp's at the current location in the input
+        if t.sp > ssp {
+          self.addThread(t, &mut nlist);
+          continue
+        }
         match self.inst[t.pc] {
           InstLiteral(m) => {
-            if c == m && i != input.char_len() {
+            let c = input.char_at(t.sp);
+            if c == m && i != input.len() {
               t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
               t.end = t.sp;
@@ -192,6 +198,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             self.addThread(t, &mut nlist);
           }
           InstRange(start, end) => {
+            let c = input.char_at(t.sp);
             if c >= start && c <= end && i != input.char_len() {
               t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
@@ -201,6 +208,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
           }
           InstTableRange(table) => {
+            let c = input.char_at(t.sp);
             if unicode::bsearch_range_table(c, table) {
               t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
@@ -210,6 +218,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
           }
           InstNegatedTableRange(table) => {
+            let c = input.char_at(t.sp);
             if !unicode::bsearch_range_table(c, table) {
               t.sp += c.len_utf8_bytes();
               t.pc = t.pc + 1;
@@ -235,6 +244,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             }
           }
           InstWordBoundary => {
+            let c = input.char_at(t.sp);
             if i == 0 || i == input.char_len() {
               continue;
             }
@@ -250,6 +260,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
             self.addThread(t, &mut clist);
           }
           InstNonWordBoundary => {
+            let c = input.char_at(t.sp);
             if i == start_index &&
                 i != 0 &&
                 input.char_at_reverse(t.end).is_alphanumeric() {
@@ -272,7 +283,7 @@ impl<'a> ExecStrategy for PikeVM<'a> {
           _ => unreachable!()
         }
       }
-
+      ssp += 1;
       swap(&mut clist, &mut nlist);
       nlist.clear();
     }

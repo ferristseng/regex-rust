@@ -20,6 +20,7 @@ pub enum Expr {
   Empty,
   Literal(char),
   LiteralString(~str),
+  SingleByte,
   CharClass(~[Range]),
   CharClassStatic(&'static [Range]),
   CharClassTable(&'static [(char,char)]),
@@ -251,7 +252,7 @@ fn parse_escape_char(p: &mut State) -> Result<Expr, ParseCode> {
         'v' => {Ok(Literal('\x0B'))},
         'A' => {Ok(Literal('\x02'))},
         'z' => {Ok(Literal('\x03'))},
-        'C' => {Ok(Literal(c))}, //TODO: A single byte (no matter the encoding)
+        'C' => {Ok(SingleByte)},
         'x' => {parse_hex_escape(p)},
          _  => {
            if c >= '0' && c <= '7' {

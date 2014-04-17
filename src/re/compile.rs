@@ -4,7 +4,7 @@ use parse::{Greedy, NonGreedy};
 use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
             NegatedCharClassTable, Alternation, Concatenation, Repetition,
             Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
-            AssertEnd, LiteralString};
+            AssertEnd, LiteralString, SingleByte};
 use charclass::Range;
 use std::str::CharRange;
 
@@ -134,6 +134,9 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
   match *expr {
     Literal(c) => {
       stack.push(InstLiteral(c));
+    }
+    SingleByte => {
+      stack.push(InstSingleByte);
     }
     LiteralString(ref s) => {
       // Iteration taken from Rust documentation
