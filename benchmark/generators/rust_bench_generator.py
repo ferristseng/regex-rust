@@ -13,10 +13,11 @@ OUTPUT = """
 // Last Modified: %s
 
 extern crate rustre;
+use rustre::parse::ParseFlags;
 
 
   fn execute (reg: ~str, text: ~str) -> () {
-    let re = match rustre::regexp::UncompiledRegexp::new(reg) {
+    let re = match rustre::regexp::UncompiledRegexp::new(reg, &mut ParseFlags::new()) {
       Ok(regex) => regex,
       Err(e) => fail!(e)
     };
@@ -41,9 +42,10 @@ OUTPUT2 = """
 // Last Modified: %s
 
 extern crate rustre;
+use rustre::parse::ParseFlags;
 
   fn main() {
-    let re = match rustre::regexp::UncompiledRegexp::new(\"%s\") {
+    let re = match rustre::regexp::UncompiledRegexp::new(\"%s\", &mut ParseFlags::new()) {
       Ok(regex) => regex,
       Err(e) => fail!(e)
     };
