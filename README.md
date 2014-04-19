@@ -131,13 +131,33 @@ Our benchmarking suite is designed to be user flexible. There are two compilatio
 
 The first stage of compilation will compile all of the test cases into each of the benchmarks to be run. Then the second stage will compile each benchmark into the build directory. In the second stage, the benchmark C++ application will be compiled and placed in the build directory as **run_benchmark**.
 
-###Benchmarking Languages Supported:
+*NOTE: You must run the **run_benchmark** within the **build** directory.
+
+##Benchmarking Languages Supported:
 
   * Rust
   * C++11 Built in Regex library
+  * BurntSushi Rust Library
 
 ###Benchmarks Performed:
   1. Generic Parse/Execute Loop
     * In this first benchmark, each program is compiled with all test cases and will loop a certain number of times as decided by the cases file. Each test case in each loop will create a new Regex and thus will compile each and every time. This is a generic first forray to test general performance for worst cases/bad programmers.
   2. Search Execution Loop
-    * This benchmark is designed to test pure parsing performance. So really our VM versus other VMs. Right now it only will compile one regex and run against our test cases for a number of loops. 
+    * This benchmark is designed to test pure parsing performance. So really our VM versus other VMs. Right now it only will compile one regex and run against our test cases for a number of loops.
+
+###Benchmark Results:
+As you can see in the benchmarking program, both tests were ran multiple times in sequential order. You can adjust the # of loops to your preference however the result is roughly the same.
+
+These are the hard percentages:
+
+General Benchmark (Using C++ as Reference):
+  * **Rust**: -10.33% from Reference
+  * **C++11**: 0% from Reference
+  * **BurntSushi Rust**: -24.16% from Reference
+
+Search Benchmark (Using C++ as Reference):
+  * **Rust**: 60.10% from Reference
+  * **C++11**: 0% from Reference
+  * **BurntSushi Rust**: 6.00% from Reference
+
+*Note: The BurntSushi Library as well is without its compiler support as far as I am made aware*

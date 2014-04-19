@@ -6,6 +6,7 @@ use std::slice;
 use error::ParseError::*;
 use unicode::*;
 use charclass::{Range, new_charclass_ranges, new_negated_charclass_ranges, perl, ascii};
+use std::strbuf::StrBuf;
 
 #[deriving(Show, Clone)]
 
@@ -139,7 +140,7 @@ fn parse_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
     }
     Some('Q') => {
       p.next();
-      let mut literal : ~str = ~"";
+      let mut literal : StrBuf = StrBuf::from_owned_str(~"");
       loop {
         match p.current() {
           Some('\\') => {
@@ -147,7 +148,7 @@ fn parse_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
             match p.current() {
               Some('E') => {
                 p.next();
-                return Ok(LiteralString(literal));
+                return Ok(LiteralString(literal.into_owned()));
               },
               Some(c) => {
                 literal.push_char('\\');
@@ -898,7 +899,7 @@ fn parse_repetition_op(p: &mut State, f: &mut ParseFlags, stack: &mut ~[Expr], c
 fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
   // these help parse numbers with more than
   // 1 digit
-  let mut buf = ~"";
+  let mut buf: StrBuf = StrBuf::from_owned_str(~"");
   let mut len = 0;
 
   loop {
@@ -918,9 +919,9 @@ fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
   // this is guaranteed to be a digit because
   // we only append it to the buffer if the char
   // is a digit
-  let start = from_str::<uint>(buf).unwrap();
+  let start = from_str::<uint>(buf.as_slice()).unwrap();
 
-  buf.clear();
+  buf.truncate(0);
 
   // Check for a ',' or a '}'
   // if there is a ',', then there either is or isn't a bound
@@ -957,7 +958,7 @@ fn extract_repetition_bounds(p: &mut State) -> Option<(uint, Option<uint>)> {
     }
   }
 
-  let end = from_str::<uint>(buf).unwrap();
+  let end = from_str::<uint>(buf.as_slice()).unwrap();
 
   match p.peekn(len) {
     Some('}') => {

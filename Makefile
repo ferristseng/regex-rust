@@ -53,9 +53,12 @@ $(BUILD)/bench: $(BUILD)
 
 	python $(BENCH)/generators/rust_bench_generator.py
 	python $(BENCH)/generators/cpp_bench_generator.py
+	python $(BENCH)/generators/rust_bench_BS_generator.py
 
 	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_gen_bench.rs  -L ./$(BUILD)
 	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_search_bench.rs  -L ./$(BUILD)
+	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_BS_gen_bench.rs  -L ./$(BENCH)/burntsushi_rexexp
+	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_BS_search_bench.rs  -L ./$(BENCH)/burntsushi_rexexp
 	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/benches/cpp_gen_bench -Weverything $(BENCH)/benches/cpp_gen_bench.cpp
 	clang++ -std=c++11 -stdlib=libc++ -o $(BUILD)/benches/cpp_search_bench -Weverything $(BENCH)/benches/cpp_search_bench.cpp
 
