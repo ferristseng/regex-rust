@@ -13,7 +13,7 @@ pub use regexp::UncompiledRegexp;
 mod test;
 mod exec;
 mod error;
-mod parse;
+pub mod parse;
 mod state;
 mod compile;
 mod charclass;
