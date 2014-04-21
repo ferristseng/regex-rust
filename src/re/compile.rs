@@ -1,16 +1,17 @@
 use std::fmt;
 use parse::Expr;
 use parse::{Greedy, NonGreedy};
-use parse::{Empty, Literal, CharClass, CharClassStatic, CharClassTable,
-            NegatedCharClassTable, Alternation, Concatenation, Repetition,
-            Capture, AssertWordBoundary, AssertNonWordBoundary, AssertStart,
-            AssertStartMultiline, AssertEnd, AssertEndMultiline, LiteralString };
+use parse::{Empty, Literal, CharClass, RangeExpr, RangeTable, NegatedRangeTable,
+            Alternation, Concatenation, Repetition, Capture, AssertWordBoundary,
+            AssertNonWordBoundary, AssertStart, AssertStartMultiline, AssertEnd,
+            AssertEndMultiline, LiteralString, SingleByte };
 use charclass::Range;
 use std::str::CharRange;
 
 #[deriving(Clone)]
 pub enum Instruction {
   InstLiteral(char),
+  InstSingleByte,
   InstRange(char, char),
   InstTableRange(&'static [(char,char)]),
   InstNegatedTableRange(&'static [(char,char)]),
@@ -33,6 +34,7 @@ impl fmt::Show for Instruction {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
       InstLiteral(c)            => write!(f.buf, "InstLiteral {:c}", c),
+      InstSingleByte            => write!(f.buf, "InstSingleByte"),
       InstRange(s, e)           => write!(f.buf, "InstRange {:c}-{:c}", s, e),
       InstTableRange(_)         => write!(f.buf, "InstTableRange"),
       InstNegatedTableRange(_)  => write!(f.buf, "InstNegatedTableRange"),
@@ -55,12 +57,12 @@ impl fmt::Show for Instruction {
 
 
 #[inline]
-fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
+fn compile_charclass(ranges: &[Expr], stack: &mut ~[Instruction]) {
   let mut ssize = stack.len();
   let mut rlen = ranges.len();
   let rsize = ssize + rlen * 3;
 
-  for &(start, end) in ranges.iter() {
+  for range in ranges.iter() {
     if rlen >= 2 {
       let split = InstSplit(ssize + 1, ssize + 3);
       stack.push(split);
@@ -69,11 +71,7 @@ fn compile_charclass(ranges: &[Range], stack: &mut ~[Instruction]) {
       rlen  -= 1;
     }
 
-    if start == end {
-      stack.push(InstLiteral(start));
-    } else {
-      stack.push(InstRange(start, end));
-    }
+    _compile_recursive(range, stack);
 
     stack.push(InstJump(rsize - 1));
   }
@@ -137,6 +135,9 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     Literal(c) => {
       stack.push(InstLiteral(c));
     }
+    SingleByte => {
+      stack.push(InstSingleByte);
+    }
     LiteralString(ref s) => {
       // Iteration taken from Rust documentation
       let mut i : uint = 0;
@@ -180,13 +181,17 @@ fn _compile_recursive(expr: &Expr, stack: &mut ~[Instruction]) -> uint {
     CharClass(ref ranges) => {
       compile_charclass(*ranges, stack);
     }
-    CharClassStatic(ranges) => {
-      compile_charclass(ranges, stack);
+    RangeExpr(start, end) => {
+      if start == end {
+        stack.push(InstLiteral(start));
+      } else {
+        stack.push(InstRange(start, end));
+      }
     }
-    CharClassTable(table) => {
+    RangeTable(table) => {
       stack.push(InstTableRange(table));
     }
-    NegatedCharClassTable(table) => {
+    NegatedRangeTable(table) => {
       stack.push(InstNegatedTableRange(table));
     }
     Capture(ref expr, id, ref name) => {

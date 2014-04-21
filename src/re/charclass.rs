@@ -1,4 +1,4 @@
-use parse::{Expr, CharClass, CharClassStatic};
+use parse::{Expr, CharClass, RangeExpr, RangeTable, NegatedRangeTable};
 use std::char::{from_u32, MAX};
 use std::cmp::{Less, Greater};
 
@@ -118,7 +118,7 @@ pub mod ascii {
 
 /// Try to get the prev character in sequence from
 /// the given one.
-fn prev_char(c: char) -> Option<char> {
+pub fn prev_char(c: char) -> Option<char> {
   match from_u32(c as u32 - 1) {
     None => None,
     r    => r
@@ -127,7 +127,7 @@ fn prev_char(c: char) -> Option<char> {
 
 /// Try to get the next character in sequence from
 /// the given one.
-fn next_char(c: char) -> Option<char> {
+pub fn next_char(c: char) -> Option<char> {
   match from_u32(c as u32 + 1) {
     None => None,
     r    => r
@@ -157,47 +157,44 @@ fn order_ranges(ranges: &mut ~[Range]) {
   })
 }
 
-/// Construct a CharClass with a set of ranges. Remove
-/// overlapping ranges preferring larger ranges (ex. Given [A-DA-C],
-/// collapse to [A-D]).
-pub fn new_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
-  let mut ranges = ranges;
+/// Construct a CharClass with a set of ranges, and negate them.
+pub fn new_negated_charclass(exprs: ~[Expr]) -> ~[Expr] {
+  let mut ranges = ~[];
 
-  order_ranges(&mut ranges);
+  for expr in exprs.iter() {
+    match expr {
+      &RangeExpr(start, end) => {
+        ranges.push((start, end));
+      }
+      &RangeTable(ref table) => {
+        for &(start, end) in table.iter() {
+          ranges.push((start, end));
+        }
+      }
+      &NegatedRangeTable(ref table) => {
+        let mut cur_start = '\x00';
+        if table.len() > 0 {
+          for &(start, end) in table.iter() {
+            match prev_char(start) {
+              Some(c) => {
+                ranges.push((cur_start, c));
+              }
+              None => ()
+            };
 
-  let mut new_ranges = ~[];
-
-  for &(start, end) in ranges.iter() {
-    match new_ranges.pop() {
-      Some(range) => {
-        let (s, e): (char, char) = range;
-        if start > e {
-          new_ranges.push((s, e));
-          if start <= end {
-            new_ranges.push((start, end))
+            match next_char(end) {
+              Some(c) => cur_start = c,
+              None => break
+            };
           }
-        } else if start < e && end > e {
-          new_ranges.push((s, end))
-        } else if start < e && end < e {
-          new_ranges.push((s, e))
-        } else {
-          new_ranges.push((s, e))
+          if cur_start <= MAX {
+            ranges.push((cur_start, MAX));
+          }
         }
       }
-      None => {
-        if start <= end {
-          new_ranges.push((start, end))
-        }
-      }
+      _ => ()
     }
   }
-
-  new_ranges
-}
-
-/// Construct a CharClass with a set of ranges, and negate them.
-pub fn new_negated_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
-  let mut ranges = ranges;
 
   order_ranges(&mut ranges);
 
@@ -209,7 +206,7 @@ pub fn new_negated_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
     match prev_char(start) {
       Some(e) => {
         if min <= e && end >= start {
-          new_ranges.push((min, e));
+          new_ranges.push(RangeExpr(min, e));
         }
       },
       None => ()
@@ -224,7 +221,7 @@ pub fn new_negated_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
 
   // Patch the end
   if min != MAX {
-    new_ranges.push((min, MAX));
+    new_ranges.push(RangeExpr(min, MAX));
   }
 
   new_ranges
@@ -234,9 +231,9 @@ pub fn new_negated_charclass_ranges(ranges: ~[Range]) -> ~[Range] {
 mod char_class_tests {
   use std::char::MAX;
   use charclass::*;
-  use parse::{Expr, CharClass};
+  use parse::{Expr, CharClass, RangeExpr};
 
-  fn unravel_cc(cc: Expr) -> ~[Range] {
+  fn unravel_cc(cc: Expr) -> ~[Expr] {
     match cc {
       CharClass(ranges) => ranges,
       _ => fail!()
@@ -244,62 +241,27 @@ mod char_class_tests {
   }
 
   #[test]
-  fn char_class_good() {
-    let cc = CharClass(new_charclass_ranges(~[('A', 'Z'), ('F', 'F'), ('A', 'あ')]));
-    assert_eq!(unravel_cc(cc), ~[('A', 'あ')]);
-  }
-
-  #[test]
-  fn char_class_empty() {
-    let cc = CharClass(new_charclass_ranges(~[('Z', 'A')]));
-    assert_eq!(unravel_cc(cc), ~[]);
-  }
-
-  #[test]
   fn char_class_negate() {
-    let cc = CharClass(new_negated_charclass_ranges(~[('A', '\uFA08')]));
-    assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('\uFA09', MAX)]);
+    let cc = CharClass(new_negated_charclass(~[RangeExpr('A', '\uFA08')]));
+    assert_eq!(unravel_cc(cc), ~[RangeExpr('\u0000', '@'), RangeExpr('\uFA09', MAX)]);
   }
 
   #[test]
   fn char_class_negate_multiple() {
-    let cc = CharClass(new_negated_charclass_ranges(~[('們', '我'), ('A', 'Z')]));
-    assert_eq!(unravel_cc(cc), ~[('\u0000', '@'), ('[', '\u5010'),
-               ('\u6212', MAX)]);
+    let cc = CharClass(new_negated_charclass(~[RangeExpr('們', '我'), RangeExpr('A', 'Z')]));
+    assert_eq!(unravel_cc(cc), ~[RangeExpr('\u0000', '@'), RangeExpr('[', '\u5010'),
+               RangeExpr('\u6212', MAX)]);
   }
 
   #[test]
   fn char_class_negate_overlap() {
-    let cc = CharClass(new_negated_charclass_ranges(~[('a', 'c'), ('c', 'c')]));
-    assert_eq!(unravel_cc(cc), ~[('\u0000', '`'), ('d', MAX)]);
+    let cc = CharClass(new_negated_charclass(~[RangeExpr('a', 'c'), RangeExpr('c', 'c')]));
+    assert_eq!(unravel_cc(cc), ~[RangeExpr('\u0000', '`'), RangeExpr('d', MAX)]);
   }
 
   #[test]
   fn char_class_negate_bounds() {
-    let cc = CharClass(new_negated_charclass_ranges(~[('\u0000', MAX)]));
+    let cc = CharClass(new_negated_charclass(~[RangeExpr('\u0000', MAX)]));
     assert_eq!(unravel_cc(cc), ~[]);
-  }
-
-  #[test]
-  fn char_class_overlapping_ranges() {
-    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('B', 'C')]));
-    assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
-  }
-
-  #[test]
-  fn char_class_repeated_ranges() {
-    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('A', 'D')]));
-    assert_eq!(unravel_cc(cc), ~[('A', 'D')]);
-  }
-
-  #[test]
-  fn char_class_overlapping_ranges2() {
-    let cc = CharClass(new_charclass_ranges(~[('A', 'D'), ('B', 'E')]));
-    assert_eq!(unravel_cc(cc), ~[('A', 'E')]);
-  }
-
-  fn char_class_negate_sequential() {
-    let cc = CharClass(new_charclass_ranges(~[('a', 'a'), ('b', 'b'), ('c', 'c')]));
-    assert_eq!(unravel_cc(cc), ~[('\u0000', '`'), ('d', MAX)]);
   }
 }

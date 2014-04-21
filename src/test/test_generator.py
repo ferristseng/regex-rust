@@ -93,8 +93,7 @@ def generate_test_num(num, digits):
     ret = "0" + ret
   return ret
 
-def generate_test_case(ident, regexp, input_str, flags,
-    matched_str, expected, groups):
+def generate_test_case(ident, regexp, input_str, flags, matched_str, expected, groups):
   if expected == NOMATCH:
     match = "None"
   elif expected == PARSEERR:

@@ -5,26 +5,27 @@ use std::str;
 use std::slice;
 use error::ParseError::*;
 use unicode::*;
-use charclass::{Range, new_charclass_ranges, new_negated_charclass_ranges, perl, ascii};
+use charclass::{Range, new_negated_charclass, perl, ascii, next_char, prev_char};
 use std::strbuf::StrBuf;
 
-#[deriving(Show, Clone)]
+#[deriving(Show, Clone, Eq)]
 
 pub enum QuantifierPrefix {
   Greedy,
   NonGreedy
 }
 
-#[deriving(Show, Clone)]
+#[deriving(Show, Clone, Eq)]
 
 pub enum Expr {
   Empty,
   Literal(char),
   LiteralString(~str),
-  CharClass(~[Range]),
-  CharClassStatic(&'static [Range]),
-  CharClassTable(&'static [(char,char)]),
-  NegatedCharClassTable(&'static [(char,char)]),
+  SingleByte,
+  CharClass(~[Expr]),
+  RangeExpr(char, char),
+  RangeTable(&'static [Range]),
+  NegatedRangeTable(&'static [Range]),
   Alternation(~Expr, ~Expr),
   Concatenation(~Expr, ~Expr),
   Repetition(~Expr, uint, Option<uint>, QuantifierPrefix),
@@ -116,12 +117,12 @@ fn parse_escape(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
 
   // Replace these with static vectors
   let cc = match current {
-    Some('d') => CharClassTable(perl::get_escape_table('d').unwrap()),
-    Some('D') => NegatedCharClassTable(perl::get_escape_table('D').unwrap()),
-    Some('w') => CharClassTable(perl::get_escape_table('w').unwrap()),
-    Some('W') => NegatedCharClassTable(perl::get_escape_table('W').unwrap()),
-    Some('s') => CharClassTable(perl::get_escape_table('s').unwrap()),
-    Some('S') => NegatedCharClassTable(perl::get_escape_table('S').unwrap()),
+    Some('d') => RangeTable(perl::get_escape_table('d').unwrap()),
+    Some('D') => NegatedRangeTable(perl::get_escape_table('D').unwrap()),
+    Some('w') => RangeTable(perl::get_escape_table('w').unwrap()),
+    Some('W') => NegatedRangeTable(perl::get_escape_table('W').unwrap()),
+    Some('s') => RangeTable(perl::get_escape_table('s').unwrap()),
+    Some('S') => NegatedRangeTable(perl::get_escape_table('S').unwrap()),
     Some('p') => {
       p.next();
       return parse_unicode_charclass(p, f, false);
@@ -208,17 +209,15 @@ fn parse_unicode_charclass(p: &mut State, f: &mut ParseFlags, neg: bool) -> Resu
 
               if f.i {
                 if neg {
-                  return Ok(CharClass(charclass_casefold(
-                    new_negated_charclass_ranges(prop_table.to_owned()))));
+                  return charclass_casefold(&[NegatedRangeTable(prop_table)]);
                 } else {
-                  return Ok(CharClass(charclass_casefold(
-                    new_charclass_ranges(prop_table.to_owned()))));
+                  return charclass_casefold(&[RangeTable(prop_table)]);
                 }
               } else {
                 if neg {
-                  return Ok(NegatedCharClassTable(prop_table));
+                  return Ok(NegatedRangeTable(prop_table));
                 } else {
-                  return Ok(CharClassTable(prop_table));
+                  return Ok(RangeTable(prop_table));
                 }
               };
             }
@@ -245,17 +244,15 @@ fn parse_unicode_charclass(p: &mut State, f: &mut ParseFlags, neg: bool) -> Resu
 
       if f.i {
         if neg {
-          return Ok(CharClass(charclass_casefold(
-            new_negated_charclass_ranges(prop_table.to_owned()))));
+          return charclass_casefold(&[NegatedRangeTable(prop_table)]);
         } else {
-          return Ok(CharClass(charclass_casefold(
-            new_charclass_ranges(prop_table.to_owned()))));
+          return charclass_casefold(&[RangeTable(prop_table)]);
         }
       } else {
         if neg {
-          return Ok(NegatedCharClassTable(prop_table));
+          return Ok(NegatedRangeTable(prop_table));
         } else {
-          return Ok(CharClassTable(prop_table));
+          return Ok(RangeTable(prop_table));
         }
       };
     }
@@ -286,17 +283,15 @@ fn parse_ascii_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, Pars
           Some(t) => {
             if f.i {
               if neg {
-                Ok(CharClass(charclass_casefold(
-                  new_negated_charclass_ranges(t.to_owned()))))
+                charclass_casefold(&[NegatedRangeTable(t)])
               } else {
-                Ok(CharClass(charclass_casefold(
-                  new_charclass_ranges(t.to_owned()))))
+                charclass_casefold(&[RangeTable(t)])
               }
             } else {
               if neg {
-                Ok(NegatedCharClassTable(t))
+                Ok(NegatedRangeTable(t))
               } else {
-                Ok(CharClassTable(t))
+                Ok(RangeTable(t))
               }
             }
           }
@@ -332,7 +327,7 @@ fn parse_escape_char(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCod
         'v' => {Ok(parse_literal('\x0B', f))},
         'A' => {Ok(parse_literal('\x02', f))},
         'z' => {Ok(parse_literal('\x03', f))},
-        'C' => {Ok(parse_literal(c, f))}, //TODO: A single byte (no matter the encoding)
+        'C' => {Ok(SingleByte)}, //TODO: A single byte (no matter the encoding)
         'x' => {parse_hex_escape(p, f)},
          _  => {
            if c >= '0' && c <= '7' {
@@ -698,8 +693,7 @@ fn parse_literal(c: char, f: &mut ParseFlags) -> Expr {
 /// * p - The current state of parsing
 #[inline]
 fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
-  let mut ranges = ~[];
-  let mut other_exprs = ~[];
+  let mut exprs = ~[];
 
   // check to see if this is an ascii char class, not a general purpose one
   match p.current() {
@@ -726,7 +720,7 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
   match p.current() {
     Some(']') => {
       p.next();
-      ranges.push((']', ']'));
+      exprs.push(RangeExpr(']', ']'));
     }
     _ => { }
   }
@@ -735,42 +729,28 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
     match p.current() {
       Some(']') => {
         p.next();
-        let cc = if f.i {
-          if negate {
-            CharClass(charclass_casefold(
-              new_negated_charclass_ranges(ranges)))
-          } else {
-            CharClass(charclass_casefold(
-              new_charclass_ranges(ranges)))
-          }
+        if exprs.len() == 0 {
+          return Err(ParseEmptyCharClassRange);
         } else {
-          if negate {
-            CharClass(new_negated_charclass_ranges(ranges))
+          return if f.i {
+            if negate {
+              charclass_casefold(new_negated_charclass(exprs))
+            } else {
+              charclass_casefold(exprs)
+            }
           } else {
-            CharClass(new_charclass_ranges(ranges))
-          }
-        };
-
-        // return CharClass and/or any internal special character classes
-        let other_exprs_result = new_multiple_alternation(other_exprs);
-        let expr_exists = match (&cc, &other_exprs_result) {
-          (&CharClass(ref r), &Some(_)) if r.len() > 0 => (true, true),
-          (&CharClass(ref r), &None) if r.len() > 0 => (true, false),
-          (_, &Some(_)) => (false, true),
-          (_, &None) => (false, false)
-        };
-
-        return match expr_exists {
-          (true, true) => Ok(Alternation(~cc, ~other_exprs_result.unwrap())),
-          (true, false) => Ok(cc),
-          (false, true) => Ok(other_exprs_result.unwrap()),
-          (false, false) => Err(ParseEmptyCharClassRange)
-        };
+            if negate {
+              Ok(CharClass(new_negated_charclass(exprs)))
+            } else {
+              Ok(CharClass(exprs))
+            }
+          };
+        }
       }
       Some('\\') => {
         p.next();
         match parse_escape(p, &mut ParseFlags::new()) {
-          Ok(expr) => other_exprs.push(expr),
+          Ok(expr) => exprs.push(expr),
           err => return err
         }
       }
@@ -778,7 +758,7 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
         p.consume(2);
         match parse_ascii_charclass(p, f) {
           Ok(table) => {
-            other_exprs.push(table);
+            exprs.push(table);
           }
           Err(e) => return Err(e)
         }
@@ -793,11 +773,11 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
             match p.peek() {
               // Not a range...something like [a-]
               Some(']') => {
-                ranges.push((c, c));
+                exprs.push(RangeExpr(c, c));
               }
               // A range...something like [a-b]
               Some(e) => {
-                ranges.push((c, e));
+                exprs.push(RangeExpr(c, e));
                 p.consume(2);
               }
               // End of string
@@ -805,7 +785,7 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
             }
           }
           // A single character...something like [a]
-          Some(_) | None => ranges.push((c, c))
+          Some(_) | None => exprs.push(RangeExpr(c, c))
         }
       }
       None => break
@@ -814,22 +794,6 @@ fn parse_charclass(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode>
   }
 
   Err(ParseExpectedClosingBracket)
-}
-
-#[inline]
-fn new_multiple_alternation(components: &[Expr]) -> Option<Expr> {
-  match components.len() {
-    0 => None,
-    _ => Some(new_alternation_recursive(components))
-  }
-}
-
-fn new_alternation_recursive(components: &[Expr]) -> Expr {
-  match components.len() {
-    1 => components[0].clone(),
-    2 => Alternation(~components[0].clone(), ~components[1].clone()),
-    n => Alternation(~components[0].clone(), ~new_alternation_recursive(components.slice(1,n)))
-  }
 }
 
 /// Parses repetitions using the *, +, and ? operators and pushes them on the
@@ -1091,9 +1055,9 @@ fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode
       Some('.') => {
         p.next();
         if f.s {
-          stack.push(CharClass(~[('\0', MAX)]));
+          stack.push(CharClass(~[RangeExpr('\0', MAX)]));
         } else {
-          stack.push(CharClass(~[('\0', '\x09'), ('\x0B', MAX)]))
+          stack.push(CharClass(~[RangeExpr('\0', '\x09'), RangeExpr('\x0B', MAX)]))
         }
       }
 
@@ -1144,18 +1108,56 @@ fn _parse_recursive(p: &mut State, f: &mut ParseFlags) -> Result<Expr, ParseCode
   }
 }
 
-fn charclass_casefold(ranges: &[(char, char)]) -> ~[(char, char)] {
+fn charclass_casefold(exprs: &[Expr]) -> Result<Expr, ParseCode> {
   let mut folded_ranges = ~[];
-  for r in ranges.iter() {
-    for folded_r in range_casefold(*r).move_iter() {
-      folded_ranges.push(folded_r);
+  for expr in exprs.iter() {
+    match expr {
+      &RangeExpr(start, end) => {
+        for range in range_casefold((start, end)).move_iter() {
+          folded_ranges.push(range);
+        }
+      }
+      &RangeTable(ref table) => {
+        for &(start, end) in table.iter() {
+          for range in range_casefold((start, end)).move_iter() {
+            folded_ranges.push(range);
+          }
+        }
+      }
+      &NegatedRangeTable(ref table) => {
+        let mut cur_start = '\x00';
+        if table.len() > 0 {
+          for &(table_r_start, table_r_end) in table.iter() {
+            match prev_char(table_r_start) {
+              Some(c) => {
+                for range in range_casefold((cur_start, c)).move_iter() {
+                  folded_ranges.push(range);
+                }
+              }
+              None => ()
+            };
+
+            match next_char(table_r_end) {
+              Some(c) => cur_start = c,
+              None => break
+            };
+          }
+
+          if cur_start <= MAX {
+            for range in range_casefold((cur_start, MAX)).move_iter() {
+              folded_ranges.push(range);
+            }
+          }
+        }
+      }
+      _ => return Err(ParseInvalidCharClassExpression)
     }
   }
 
-  folded_ranges
+  Ok(CharClass(folded_ranges))
 }
 
-fn range_casefold(r: (char, char)) -> ~[(char, char)] {
+fn range_casefold(r: (char, char)) -> ~[Expr] {
   let mut folded_ranges = ~[];
   let (start, end) = r;
   let mut cur_char = start;
@@ -1168,7 +1170,7 @@ fn range_casefold(r: (char, char)) -> ~[(char, char)] {
         if (c as uint) == (cur_end as uint) + 1 {
           cur_end = c;
         } else {
-          folded_ranges.push((cur_start, cur_end));
+          folded_ranges.push(RangeExpr(cur_start, cur_end));
           cur_start = c;
           cur_end = c;
         }
@@ -1181,7 +1183,7 @@ fn range_casefold(r: (char, char)) -> ~[(char, char)] {
       None => break
     };
   }
-  folded_ranges.push((cur_start, cur_end));
+  folded_ranges.push(RangeExpr(cur_start, cur_end));
   folded_ranges
 }
 
@@ -1336,22 +1338,22 @@ mod parse_tests {
 
   // #[test]
   // fn parse_unicode_charclass_single_letter() {
-  //   test_parse!("\\pN", Ok(CharClassTable(~"N")));
+  //   test_parse!("\\pN", Ok(RangeTable(~"N")));
   // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter() {
-    test_parse!("\\p{Greek}", Ok(CharClassTable(_)));
+    test_parse!("\\p{Greek}", Ok(RangeTable(_)));
   }
 
   // #[test]
   // fn parse_unicode_charclass_single_letter_negated() {
-  //   test_parse!("\\PL", Ok(NegatedCharClassTable(_)));
+  //   test_parse!("\\PL", Ok(NegatedRangeTable(_)));
   // }
 
   #[test]
   fn parse_unicode_charclass_multiple_letter_negated() {
-    test_parse!("\\P{Latin}", Ok(NegatedCharClassTable(_)));
+    test_parse!("\\P{Latin}", Ok(NegatedRangeTable(_)));
   }
 
   #[test]
@@ -1386,12 +1388,12 @@ mod parse_tests {
 
   #[test]
   fn parse_unicode_charclass_nested() {
-    test_parse!("[sdkfj\\p{Latin}]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
+    test_parse!("[sdkfj\\p{Latin}]", Ok(Alternation(~CharClass(_), ~RangeTable(_))));
   }
 
   #[test]
   fn parse_ascii_charclass() {
-    test_parse!("[:alpha:]", Ok(CharClassTable(_)));
+    test_parse!("[:alpha:]", Ok(RangeTable(_)));
   }
 
   #[test]
@@ -1406,7 +1408,7 @@ mod parse_tests {
 
   #[test]
   fn parse_ascii_charclass_nested() {
-    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~CharClassTable(_))));
+    test_parse!("[dsf[:print:]]", Ok(Alternation(~CharClass(_), ~RangeTable(_))));
   }
 
   #[test]

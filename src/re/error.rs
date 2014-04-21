@@ -34,6 +34,7 @@ pub mod ParseError {
     ParseUnexpectedOperand,
     ParseUnexpectedCharacter,
 
+    ParseInvalidCharClassExpression,
     ParseInvalidUnicodeProperty,
     ParseInvalidAsciiCharClass,
     ParseInvalidFlag(char),
@@ -75,6 +76,7 @@ pub mod ParseError {
         ParseUnexpectedClosingParen      => write!(f.buf, "Parse Error: Unexpected closing parenthases in input"),
         ParseUnexpectedOperand           => write!(f.buf, "Parse Error: Unexpected operand was on the stack"),
         ParseUnexpectedCharacter         => write!(f.buf, "Parse Error: Unexpected character in input"),
+        ParseInvalidCharClassExpression  => write!(f.buf, "Parse Error: Unexpected expression type in a character class"),
         ParseInvalidUnicodeProperty      => write!(f.buf, "Parse Error: Invalid Unicode property provided"),
         ParseInvalidAsciiCharClass       => write!(f.buf, "Parse Error: Invalid ASCII character class name provided"),
         ParseInvalidFlag(c)              => write!(f.buf, "Parse Error: Invalid parse flag: {:c}", c),
