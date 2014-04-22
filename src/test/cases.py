@@ -418,69 +418,40 @@ TESTS = [
 ("[a-]*", "--a", "", "--a", MATCH),
 ("[a-m-]*", "--amoma--", "", "--am", MATCH),
 (":::1:::0:|:::1:1:0:", ":::0:::1:::1:::0:", "", ":::1:::0:", MATCH),
-(":::1:::0:|:::1:1:1:", ":::0:::1:::1:::0:", "", ":::1:::0:", MATCH)
+(":::1:::0:|:::1:1:1:", ":::0:::1:::1:::0:", "", ":::1:::0:", MATCH),
 # {E  [[:upper:]]   A   (0,1) [[<element>]] not supported
-# E [[:lower:]]+    `az{    (1,3)
-# E [[:upper:]]+    @AZ[    (1,3)
-# BE  [[-]]     [[-]]   (2,4)
-# BE  [[.NIL.]] NULL  ECOLLATE
+("[[:lower:]]+", "`az{", "", "az", MATCH),
+("[[:upper:]]+", "@AZ[", "", "AZ", MATCH),
+("[[-]]", "[[-]]", "", "-]", MATCH),
+# [[.NIL.]] NULL  ECOLLATE
 # BE  [[=aleph=]] NULL  ECOLLATE
 # }
-# BE$ \n    \n  (0,1)
-# BEn$  \n    \n  (0,1)
-# BE$ [^a]    \n  (0,1)
-# BE$ \na   \na (0,2)
-# E (a)(b)(c) abc (0,3)(0,1)(1,2)(2,3)
-# BE  xxx   xxx (0,3)
-# E1  (^|[ (,;])((([Ff]eb[^ ]* *|0*2/|\* */?)0*[6-7]))([^0-9]|$)  feb 6,  (0,6)
-# E1  (^|[ (,;])((([Ff]eb[^ ]* *|0*2/|\* */?)0*[6-7]))([^0-9]|$)  2/7 (0,3)
-# E1  (^|[ (,;])((([Ff]eb[^ ]* *|0*2/|\* */?)0*[6-7]))([^0-9]|$)  feb 1,Feb 6 (5,11)
-# E3  ((((((((((((((((((((((((((((((x)))))))))))))))))))))))))))))) x (0,1)(0,1)(0,1)
-# E3  ((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))*  xx  (0,2)(1,2)(1,2)
-# E a?(ab|ba)*  ababababababababababababababababababababababababababababababababababababababababa (0,81)(79,81)
-# E abaa|abbaa|abbbaa|abbbbaa ababbabbbabbbabbbbabbbbaa (18,25)
-# E abaa|abbaa|abbbaa|abbbbaa ababbabbbabbbabbbbabaa  (18,22)
-# E aaac|aabc|abac|abbc|baac|babc|bbac|bbbc baaabbbabac (7,11)
-# BE$ .*      \x01\xff  (0,2)
-# E aaaa|bbbb|cccc|ddddd|eeeeee|fffffff|gggg|hhhh|iiiii|jjjjj|kkkkk|llll    XaaaXbbbXcccXdddXeeeXfffXgggXhhhXiiiXjjjXkkkXlllXcbaXaaaa (53,57)
-# L aaaa\nbbbb\ncccc\nddddd\neeeeee\nfffffff\ngggg\nhhhh\niiiii\njjjjj\nkkkkk\nllll   XaaaXbbbXcccXdddXeeeXfffXgggXhhhXiiiXjjjXkkkXlllXcbaXaaaa NOMATCH
-# E a*a*a*a*a*b   aaaaaaaaab  (0,10)
-# BE  ^     NULL    (0,0)
-# BE  $     NULL    (0,0)
-# BE  ^$      NULL    (0,0)
-# BE  ^a$     a   (0,1)
-# BE  abc     abc   (0,3)
-# BE  abc     xabcy   (1,4)
-# BE  abc     ababc   (2,5)
-# BE  ab*c      abc   (0,3)
-# BE  ab*bc     abc   (0,3)
-# BE  ab*bc     abbc    (0,4)
-# BE  ab*bc     abbbbc    (0,6)
-# E ab+bc     abbc    (0,4)
-# E ab+bc     abbbbc    (0,6)
-# E ab?bc     abbc    (0,4)
-# E ab?bc     abc   (0,3)
-# E ab?c      abc   (0,3)
-# BE  ^abc$     abc   (0,3)
-# BE  ^abc      abcc    (0,3)
-# BE  abc$      aabc    (1,4)
-# BE  ^     abc   (0,0)
-# BE  $     abc   (3,3)
-# BE  a.c     abc   (0,3)
-# BE  a.c     axc   (0,3)
-# BE  a.*c      axyzc   (0,5)
-# BE  a[bc]d      abd   (0,3)
-# BE  a[b-d]e     ace   (0,3)
-# BE  a[b-d]      aac   (1,3)
-# BE  a[-b]     a-    (0,2)
-# BE  a[b-]     a-    (0,2)
-# BE  a]      a]    (0,2)
-# BE  a[]]b     a]b   (0,3)
-# BE  a[^bc]d     aed   (0,3)
-# BE  a[^-b]c     adc   (0,3)
-# BE  a[^]b]c     adc   (0,3)
-# E ab|cd     abc   (0,2)
-# E ab|cd     abcd    (0,2)
+("\n", "\n", "", "\n", MATCH),
+("[^a]", "\n", "", "\n", MATCH),
+("\na", "\na", "", "\na", MATCH),
+("(a)(b)(c)", "abc", "", "abc", MATCH),
+("xxx", "xxx", "", "xxx", MATCH),
+("(^|[ (,;])((([Ff]eb[^ ]* *|0*2/|\* */?)0*[6-7]))([^0-9]|$)", "feb 6,", "", "feb 6,", MATCH),
+("(^|[ (,;])((([Ff]eb[^ ]* *|0*2/|\* */?)0*[6-7]))([^0-9]|$)", "2/7", "", "2/7", MATCH),
+("(^|[ (,;])((([Ff]eb[^ ]* *|0*2/|\* */?)0*[6-7]))([^0-9]|$)", "feb 1,Feb 6", "", ",Feb 6", MATCH),
+("((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))", "x", "", "x", MATCH),
+("((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))*", "xx", "", "xx", MATCH),
+("a?(ab|ba)*", "ababababababababababababababababababababababababababababababababababababababababa", "", "ababababababababababababababababababababababababababababababababababababababababa", MATCH),
+("abaa|abbaa|abbbaa|abbbbaa", "ababbabbbabbbabbbbabbbbaa", "", "abbbbaa", MATCH),
+("abaa|abbaa|abbbaa|abbbbaa", "ababbabbbabbbabbbbabaa", "", "abaa", MATCH),
+("aaac|aabc|abac|abbc|baac|babc|bbac|bbbc", "baaabbbabac", "", "abac", MATCH),
+# (".*", "\x01\xff", "", "\x01\xff", MATCH)   # not UTF-8
+("aaaa|bbbb|cccc|ddddd|eeeeee|fffffff|gggg|hhhh|iiiii|jjjjj|kkkkk|llll", "XaaaXbbbXcccXdddXeeeXfffXgggXhhhXiiiXjjjXkkkXlllXcbaXaaaa", "", "aaaa", MATCH),
+("aaaa\nbbbb\ncccc\nddddd\neeeeee\nfffffff\ngggg\nhhhh\niiiii\njjjjj\nkkkkk\nllll", "XaaaXbbbXcccXdddXeeeXfffXgggXhhhXiiiXjjjXkkkXlllXcbaXaaaa", "", "", NOMATCH),
+("a*a*a*a*a*b", "aaaaaaaaab", "", "aaaaaaaaab", MATCH),
+("^", "", "", "", NOMATCH),
+("$", "", "", "", NOMATCH),
+("^a$", "a", "", "a", MATCH),
+("abc", "abc", "", "abc", MATCH),
+("abc", "xabcy", "", "abc", MATCH),
+("ab*bc", "abc", "", "abc", MATCH),
+("abc$", "aabc", "", "abc", MATCH),
+("a[b-]", "a-", "", "a-", MATCH),
 # E a\(b      a(b   (0,3)
 # E a\(*b     ab    (0,2)
 # E a\(*b     a((b    (0,4)
@@ -505,7 +476,6 @@ TESTS = [
 # BE  abcd*efg    abcdefg   (0,7)
 # BE  ab*     xabyabbbz (1,3)
 # BE  ab*     xayabbbz  (1,2)
-# E (ab|cd)e    abcde   (2,5)(2,4)
 # BE  [abhgefdc]ij    hij   (0,3)
 # E (a|b)c*d    abcd    (1,4)(1,2)
 # E (ab|ab*)bc    abc   (0,3)(0,1)
