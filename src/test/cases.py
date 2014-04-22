@@ -10,6 +10,7 @@
 MATCH = 1
 NOMATCH = 0
 PARSEERR = -1
+NONE = "NONE"
 
 # These are the tests we generate functions for
 # (re, input, matched_str, expected, ..[groups])
@@ -147,12 +148,12 @@ TESTS = [
   ("(ab|a)b*c", "abc", "", "abc", MATCH, ["ab"]),
   ("((a)(b)c)(d)", "abcd", "", "abcd", MATCH, ["abc", "a", "b", "d"]),
   ("[a-zA-Z_][a-zA-Z0-9_]*", "alpha", "", "alpha", MATCH),
-  ("^a(bc+|b[eh])g|.h$", "abh", "", "bh", MATCH, [""]),
-  ("(bc+d$|ef*g.|h?i(j|k))", "effgz", "", "effgz", MATCH, ["effgz", ""]),
+  ("^a(bc+|b[eh])g|.h$", "abh", "", "bh", MATCH, [NONE]),
+  ("(bc+d$|ef*g.|h?i(j|k))", "effgz", "", "effgz", MATCH, ["effgz", NONE]),
   ("(bc+d$|ef*g.|h?i(j|k))", "ij", "", "ij", MATCH, ["ij", "j"]),
   ("(bc+d$|ef*g.|h?i(j|k))", "effg", "", "", NOMATCH),
   ("(bc+d$|ef*g.|h?i(j|k))", "bcdd", "", "", NOMATCH),
-  ("(bc+d$|ef*g.|h?i(j|k))", "reffgz", "", "effgz", MATCH, ["effgz", ""]),
+  ("(bc+d$|ef*g.|h?i(j|k))", "reffgz", "", "effgz", MATCH, ["effgz", NONE]),
   ("(((((((((a)))))))))", "a", "", "a", MATCH, ["a", "a", "a", "a", "a", "a", "a", "a", "a"]),
   ("multiple words of text", "uh-uh", "", "", NOMATCH),
   ("multiple words", "multiple words, yeah", "", "multiple words", MATCH),
