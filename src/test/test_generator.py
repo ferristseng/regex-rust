@@ -47,7 +47,7 @@ macro_rules! run_tests(
                 Some(match_group) => {
                   assert_eq!(match_group, g.to_str());
                 }
-                None => (assert!(false))
+                None => (assert_eq!(~"NONE", g.to_str()))
               }
 
               i += 1;
