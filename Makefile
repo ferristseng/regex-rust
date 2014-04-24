@@ -54,6 +54,7 @@ $(BUILD)/bench: $(BUILD)
 	python $(BENCH)/generators/rust_bench_generator.py
 	python $(BENCH)/generators/cpp_bench_generator.py
 	python $(BENCH)/generators/rust_bench_BS_generator.py
+	python $(BENCH)/generators/python_bench_generator.py
 
 	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_gen_bench.rs  -L ./$(BUILD)
 	rustc $(FLAGS) --out-dir $(BUILD)/benches $(BENCH)/benches/rust_search_bench.rs  -L ./$(BUILD)

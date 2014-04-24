@@ -138,6 +138,7 @@ The first stage of compilation will compile all of the test cases into each of t
   * Rust
   * C++11 Built in Regex library
   * BurntSushi Rust Library
+  * Python RE library
 
 ###Benchmarks Performed:
   1. Generic Parse/Execute Loop
@@ -154,10 +155,14 @@ General Benchmark (Using C++ as Reference):
   * **Rust**: -10.33% from Reference
   * **C++11**: 0% from Reference
   * **BurntSushi Rust**: -24.16% from Reference
+  *  **Python**: -65.06% from Reference
 
 Search Benchmark (Using C++ as Reference):
   * **Rust**: 60.10% from Reference
   * **C++11**: 0% from Reference
   * **BurntSushi Rust**: 6.00% from Reference
+  * **Python**: 3.00% from Reference
 
 *Note: The BurntSushi Library as well is without its compiler support as far as I am made aware*
+
+*Note: The Python Benchmarks seem very off, however we can't fault our benchmark. We believe its an optimization trick*
