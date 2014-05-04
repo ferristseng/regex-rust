@@ -1,6 +1,6 @@
-# Test generator 
+# Test generator
 import re
-from cases import * 
+from cases import *
 from datetime import datetime
 
 FILE = open('src/re/test.rs', 'w')
@@ -12,41 +12,48 @@ OUTPUT = """
 // Last Modified: %s
 
 macro_rules! run_tests(
-  ($re: expr, $input: expr, $matched: expr, $ident: expr, 
+  ($re: expr, $input: expr, $flags: expr, $matched: expr, $ident: expr,
    $expect: pat, $groups: expr) => (
     {
-      let re = match UncompiledRegexp::new($re) {
+      let f = &mut ParseFlags::new();
+      f.setFlags($flags);
+      let re = match Regexp::new($re, f) {
         Ok(regex) => regex,
         Err(e) => fail!(e)
       };
       let res = re.search($input);
       let expect_test = match res {
-        $expect => true, 
+        $expect => true,
         _ => {
-          println(format!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'>", 
-                  $ident, $re, $input));
+          println!("Failed with test {:s}: <Re: '{:s}'> | <Input: '{:s}'> | <Actual Output: >",
+                  $ident, $re, $input);
           false
         }
       };
-      if (!expect_test) {
+      if !expect_test {
         assert!(expect_test);
         return
       }
-      if (res.is_some()) {
+      if res.is_some() {
         match res {
           Some(ma) => {
             assert_eq!(ma.matched(), $matched)
-            
-            let groups: &'static[&'static str] = $groups;
+
+            let groups: &[~str] = $groups;
             let mut i = 0;
 
             for g in groups.iter() {
-              assert_eq!(ma.group(i), g.to_str());
+              match ma.group(i) {
+                Some(match_group) => {
+                  assert_eq!(match_group, g.to_str());
+                }
+                None => (assert_eq!(~"NONE", g.to_str()))
+              }
 
               i += 1;
             }
           }
-          _ => () 
+          _ => ()
         }
       }
     }
@@ -55,7 +62,8 @@ macro_rules! run_tests(
 
 #[cfg(test)]
 mod python_tests {
-  use regexp::UncompiledRegexp;
+  use regexp::Regexp;
+  use parse::ParseFlags;
 
   // Tests start here
   %s
@@ -65,7 +73,7 @@ mod python_tests {
 TEST_FN = \
 """
   fn test_case_ident_%s() {
-    run_tests!(\"%s\", \"%s\", ~\"%s\", \"%s\", %s, &'static [%s])
+    run_tests!(\"%s\", \"%s\", ~\"%s\", ~\"%s\", \"%s\", %s, &[%s])
   }"""
 
 SUCCESS_FN = \
@@ -85,8 +93,7 @@ def generate_test_num(num, digits):
     ret = "0" + ret
   return ret
 
-def generate_test_case(ident, regexp, input_str, 
-    matched_str, expected, groups):
+def generate_test_case(ident, regexp, input_str, flags, matched_str, expected, groups):
   if expected == NOMATCH:
     match = "None"
   elif expected == PARSEERR:
@@ -95,17 +102,19 @@ def generate_test_case(ident, regexp, input_str,
     match = "Some(_)"
 
   regexp = re.sub("\\\\", "\\\\\\\\", regexp)
-  input_str = re.sub("\\\\", "\\\\\\\\", input_str)
-  matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
+  # input_str = re.sub("\\\\", "\\\\\\\\", input_str)
+  # matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
 
-  if (len(groups) > 0):
-    groups_str  = "\"" + "\", \"".join(groups) + "\""
+  if expected == MATCH:
+    groups_str = "~\"" + matched_str + "\""
+    if (len(groups) > 0):
+      groups_str = groups_str + ", ~\"" + "\", ~\"".join(groups) + "\""
   else:
     groups_str = ""
 
   test = FAIL_FN if expected == PARSEERR else SUCCESS_FN
 
-  return test % (ident, regexp, input_str, matched_str, ident, 
+  return test % (ident, regexp, input_str, flags, matched_str, ident,
       match, groups_str)
 
 if __name__ == "__main__":
@@ -114,14 +123,15 @@ if __name__ == "__main__":
 
   for (i, test) in enumerate(TESTS):
     ident = generate_test_num(i, len(str(len(TESTS))))
-    if (len(test) == 5):
-      groups = test[4]
+    if (len(test) == 6):
+      groups = test[5]
     else:
       groups = []
     buf += \
-      generate_test_case(ident, test[0], test[1], test[2], test[3], 
+      generate_test_case(ident, test[0], test[1], test[2], test[3], test[4],
                          groups)
 
   FILE.write(OUTPUT % (date, buf))
+
 
   print("Successfully generated test file: src/re/test.rs")
