@@ -17,7 +17,7 @@ macro_rules! run_tests(
     {
       let f = &mut ParseFlags::new();
       f.setFlags($flags);
-      let re = match UncompiledRegexp::new($re, f) {
+      let re = match Regexp::new($re, f) {
         Ok(regex) => regex,
         Err(e) => fail!(e)
       };
@@ -62,7 +62,7 @@ macro_rules! run_tests(
 
 #[cfg(test)]
 mod python_tests {
-  use regexp::UncompiledRegexp;
+  use regexp::Regexp;
   use parse::ParseFlags;
 
   // Tests start here
@@ -105,8 +105,10 @@ def generate_test_case(ident, regexp, input_str, flags, matched_str, expected, g
   # input_str = re.sub("\\\\", "\\\\\\\\", input_str)
   # matched_str = re.sub("\\\\", "\\\\\\\\", matched_str)
 
-  if (len(groups) > 0):
-    groups_str  = "~\"" + "\", ~\"".join(groups) + "\""
+  if expected == MATCH:
+    groups_str = "~\"" + matched_str + "\""
+    if (len(groups) > 0):
+      groups_str = groups_str + ", ~\"" + "\", ~\"".join(groups) + "\""
   else:
     groups_str = ""
 

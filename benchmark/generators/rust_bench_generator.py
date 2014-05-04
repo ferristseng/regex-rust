@@ -17,7 +17,7 @@ use rustre::parse::ParseFlags;
 
 
   fn execute (reg: ~str, text: ~str) -> () {
-    let re = match rustre::regexp::UncompiledRegexp::new(reg, &mut ParseFlags::new()) {
+    let re = match rustre::regexp::Regexp::new(reg, &mut ParseFlags::new()) {
       Ok(regex) => regex,
       Err(e) => fail!(e)
     };
@@ -45,7 +45,7 @@ extern crate rustre;
 use rustre::parse::ParseFlags;
 
   fn main() {
-    let re = match rustre::regexp::UncompiledRegexp::new(\"%s\", &mut ParseFlags::new()) {
+    let re = match rustre::regexp::Regexp::new(\"%s\", &mut ParseFlags::new()) {
       Ok(regex) => regex,
       Err(e) => fail!(e)
     };

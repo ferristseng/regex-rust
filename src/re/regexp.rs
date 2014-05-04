@@ -6,7 +6,7 @@ use compile::compile_recursive;
 use error::ParseError::*;
 
 /// Uncompiled regular expression.
-pub struct UncompiledRegexp {
+pub struct Regexp {
 	prog: ~[Instruction]
 }
 
@@ -28,12 +28,12 @@ impl ReplStringSpecError {
 }
 
 /// Constructors
-impl UncompiledRegexp {
-	pub fn new(s: &str, f: &mut ParseFlags) -> Result<UncompiledRegexp, ParseCode> {
+impl Regexp {
+	pub fn new(s: &str, f: &mut ParseFlags) -> Result<Regexp, ParseCode> {
 		match parse(s, f) {
 			Ok(ref expr) => {
 				let prog = compile_recursive(expr);
-				Ok(UncompiledRegexp { prog: prog })
+				Ok(Regexp { prog: prog })
 			}
 			Err(e) => Err(e)
 		}
@@ -43,7 +43,7 @@ impl UncompiledRegexp {
 /// TODO:
 /// The API needs some work.
 /// Allow for other implementations to be used?
-impl UncompiledRegexp {
+impl Regexp {
 	/// Checks if the beginning of the input string
 	/// contains a match, and returns it.
 	pub fn exec(&self, input: &str) -> Option<Match> {
@@ -74,58 +74,17 @@ impl UncompiledRegexp {
 	}
 
 	pub fn split(&self, input: &str) -> ~[~str] { // This is lengthier than it should be; I'll keep working to improve it.
-		let mut start_indices = ~[];
-		let mut match_lengths = ~[];
-		let mut matches: ~[Match] = ~[];
 		let mut result: ~[~str] = ~[];
-		let len = input.len();
-		let strat = PikeVM::new(self.prog, 0);
+		let mut cur_start = 0;
+		let mut end = input.len();
 
-		matches = self.find_all(input); // Check whether input contains the regex
-		for i in range(0, matches.len()) {
-			let m = matches[i].input.slice(matches[i].start, matches[i].end);
-			if m.is_empty() {
-				result.push(input.to_owned());
-				return result;
-			}
+		let matches = self.find_all(input); // Check whether input contains the regex
+		for m in matches.iter() {
+			result.push(input.slice(cur_start, m.start).to_owned());
+			cur_start = m.end;
 		}
+		result.push(input.slice(cur_start, end).to_owned());
 
-		let mut start = 0;
-		for _ in range(0, len + 1) { // Run starting at each character
-				match strat.run(input, start) { // run only matches one thing...
-					Some(t) => {
-						let nextPos = t.end;
-						start_indices.push(start);
-						match_lengths.push(t.end - start + 1);
-						start = nextPos;
-					}
-					None => {
-						start += 1;
-					}
-				}
-		}
-
-		if start_indices.len() == 1 { // If 1 match
-			if start_indices[0] == 0 { // Matched at start of input
-				let res = format!("{:s}", input.slice_from(start_indices[0] + match_lengths[0]-1));
-				result.push(res);
-				return result;
-			} else { // At end of input
-				let res = format!("{:s}", input.slice_to(start_indices[0]));
-				result.push(res);
-				return result;
-			}
-		}
-
-		for i in range(0, start_indices.len()) { // If more than 1 match
-			if i == start_indices.len()-1 { // If reached end of input
-				let res = format!("{:s}", input.slice_from(start_indices[i] + match_lengths[i] - 1));
-				result.push(res);
-			} else {
-				let res = format!("{:s}", input.slice(start_indices[i] + match_lengths[i] - 1, start_indices[i+1]));
-				result.push(res);
-			}
-		}
 		return result;
 	}
 
@@ -285,7 +244,7 @@ mod library_functions_test {
 	fn test_replace (re: &str, input: &str, flags: ~str, replaceWith: &str, expect: Result<~str, ReplStringSpecError>) {
 		let f = &mut ParseFlags::new();
 		f.setFlags(flags);
-		let reg = match UncompiledRegexp::new(re, f) {
+		let reg = match Regexp::new(re, f) {
 			Ok(regex) => regex,
 			Err(e) => fail!(e)
 		};
@@ -300,7 +259,7 @@ mod library_functions_test {
 	fn test_replacen (re: &str, input: &str, flags: ~str, replaceWith: &str, expect: Result<(~str, uint), ReplStringSpecError>) {
 		let f = &mut ParseFlags::new();
 		f.setFlags(flags);
-		let reg = match UncompiledRegexp::new(re, f) {
+		let reg = match Regexp::new(re, f) {
 			Ok(regex) => regex,
 			Err(e) => fail!(e)
 		};
@@ -311,7 +270,7 @@ mod library_functions_test {
 			match printResult {
 				(resS, resN) => {
 					match printExpect {
-						(expS, expN) => fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s} with {:u} replaces, not expected result of {:s} with {:u} replaces\n", 
+						(expS, expN) => fail!(format!("Replacing {:s} in {:s} with {:s} yielded {:s} with {:u} replaces, not expected result of {:s} with {:u} replaces\n",
 							re, input, replaceWith, resS, resN, expS, expN))
 					}
 				}
@@ -324,7 +283,7 @@ mod library_functions_test {
 			{
 				let f = &mut ParseFlags::new();
 				f.setFlags($flags);
-				let re = match UncompiledRegexp::new($re, f) {
+				let re = match Regexp::new($re, f) {
 					Ok(regex) => regex,
 					Err(e) => fail!(e)
 				};
@@ -347,7 +306,7 @@ mod library_functions_test {
 	macro_rules! test_split(
 		($re: expr, $input: expr, $expect: expr) => (
 			{
-				let re = match UncompiledRegexp::new($re, &mut ParseFlags::new()) {
+				let re = match Regexp::new($re, &mut ParseFlags::new()) {
 					Ok(regex) => regex,
 					Err(e) => fail!(e)
 				};
@@ -620,32 +579,32 @@ mod tests {
 
 	#[test]
 	fn parse_alternation_ok_test() {
-		assert!(UncompiledRegexp::new("a|b", &mut ParseFlags::new()).is_ok());
+		assert!(Regexp::new("a|b", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_concatenation_ok_test() {
-		assert!(UncompiledRegexp::new("a(bc)d", &mut ParseFlags::new()).is_ok());
+		assert!(Regexp::new("a(bc)d", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_char_class_ok_test() {
-		assert!(UncompiledRegexp::new("[a-zABC!@#]]]", &mut ParseFlags::new()).is_ok());
+		assert!(Regexp::new("[a-zABC!@#]]]", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_capture_ok_test() {
-		assert!(UncompiledRegexp::new("(hel(ABC)ok)", &mut ParseFlags::new()).is_ok());
+		assert!(Regexp::new("(hel(ABC)ok)", &mut ParseFlags::new()).is_ok());
 	}
 
 	#[test]
 	fn parse_capture_fail_test() {
-		assert!(UncompiledRegexp::new("(hel(ABC)ok", &mut ParseFlags::new()).is_err());
+		assert!(Regexp::new("(hel(ABC)ok", &mut ParseFlags::new()).is_err());
 	}
 
 	#[test]
 	fn search_group_fetch() {
-		match UncompiledRegexp::new("(?P<hello>d)", &mut ParseFlags::new()) {
+		match Regexp::new("(?P<hello>d)", &mut ParseFlags::new()) {
 			Ok(regex) => {
 				match regex.search("dhfs") {
 					Some(m) => {

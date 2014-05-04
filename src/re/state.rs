@@ -13,7 +13,7 @@ impl<'a> State<'a> {
       input: input,
       cursor: 0,
       len: input.char_len(),
-      ncaptures: 0,
+      ncaptures: 1,
       nparens: 0
     }
   }

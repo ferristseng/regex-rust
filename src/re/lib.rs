@@ -8,7 +8,7 @@
 #![comment = "Regular Expression Engine in Rust"]
 
 
-pub use regexp::UncompiledRegexp;
+pub use regexp::Regexp;
 
 mod test;
 mod exec;

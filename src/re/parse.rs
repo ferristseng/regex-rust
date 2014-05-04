@@ -103,7 +103,10 @@ macro_rules! check_ok(
 pub fn parse(t: &str, f: &mut ParseFlags) -> Result<Expr, ParseCode> {
   let mut p = State::new(t);
 
-  _parse_recursive(&mut p, f)
+  match _parse_recursive(&mut p, f) {
+    Ok(expr) => Ok(Capture(~expr, 0, None)),
+    Err(err) => Err(err)
+  }
 }
 
 /// Parses an escaped value at a given state.
